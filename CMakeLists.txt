@@ -11,7 +11,7 @@ find_package(Catch2 REQUIRED)
 include(Catch)
 include(CTest)
 
-add_library(fil INTERFACE)
+add_library(fys::fil INTERFACE)
 
 target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/

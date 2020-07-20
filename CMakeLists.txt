@@ -13,18 +13,10 @@ include(CTest)
 
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
-
-
 target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
         ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/opt)
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
 
-enable_testing()
-
-add_executable(fsm_test_bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/state_machine_testcase.cpp)
-target_link_libraries(fsm_test_bin fil)
-catch_discover_tests(fsm_test_bin)
+add_subdirectory(test)

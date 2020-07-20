@@ -21,11 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <fsm/state_machine.hpp>
+#include <fsm/state_machine.hh>
 #include <catch2/catch.hpp>
 #include <iostream>
 
-TEST_CASE("state_machine_test_case")
+TEST_CASE("state_machine_test_case", "[fsm]")
 {
 	enum StateTest : std::uint32_t {
 		STATE_1,

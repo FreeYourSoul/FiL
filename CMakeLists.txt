@@ -8,6 +8,8 @@ endif ()
 project(fil CXX)
 
 find_package(Catch2 REQUIRED)
+find_package(fmt REQUIRED)
+
 include(Catch)
 include(CTest)
 
@@ -18,5 +20,6 @@ target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
         ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
         ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
+target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(test)

@@ -36,9 +36,9 @@ namespace internal {
 class cli_base_action {
 public:
 	explicit cli_base_action(std::string name, std::string helper, std::function<void()> handler)
-			:_name(std::move(name)), _helper(std::move(helper)), _hander(std::move(handler)) { }
+			:_name(std::move(name)), _helper(std::move(helper)), _handler(std::move(handler)) { }
 
-	explicit cli_base_action(std::string name, std::string helper, std::function<void(std::string&)> handler)
+	explicit cli_base_action(std::string name, std::string helper, std::function<void(std::string)> handler)
 			:_name(std::move(name)), _helper(std::move(helper)), _handler_with_param(std::move(handler)) { }
 
 	void exec() const
@@ -66,13 +66,19 @@ protected:
 	std::string _helper;
 
 	std::function<void()> _handler = nullptr;
-	std::function<void(std::string&)> _handler_with_param = nullptr;
+	std::function<void(std::string)> _handler_with_param = nullptr;
 };
 
 }
 
 class option : public internal::cli_base_action {
 public:
+	explicit option(std::string name, std::string helper, std::function<void()> handler)
+			:internal::cli_base_action(std::move(name), std::move(helper), std::move(handler)) { }
+
+	explicit option(std::string name, std::string helper, std::function<void(std::string)> handler)
+			:internal::cli_base_action(std::move(name), std::move(helper), std::move(handler)) { }
+
 	[[nodiscard]] std::string
 	generate_helper() const
 	{
@@ -86,13 +92,13 @@ public:
 	explicit sub_command(std::string name, std::string helper, std::function<void()> handler)
 			:internal::cli_base_action(std::move(name), std::move(helper), std::move(handler))
 	{
-		_options.emplace_back(option("--help", "Display this helper", []() { fmt::print(generate_helper()); }));
+		_options.emplace_back(option("--help", "Display this helper", [this]() { fmt::print(generate_helper()); }));
 	}
 
-	explicit sub_command(std::string name, std::string helper, std::function<void(std::string&)> handler)
+	explicit sub_command(std::string name, std::string helper, std::function<void(std::string)> handler)
 			:internal::cli_base_action(std::move(name), std::move(helper), std::move(handler))
 	{
-		_options.emplace_back(option("--help", "Display this helper", []() { fmt::print(generate_helper()); }));
+		_options.emplace_back(option("--help", "Display this helper", [this]() { fmt::print(generate_helper()); }));
 	}
 
 	void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }
@@ -151,23 +157,24 @@ protected:
 	}
 
 private:
-	void is_not_command(const std::string& command_to_check)
+	[[nodiscard]] bool
+	is_not_command(const std::string& command_to_check) const
 	{
 		auto it = std::find_if(_sub_commands.begin(), _sub_commands.end(),
-				[&command_to_check](const auto& value) { return value.get_name() == command_to_check });
+				[&command_to_check](const auto& value) { return value.get_name() == command_to_check; });
 		return it == _sub_commands.end();
 	}
 
 	void exec_parameter(std::vector<std::string>& args, std::uint32_t& index)
 	{
-		if (!_hander_on_param) {
+		if (!_handler_on_param) {
 			throw std::invalid_argument(
 					fmt::format(FMT_STRING("error usage : {} :\n{}"),
 							_name, generate_helper()));
 		}
 		if (index >= args.size() || args.at(index).front() == '-') {
-			throw std::invalid_argument(fmt::format(FMT_STRING("error usage : Option {} require a parameter :\n{}"),
-					option_name, it->generate_helper()));
+			throw std::invalid_argument(fmt::format(FMT_STRING("error usage : command {} require a parameter :\n{}"),
+					_name, generate_helper()));
 		}
 		_handler_on_param(std::move(args.at(index)));
 	}
@@ -176,7 +183,7 @@ private:
 	{
 		const std::string option_name = args.at(index);
 		auto it = std::find_if(_options.begin(), _options.end(),
-				[&option_name](const auto& value) { return value.get_name() == option_name });
+				[&option_name](const auto& value) { return value.get_name() == option_name; });
 
 		if (it == _options.end()) {
 			throw std::invalid_argument(fmt::format(FMT_STRING("error usage : Option {} doesn't exists:\n{}"),
@@ -212,7 +219,8 @@ public:
 	bool parse_command_line(int argc, char** argv)
 	{
 		if (argc > 0) {
-			return exec_command(std::vector<std::string>(argv + 1, argv + argc), 1u);
+			std::vector<std::string> arguments(argv + 1, argv + argc);
+			return exec_command(arguments, 1u);
 		}
 		return false;
 	}

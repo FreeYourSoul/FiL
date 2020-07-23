@@ -89,13 +89,13 @@ public:
 
 class sub_command : public internal::cli_base_action {
 public:
-	explicit sub_command(std::string name, std::string helper, std::function<void()> handler)
+	explicit sub_command(std::string name, std::function<void()> handler, std::string helper)
 			:internal::cli_base_action(std::move(name), std::move(handler), std::move(helper))
 	{
 		_options.emplace_back(option("--help", [this]() { fmt::print(generate_helper()); }, "Display this helper"));
 	}
 
-	explicit sub_command(std::string name, std::string helper, std::function<void(std::string)> handler)
+	explicit sub_command(std::string name, std::function<void(std::string)> handler, std::string helper)
 			:internal::cli_base_action(std::move(name), std::move(handler), std::move(helper))
 	{
 		_options.emplace_back(option("--help", [this]() { fmt::print(generate_helper()); }, "Display this helper"));
@@ -111,6 +111,11 @@ public:
 	void add_option(option&& opt)
 	{
 		_options.emplace_back(std::move(opt));
+	}
+
+	void set_sub_command_only(bool is_sub_command_only)
+	{
+		_sub_command_only = is_sub_command_only;
 	}
 
 protected:
@@ -133,21 +138,16 @@ protected:
 						throw std::invalid_argument(fmt::format(FMT_STRING("CLI error usage Chaining command is impossible:\n{}"),
 								generate_helper()));
 					}
-					return exec_command(args, ++index);
+					return exec_subcommand(args, index);
 				}
 			}
 			++index;
 		}
 		if (_sub_command_only) {
-
+			throw std::invalid_argument(fmt::format(FMT_STRING("Command {} is subcommand only:\n{}"), _name, generate_helper()));
 		}
 		_handler();
 		return true;
-	}
-
-	void set_sub_command_only(bool is_sub_command_only)
-	{
-		_sub_command_only = is_sub_command_only;
 	}
 
 	[[nodiscard]] std::string
@@ -168,15 +168,23 @@ private:
 	void exec_parameter(std::vector<std::string>& args, std::uint32_t& index)
 	{
 		if (!_handler_on_param) {
-			throw std::invalid_argument(
-					fmt::format(FMT_STRING("error usage : {} :\n{}"),
-							_name, generate_helper()));
+			return;
 		}
 		if (index >= args.size() || args.at(index).front() == '-') {
 			throw std::invalid_argument(fmt::format(FMT_STRING("error usage : command {} require a parameter :\n{}"),
 					_name, generate_helper()));
 		}
 		_handler_on_param(std::move(args.at(index)));
+	}
+
+	bool exec_subcommand(std::vector<std::string>& args, std::uint32_t index)
+	{
+		auto it = std::find_if(_sub_commands.begin(), _sub_commands.end(),
+				[command_to_check = args.at(index)](const auto& value) { return value.name() == command_to_check; });
+		if (it == _sub_commands.end()) {
+			return false;
+		}
+		return it->exec_command(args, ++index);
 	}
 
 	void exec_option(std::vector<std::string>& args, std::uint32_t& index) const
@@ -214,7 +222,7 @@ private:
 class command_line_interface : public sub_command {
 public:
 	explicit command_line_interface(std::function<void()> handler, std::string helper = "")
-			:sub_command({}, std::move(helper), std::move(handler)) { }
+			:sub_command({}, std::move(handler), std::move(helper)) { }
 
 	bool parse_command_line(int argc, char** argv)
 	{
@@ -226,6 +234,24 @@ public:
 	}
 
 };
+
+namespace cli {
+
+static void
+add_argument_option(sub_command& sub_command, std::string opt, std::string& argument_string, std::string help = "")
+{
+	sub_command.add_option(option(std::move(opt),
+			[&argument_string](std::string arg) { argument_string = std::move(arg); },
+			std::move(help)));
+}
+
+static void
+add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string)
+{
+	sub_command.on_parameter_handler([&args_string](std::string arg) { args_string.emplace_back(std::move(arg)); });
+}
+
+}
 
 }
 

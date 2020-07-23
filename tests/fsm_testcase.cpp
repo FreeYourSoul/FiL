@@ -21,11 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <fsm/state_machine.hh>
+#include <fil/fsm/state_machine.hh>
 #include <catch2/catch.hpp>
-#include <iostream>
 
-TEST_CASE("state_machine_test_case", "[fsm]")
+TEST_CASE("fsm_testcase Simple", "[fsm]")
 {
 	enum StateTest : std::uint32_t {
 		STATE_1,
@@ -42,10 +41,22 @@ TEST_CASE("state_machine_test_case", "[fsm]")
 		bool check_transition_3 = false;
 		bool check_transition_4 = false;
 
-		s.add_transition(STATE_1, STATE_2, [&check_transition_1](){ check_transition_1 = true; return true;});
-		s.add_transition(STATE_2, STATE_3, [&check_transition_2](){ check_transition_2 = true; return true;});
-		s.add_transition(STATE_3, STATE_4, [&check_transition_3](){ check_transition_3 = true; return true;});
-		s.add_transition(STATE_4, STATE_5, [&check_transition_4](){ check_transition_4 = true; return true;});
+		s.add_transition(STATE_1, STATE_2, [&check_transition_1]() {
+			check_transition_1 = true;
+			return true;
+		});
+		s.add_transition(STATE_2, STATE_3, [&check_transition_2]() {
+			check_transition_2 = true;
+			return true;
+		});
+		s.add_transition(STATE_3, STATE_4, [&check_transition_3]() {
+			check_transition_3 = true;
+			return true;
+		});
+		s.add_transition(STATE_4, STATE_5, [&check_transition_4]() {
+			check_transition_4 = true;
+			return true;
+		});
 
 		auto o = s.advance();
 
@@ -63,10 +74,22 @@ TEST_CASE("state_machine_test_case", "[fsm]")
 		int pass_3 = 0;
 		int pass_4 = 0;
 
-		s.add_transition(STATE_1, STATE_2, [&pass_1](){ ++pass_1; return true;});
-		s.add_transition(STATE_2, STATE_3, [&pass_2](){ ++pass_2; return true;});
-		s.add_transition(STATE_3, STATE_4, [&pass_3](){ ++pass_3; return true;});
-		s.add_transition(STATE_4, STATE_5, [&pass_4](){ ++pass_4; return true;});
+		s.add_transition(STATE_1, STATE_2, [&pass_1]() {
+			++pass_1;
+			return true;
+		});
+		s.add_transition(STATE_2, STATE_3, [&pass_2]() {
+			++pass_2;
+			return true;
+		});
+		s.add_transition(STATE_3, STATE_4, [&pass_3]() {
+			++pass_3;
+			return true;
+		});
+		s.add_transition(STATE_4, STATE_5, [&pass_4]() {
+			++pass_4;
+			return true;
+		});
 
 		auto o = s.advance();
 
@@ -79,5 +102,4 @@ TEST_CASE("state_machine_test_case", "[fsm]")
 
 
 
-
-} // End TestCase : state_machine_test_case
+}

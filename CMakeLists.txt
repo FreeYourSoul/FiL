@@ -7,8 +7,16 @@ endif ()
 
 project(fil CXX)
 
-find_package(Catch2 REQUIRED)
+# ---- Include guards ----
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+    message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.")
+endif()
+
+find_package(Catch2)
 find_package(fmt REQUIRED)
+
+include(cmake/utility/DoxygenSupport.cmake)
+include(cmake/utility/sanitizers.cmake)
 
 include(Catch)
 include(CTest)
@@ -17,9 +25,11 @@ add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
 target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
         ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
         ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
-add_subdirectory(test)
+add_subdirectory(tests)

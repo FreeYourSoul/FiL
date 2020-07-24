@@ -12,11 +12,10 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.")
 endif()
 
-find_package(Catch2)
 find_package(fmt REQUIRED)
+find_package(Catch2 QUIET)
 
 include(cmake/utility/DoxygenSupport.cmake)
-include(cmake/utility/sanitizers.cmake)
 
 include(Catch)
 include(CTest)
@@ -30,6 +29,7 @@ target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
         ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
         ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
+target_compile_features(fil INTERFACE cxx_std_17)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(tests)

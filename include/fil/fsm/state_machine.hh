@@ -34,79 +34,76 @@ namespace fil {
 
 template<typename State>
 class state_machine {
-	static constexpr std::uint32_t BEFORE = 0;
-	static constexpr std::uint32_t AFTER = 1;
-	static constexpr std::uint32_t PREDICATE = 2;
+  static constexpr std::uint32_t BEFORE = 0;
+  static constexpr std::uint32_t AFTER = 1;
+  static constexpr std::uint32_t PREDICATE = 2;
 
-	using state_type = State;
-	using predicate = std::function<bool()>;
-	using callback = std::function<void(state_type)>;
+  using state_type = State;
+  using predicate = std::function<bool()>;
+  using callback = std::function<void(state_type)>;
 
 public:
-	state_machine(state_type st)
-			:_current_state(st) { }
+  state_machine(state_type st)
+	  : _current_state(st) {}
 
-	[[nodiscard]] state_type advance()
-	{
-		std::uint32_t prevent_loop = 0;
-		for (std::uint32_t i = 0; i < _transitions.size(); ++i) {
-			if (std::get<BEFORE>(_transitions.at(i)) == _current_state && std::get<PREDICATE>(_transitions.at(i))()) {
+  [[nodiscard]] state_type advance() {
 
-				if (i < _on_entry_callbacks.size()) {
-					auto cb = _on_entry_callbacks.at(i);
-					if (cb) {
-						cb(_current_state);
-					}
-				}
+	std::uint32_t prevent_loop = 0;
 
-				_current_state = std::get<AFTER>(_transitions.at(i));
+	for (std::uint32_t i = 0; i < _transitions.size(); ++i) {
+	  if (std::get<BEFORE>(_transitions.at(i)) == _current_state && std::get<PREDICATE>(_transitions.at(i))()) {
 
-				// security in order to prevent infinite looping over always true predicates
-				if (++prevent_loop >= _transitions.size()) {
-					return _current_state;
-				}
-				// reset 0 in order to retry previous transition as the current one succeed
-				i = 0;
-			}
+		if (i < _on_entry_callbacks.size()) {
+		  auto cb = _on_entry_callbacks.at(i);
+		  if (cb) {
+			cb(_current_state);
+		  }
 		}
-		return _current_state;
-	}
 
-	void add_transition(state_type before, state_type after, predicate&& pred)
-	{
-		reserve_callbacks(before);
-		reserve_callbacks(after);
-		_transitions.emplace_back(std::make_tuple(before, after, std::forward<predicate>(pred)));
-	}
+		_current_state = std::get<AFTER>(_transitions.at(i));
 
-	void on_exit(state_type state_entry, callback&& on_exit)
-	{
-		reserve_callbacks(state_entry);
-		_on_entry_callbacks[index_state(state_entry)] = std::forward<callback>(on_exit);
+		// security in order to prevent infinite looping over always true predicates
+		if (++prevent_loop >= _transitions.size()) {
+		  return _current_state;
+		}
+		// reset 0 in order to retry previous transition as the current one succeed
+		i = 0;
+	  }
 	}
+	return _current_state;
+  }
 
-	[[nodiscard]] state_type current_state() const { return _current_state; }
+  void add_transition(state_type before, state_type after, predicate&& pred) {
+	reserve_callbacks(before);
+	reserve_callbacks(after);
+	_transitions.emplace_back(std::make_tuple(before, after, std::forward<predicate>(pred)));
+  }
+
+  void on_exit(state_type state_entry, callback&& on_exit) {
+	reserve_callbacks(state_entry);
+	_on_entry_callbacks[index_state(state_entry)] = std::forward<callback>(on_exit);
+  }
+
+  [[nodiscard]] state_type current_state() const { return _current_state; }
 
 private:
-	std::uint32_t
-	index_state(State state)
-	{
-		return static_cast<std::uint32_t>(state);
-	}
+  std::uint32_t
+  index_state(State state) {
+	return static_cast<std::uint32_t>(state);
+  }
 
-	void reserve_callbacks(state_type state)
-	{
-		const std::uint32_t index = index_state(state);
-		if (index > _on_entry_callbacks.size()) {
-			_on_entry_callbacks.reserve(index);
-		}
+  void reserve_callbacks(state_type state) {
+	const std::uint32_t index = index_state(state);
+	if (index > _on_entry_callbacks.size()) {
+	  _on_entry_callbacks.reserve(index);
 	}
+  }
 
 private:
-	state_type _current_state;
+  state_type _current_state;
 
-	std::vector<std::tuple<state_type, state_type, predicate>> _transitions;
-	std::vector<callback> _on_entry_callbacks;
+  std::vector<std::tuple<state_type, state_type, predicate>> _transitions;
+  std::vector<callback> _on_entry_callbacks;
 
 };
 

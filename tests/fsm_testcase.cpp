@@ -24,81 +24,80 @@
 #include <fil/fsm/state_machine.hh>
 #include <catch2/catch.hpp>
 
-TEST_CASE("fsm_testcase Simple", "[fsm]")
-{
-	enum StateTest : std::uint32_t {
-		STATE_1,
-		STATE_2,
-		STATE_3,
-		STATE_4,
-		STATE_5
-	};
+TEST_CASE("fsm_testcase Simple", "[fsm]") {
+  enum StateTest : std::uint32_t {
+	STATE_1,
+	STATE_2,
+	STATE_3,
+	STATE_4,
+	STATE_5
+  };
 
-	SECTION("Go through") {
-		fil::state_machine<StateTest> s(STATE_1);
-		bool check_transition_1 = false;
-		bool check_transition_2 = false;
-		bool check_transition_3 = false;
-		bool check_transition_4 = false;
+  SECTION("Go through") {
+	fil::state_machine<StateTest> s(STATE_1);
+	bool check_transition_1 = false;
+	bool check_transition_2 = false;
+	bool check_transition_3 = false;
+	bool check_transition_4 = false;
 
-		s.add_transition(STATE_1, STATE_2, [&check_transition_1]() {
-			check_transition_1 = true;
-			return true;
-		});
-		s.add_transition(STATE_2, STATE_3, [&check_transition_2]() {
-			check_transition_2 = true;
-			return true;
-		});
-		s.add_transition(STATE_3, STATE_4, [&check_transition_3]() {
-			check_transition_3 = true;
-			return true;
-		});
-		s.add_transition(STATE_4, STATE_5, [&check_transition_4]() {
-			check_transition_4 = true;
-			return true;
-		});
+	s.add_transition(STATE_1, STATE_2, [&check_transition_1]() {
+	  check_transition_1 = true;
+	  return true;
+	});
+	s.add_transition(STATE_2, STATE_3, [&check_transition_2]() {
+	  check_transition_2 = true;
+	  return true;
+	});
+	s.add_transition(STATE_3, STATE_4, [&check_transition_3]() {
+	  check_transition_3 = true;
+	  return true;
+	});
+	s.add_transition(STATE_4, STATE_5, [&check_transition_4]() {
+	  check_transition_4 = true;
+	  return true;
+	});
 
-		auto o = s.advance();
+	auto o = s.advance();
 
-		CHECK(check_transition_1);
-		CHECK(check_transition_2);
-		CHECK(check_transition_3);
-		CHECK(check_transition_4);
-		CHECK(STATE_5 == o);
-	} // End section : Go through
+	CHECK(check_transition_1);
+	CHECK(check_transition_2);
+	CHECK(check_transition_3);
+	CHECK(check_transition_4);
+	CHECK(STATE_5 == o);
+  } // End section : Go through
 
-	SECTION("Pass only once") {
-		fil::state_machine<StateTest> s(STATE_1);
-		int pass_1 = 0;
-		int pass_2 = 0;
-		int pass_3 = 0;
-		int pass_4 = 0;
+  SECTION("Pass only once") {
+	fil::state_machine<StateTest> s(STATE_1);
+	int pass_1 = 0;
+	int pass_2 = 0;
+	int pass_3 = 0;
+	int pass_4 = 0;
 
-		s.add_transition(STATE_1, STATE_2, [&pass_1]() {
-			++pass_1;
-			return true;
-		});
-		s.add_transition(STATE_2, STATE_3, [&pass_2]() {
-			++pass_2;
-			return true;
-		});
-		s.add_transition(STATE_3, STATE_4, [&pass_3]() {
-			++pass_3;
-			return true;
-		});
-		s.add_transition(STATE_4, STATE_5, [&pass_4]() {
-			++pass_4;
-			return true;
-		});
+	s.add_transition(STATE_1, STATE_2, [&pass_1]() {
+	  ++pass_1;
+	  return true;
+	});
+	s.add_transition(STATE_2, STATE_3, [&pass_2]() {
+	  ++pass_2;
+	  return true;
+	});
+	s.add_transition(STATE_3, STATE_4, [&pass_3]() {
+	  ++pass_3;
+	  return true;
+	});
+	s.add_transition(STATE_4, STATE_5, [&pass_4]() {
+	  ++pass_4;
+	  return true;
+	});
 
-		auto o = s.advance();
+	auto o = s.advance();
 
-		CHECK(1 == pass_1);
-		CHECK(1 == pass_2);
-		CHECK(1 == pass_3);
-		CHECK(1 == pass_4);
-		CHECK(STATE_5 == o);
-	} // End section : Pass only once
+	CHECK(1 == pass_1);
+	CHECK(1 == pass_2);
+	CHECK(1 == pass_3);
+	CHECK(1 == pass_4);
+	CHECK(STATE_5 == o);
+  } // End section : Pass only once
 
 
 

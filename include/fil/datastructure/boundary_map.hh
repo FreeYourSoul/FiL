@@ -31,41 +31,35 @@ template<typename T = int>
 class boundary_map {
 public:
 
-	[[nodiscard]] auto
-	get(int index) const
-	{
-		return _map.lower_bound(index);
-	}
+  [[nodiscard]] auto
+  get(int index) const {
+	return _map.lower_bound(index);
+  }
 
-	void insert(int index, T&& element)
-	{
-		auto it = get(index);
-		if (it == _map.end()) {
-			_map[index] = std::forward<T>(element);
-		}
-		else if (element != it->second) {
-			_map[it->first + 1] = std::forward<T>(element);
-		}
-		else {
-			_map.erase(it);
-			_map[it->first] = std::forward<T>(element);
-		}
+  void insert(int index, T&& element) {
+	auto it = get(index);
+	if (it == _map.end()) {
+	  _map[index] = std::forward<T>(element);
+	} else if (element != it->second) {
+	  _map[it->first + 1] = std::forward<T>(element);
+	} else {
+	  _map.erase(it);
+	  _map[it->first] = std::forward<T>(element);
 	}
+  }
 
-	void insert(int index, const T& element)
-	{
-		T elem = element;
-		insert(index, std::move(elem));
-	}
+  void insert(int index, const T& element) {
+	T elem = element;
+	insert(index, std::move(elem));
+  }
 
-	[[nodiscard]] auto
-	end() const
-	{
-		return _map.end();
-	}
+  [[nodiscard]] auto
+  end() const {
+	return _map.end();
+  }
 
 private:
-	std::map<int, T> _map;
+  std::map<int, T> _map;
 };
 
 using boundary_map_int = boundary_map<int>;

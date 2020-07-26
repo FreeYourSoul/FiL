@@ -36,69 +36,63 @@ namespace fil {
 class rng {
 
 public:
-	explicit rng(std::uint32_t seed = 0)
-			:_mt(std::make_unique<std::mt19937>()), _seed(seed)
-	{
-		if (!seed) {
-			std::random_device rd;
+  explicit rng(std::uint32_t seed = 0)
+	  : _mt(std::make_unique<std::mt19937>()), _seed(seed) {
+	if (!seed) {
+	  std::random_device rd;
 
-			if (rd.entropy() != 0.0) {
-				_seed = rd();
-			}
-			else {
-				_seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-			}
-		}
-		_mt->seed(_seed);
+	  if (rd.entropy() != 0.0) {
+		_seed = rd();
+	  } else {
+		_seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	  }
 	}
+	_mt->seed(_seed);
+  }
 
-	template<typename Type>
-	[[nodiscard]] Type generate_in_range(Type rA, Type rB)
-	{
-		static_assert(std::is_integral_v<Type> || std::is_floating_point_v<Type>,
-				"Type has to be an integer or a floating point number");
+  template<typename Type>
+  [[nodiscard]] Type generate_in_range(Type rA, Type rB) {
+	static_assert(std::is_integral_v<Type> || std::is_floating_point_v<Type>,
+				  "Type has to be an integer or a floating point number");
 
-		if constexpr (std::is_integral_v<Type>) {
-			std::uniform_int_distribution<Type> distribution(rA, rB);
-			return distribution(*_mt);
-		}
-		else if constexpr (std::is_floating_point_v<Type>) {
-			std::uniform_real_distribution<Type> distribution(rA, rB);
-			return distribution(*_mt);
-		}
+	if constexpr (std::is_integral_v<Type>) {
+	  std::uniform_int_distribution<Type> distribution(rA, rB);
+	  return distribution(*_mt);
+	} else if constexpr (std::is_floating_point_v<Type>) {
+	  std::uniform_real_distribution<Type> distribution(rA, rB);
+	  return distribution(*_mt);
 	}
+  }
 
-	[[nodiscard]] std::uint32_t get_seed() const { return _seed; }
+  [[nodiscard]] std::uint32_t get_seed() const { return _seed; }
 
 private:
 
-	std::unique_ptr<std::mt19937> _mt;
-	std::uint32_t _seed;
+  std::unique_ptr<std::mt19937> _mt;
+  std::uint32_t _seed;
 };
 
 class uuid_generator {
 public:
-	explicit uuid_generator(const std::string& salt, std::uint32_t seed = 0)
-			:_rng(seed)
-	{
-		for (char c : salt) {
-			_salt += std::uint64_t(c);
-		}
+  explicit uuid_generator(const std::string& salt, std::uint32_t seed = 0)
+	  : _rng(seed) {
+	for (char c : salt) {
+	  _salt += std::uint64_t(c);
 	}
+  }
 
-	std::string generate_uuid(std::uint32_t max_size = 16u)
-	{
-		auto uuid = fmt::format("{:x}{:x}{:x}", _salt, _id, _rng.generate_in_range(10000, 1000000));
-		if (uuid.size() > max_size) {
-			uuid.resize(max_size);
-		}
-		return uuid;
+  std::string generate_uuid(std::uint32_t max_size = 16u) {
+	auto uuid = fmt::format("{:x}{:x}{:x}", _salt, _id, _rng.generate_in_range(10000, 1000000));
+	if (uuid.size() > max_size) {
+	  uuid.resize(max_size);
 	}
+	return uuid;
+  }
 
 private:
-	rng _rng;
-	std::uint64_t _salt{};
-	std::uint64_t _id{};
+  rng _rng;
+  std::uint64_t _salt{};
+  std::uint64_t _id{};
 };
 
 }

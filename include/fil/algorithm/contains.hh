@@ -22,8 +22,8 @@
 // SOFTWARE.
 
 
-#ifndef FIL_CONTAINER_HH
-#define FIL_CONTAINER_HH
+#ifndef FIL_CONTAINS_HH
+#define FIL_CONTAINS_HH
 
 #include <algorithm>
 #include <vector>
@@ -45,23 +45,21 @@ namespace fil {
  */
 template<typename T, typename R, typename Accessor>
 [[nodiscard]] bool
-all_contains(const std::vector<T>& to_check, const std::vector<R>& container, Accessor&& accessor)
-{
-	return std::all_of(to_check.cbegin(), to_check.cend(), [container, &accessor](const T& lhs) {
-		return std::find_if(container.cbegin(), container.cend(),
-				[&lhs, &accessor](const auto& v) { return lhs == accessor(v); }) != container.cend();
-	});
+all_contains(const std::vector<T>& to_check, const std::vector<R>& container, Accessor&& accessor) {
+  return std::all_of(to_check.cbegin(), to_check.cend(), [container, &accessor](const T& lhs) {
+	return std::find_if(container.cbegin(), container.cend(),
+						[&lhs, &accessor](const auto& v) { return accessor(lhs) == accessor(v); }) != container.cend();
+  });
 }
 
 template<typename T>
 [[nodiscard]] bool
-all_contains(const std::vector<T>& to_check, const std::vector<T>& container)
-{
-	return std::all_of(to_check.cbegin(), to_check.cend(), [container](const T& elem) {
-		return std::find(container.cbegin(), container.cent(), elem) != container.cend();
-	});
+all_contains(const std::vector<T>& to_check, const std::vector<T>& container) {
+  return std::all_of(to_check.cbegin(), to_check.cend(), [container](const T& elem) {
+	return std::find(container.cbegin(), container.cend(), elem) != container.cend();
+  });
 }
 
 }
 
-#endif //FIL_CONTAINER_HH
+#endif //FIL_CONTAINS_HH

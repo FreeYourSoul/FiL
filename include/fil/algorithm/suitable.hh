@@ -32,12 +32,12 @@ namespace fil {
 namespace {
 template<typename T, typename = void>
 struct is_iterator {
-	static constexpr bool value = false;
+  static constexpr bool value = false;
 };
 
 template<typename T>
-struct is_iterator<T, std::enable_if_t < !std::is_same<typename std::iterator_traits<T>::value_type, void>::value>> {
-static constexpr bool value = true;
+struct is_iterator<T, std::enable_if_t<!std::is_same<typename std::iterator_traits<T>::value_type, void>::value>> {
+  static constexpr bool value = true;
 };
 
 }
@@ -55,24 +55,22 @@ static constexpr bool value = true;
  */
 template<typename InputIt, typename ComparePredicate>
 [[nodiscard]] InputIt
-find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp, InputIt start)
-{
-	static_assert(is_iterator<InputIt>::value, "");
+find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp, InputIt start) {
+  static_assert(is_iterator<InputIt>::value, "");
 
-	auto suitable = start;
-	while (first != last) {
-		if (std::forward<ComparePredicate>(comp)(*suitable, *first)) {
-			suitable = first;
-		}
-		++first;
+  auto suitable = start;
+  while (first != last) {
+	if (std::forward<ComparePredicate>(comp)(*suitable, *first)) {
+	  suitable = first;
 	}
-	return suitable;
+	++first;
+  }
+  return suitable;
 }
 template<typename InputIt, typename ComparePredicate>
 [[nodiscard]] InputIt
-find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp)
-{
-	return find_most_suitable(first, last, std::forward<ComparePredicate>(comp), first);
+find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp) {
+  return find_most_suitable(first, last, std::forward<ComparePredicate>(comp), first);
 }
 
 /**
@@ -86,22 +84,21 @@ find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp)
  */
 template<typename InputIt, typename RetrieverLower, typename AlgorithmPredicate>
 [[nodiscard]] InputIt
-compose_most_suitable(InputIt first, InputIt last, RetrieverLower&& retriever, AlgorithmPredicate&& algo)
-{
-	static_assert(is_iterator<InputIt>::value, "");
+compose_most_suitable(InputIt first, InputIt last, RetrieverLower&& retriever, AlgorithmPredicate&& algo) {
+  static_assert(is_iterator<InputIt>::value, "");
 
-	if (first == last)
-		return first;
+  if (first == last)
+	return first;
 
-	auto suitable = retriever(*first).begin();
-	while (first != last) {
-		auto& inner_container = std::forward(retriever)(*first);
-		auto suitableTmp = std::forward(algo)(inner_container.begin(), inner_container.end(), suitable);
-		if (suitableTmp != inner_container.end())
-			suitable = suitableTmp;
-		++first;
-	}
-	return suitable;
+  auto suitable = retriever(*first).begin();
+  while (first != last) {
+	auto& inner_container = std::forward(retriever)(*first);
+	auto suitableTmp = std::forward(algo)(inner_container.begin(), inner_container.end(), suitable);
+	if (suitableTmp != inner_container.end())
+	  suitable = suitableTmp;
+	++first;
+  }
+  return suitable;
 }
 
 }

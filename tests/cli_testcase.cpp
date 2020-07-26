@@ -241,6 +241,53 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]")
 
 } // End TestCase : cli_test_case SubCommand One Layer
 
+TEST_CASE("cli_test_case utility", "[cli]")
+{
+	bool action_base_has_been_called = false;
+	fil::command_line_interface cli(
+			[&action_base_has_been_called]() { action_base_has_been_called = true; },
+			"A Simple Command Line tool");
+
+	bool action_sub_has_been_called = false;
+	auto sub = fil::sub_command("command_of_doom",
+			[&action_sub_has_been_called]() { action_sub_has_been_called = true; },
+			"Sub Command Helper doc");
+
+	std::string arg_opt;
+	fil::cli::add_argument_option(sub, "--oo", arg_opt);
+
+	std::vector<std::string> vec_arg;
+	fil::cli::add_multi_arg(sub, vec_arg);
+
+	cli.add_sub_command(std::move(sub));
+	cli.set_sub_command_only(true);
+
+	SECTION("add_argument_option") {
+		char* args[] = {"cli", "command_of_doom", "--oo", "argumentation_of_doom"};
+		cli.parse_command_line(4, args);
+
+		CHECK_FALSE(action_base_has_been_called);
+		CHECK(action_sub_has_been_called);
+		CHECK("argumentation_of_doom" == arg_opt);
+	} // End section :
+
+	SECTION("add_multi_arg") {
+		char* args[] = {"cli", "command_of_doom", "argumentation_of_doom1", "argumentation_of_doom2"};
+		cli.parse_command_line(4, args);
+
+		CHECK_FALSE(action_base_has_been_called);
+		CHECK(action_sub_has_been_called);
+		CHECK(2 == vec_arg.size());
+		CHECK("argumentation_of_doom1" == vec_arg[0]);
+		CHECK("argumentation_of_doom2" == vec_arg[1]);
+	} // End section : add_multi_arg
+
+	SECTION("error on sub_commmand_only") {
+		char* args[] = {"cli"};
+
+		CHECK_THROWS_AS([&]() { cli.parse_command_line(1, args); }(), std::invalid_argument);
+	} // End section :
+}
 
 TEST_CASE("cli_test_case Helper functions", "[cli]")
 {

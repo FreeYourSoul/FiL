@@ -55,7 +55,9 @@ public:
 	template<typename Type>
 	[[nodiscard]] Type generate_in_range(Type rA, Type rB)
 	{
-		static_assert(std::is_integral_v<Type> || std::is_floating_point_v<Type>);
+		static_assert(std::is_integral_v<Type> || std::is_floating_point_v<Type>,
+				"Type has to be an integer or a floating point number");
+
 		if constexpr (std::is_integral_v<Type>) {
 			std::uniform_int_distribution<Type> distribution(rA, rB);
 			return distribution(*_mt);

@@ -87,6 +87,15 @@ public:
 
 };
 
+/**
+ * A subcommand is a command that can have multiple options, it can have arguments
+ * if _sub_command_only is set, this subcommand can only called by via another embedded subcommand and cannot be called otherwise
+ * In this case, options are still enabled.
+ *
+ * @example it is used as follow :
+ * ./binary_executable subcommand --option_1 --option2-with-argument argument argumentofthesubcommand
+ *
+ */
 class sub_command : public internal::cli_base_action {
 public:
 	explicit sub_command(std::string name, std::function<void()> handler, std::string helper)
@@ -110,6 +119,10 @@ public:
 
 	void add_option(option&& opt)
 	{
+		if (opt.name().front() != '-') {
+			fmt::print("Error Option {} : An option has to start with '-' character", opt.name());
+			return;
+		}
 		_options.emplace_back(std::move(opt));
 	}
 
@@ -150,8 +163,7 @@ protected:
 		return true;
 	}
 
-	[[nodiscard]] std::string
-	generate_helper() const
+	[[nodiscard]] std::string generate_helper() const
 	{
 		return {};
 	}
@@ -219,6 +231,9 @@ private:
 	std::vector<option> _options;
 };
 
+/**
+ * @brief Main class for a CLI, is a subclass of subcommand
+ */
 class command_line_interface : public sub_command {
 public:
 	explicit command_line_interface(std::function<void()> handler, std::string helper = "")

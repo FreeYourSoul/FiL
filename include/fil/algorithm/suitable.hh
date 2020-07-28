@@ -24,23 +24,24 @@
 #ifndef FIL_SUITABLE_HH
 #define FIL_SUITABLE_HH
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 namespace fil {
 
 namespace {
 template<typename T, typename = void>
 struct is_iterator {
-  static constexpr bool value = false;
+   static constexpr bool value = false;
 };
 
 template<typename T>
 struct is_iterator<T, std::enable_if_t<!std::is_same<typename std::iterator_traits<T>::value_type, void>::value>> {
-  static constexpr bool value = true;
+   static constexpr bool value = true;
 };
 
-}
+}// namespace
+
 /**
  * @brief Get the most suitable (suitable being defined by a comparator) of a given container.
  * The most suitable follow the comparator.
@@ -50,56 +51,56 @@ struct is_iterator<T, std::enable_if_t<!std::is_same<typename std::iterator_trai
  *
  * @param first iterator start of the container
  * @param last iterator end of the container
- * @param predicate predicate that takes the current most suitable and the next value to do a comparison
+ * @param comp predicate that takes the current most suitable and the next value to do a comparison
+ * @param start is the input defining the default most suitable
  * @return iterator pointing on the maximum value described by the predicate, if container is empty, last is returned
  */
 template<typename InputIt, typename ComparePredicate>
-[[nodiscard]] InputIt
-find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp, InputIt start) {
-  static_assert(is_iterator<InputIt>::value, "");
+[[nodiscard]] InputIt find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp, InputIt start) {
+   static_assert(is_iterator<InputIt>::value);
 
-  auto suitable = start;
-  while (first != last) {
-	if (std::forward<ComparePredicate>(comp)(*suitable, *first)) {
-	  suitable = first;
-	}
-	++first;
-  }
-  return suitable;
-}
-template<typename InputIt, typename ComparePredicate>
-[[nodiscard]] InputIt
-find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp) {
-  return find_most_suitable(first, last, std::forward<ComparePredicate>(comp), first);
+   auto suitable = start;
+   while (first != last) {
+	  if (std::forward<ComparePredicate>(comp)(*suitable, *first)) {
+		 suitable = first;
+	  }
+	  ++first;
+   }
+   return suitable;
 }
 
 /**
- *
- *
- * @param first
- * @param last
- * @param retriever
- * @param algo
- * @return
+ * @return the most suitable following a given comparator, the element defined by the iterator first is used as default most suitable
+ */
+template<typename InputIt, typename ComparePredicate>
+[[nodiscard]] InputIt find_most_suitable(InputIt first, InputIt last, ComparePredicate&& comp) {
+   return find_most_suitable(first, last, std::forward<ComparePredicate>(comp), first);
+}
+
+/**
+ * Finding the most suitable over a container of container.
+ * The first element of the first container is designed as default most suitable.
  */
 template<typename InputIt, typename RetrieverLower, typename AlgorithmPredicate>
-[[nodiscard]] InputIt
-compose_most_suitable(InputIt first, InputIt last, RetrieverLower&& retriever, AlgorithmPredicate&& algo) {
-  static_assert(is_iterator<InputIt>::value, "");
+[[nodiscard]] InputIt compose_most_suitable(InputIt first, InputIt last, RetrieverLower&& retriever, AlgorithmPredicate&& algo) {
+   static_assert(is_iterator<InputIt>::value);
 
-  if (first == last)
-	return first;
+   if (first == last) {
+	  return first;
+   }
 
-  auto suitable = retriever(*first).begin();
-  while (first != last) {
-	auto& inner_container = std::forward(retriever)(*first);
-	auto suitableTmp = std::forward(algo)(inner_container.begin(), inner_container.end(), suitable);
-	if (suitableTmp != inner_container.end())
-	  suitable = suitableTmp;
-	++first;
-  }
-  return suitable;
+   auto suitable = retriever(*first).begin();
+
+   while (first != last) {
+	  auto& inner_container = std::forward(retriever)(*first);
+	  auto suitableTmp = std::forward(algo)(inner_container.begin(), inner_container.end(), suitable);
+	  if (suitableTmp != inner_container.end()) {
+		 suitable = suitableTmp;
+	  }
+	  ++first;
+   }
+   return suitable;
 }
 
-}
-#endif //FIL_SUITABLE_HH
+}// namespace fil
+#endif//FIL_SUITABLE_HH

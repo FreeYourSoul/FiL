@@ -30,9 +30,7 @@ namespace fil {
 template<typename T = int>
 class boundary_map {
 public:
-
-  [[nodiscard]] auto
-  get(int index) const {
+  [[nodiscard]] auto get(int index) const {
 	return _map.lower_bound(index);
   }
 
@@ -53,15 +51,15 @@ public:
 	insert(index, std::move(elem));
   }
 
-  [[nodiscard]] auto
-  end() const {
+  [[nodiscard]] auto end() const {
 	return _map.end();
   }
 
 private:
   std::map<int, T> _map;
+
 };
 
 using boundary_map_int = boundary_map<int>;
 
-} // namespace fys
+}// namespace fil

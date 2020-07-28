@@ -25,33 +25,32 @@
 #include <fil/datastructure/rng.hh>
 
 TEST_CASE("rng_test_case", "[rng]") {
-  const std::uint32_t seed = 42;
+   const std::uint32_t seed = 42;
 
-  SECTION("rng") {
-	fil::rng rnf(seed);
+   SECTION("rng") {
+	  fil::rng rnf(seed);
 
-	CHECK(42 == rnf.get_seed());
+	  CHECK(42 == rnf.get_seed());
 
-	CHECK(380824 == rnf.generate_in_range(10000, 1000000));
-	CHECK(798641 == rnf.generate_in_range(10000, 1000000));
-	CHECK(951283 == rnf.generate_in_range(10000, 1000000));
-	CHECK(191615 == rnf.generate_in_range(10000, 1000000));
-	CHECK(734732 == rnf.generate_in_range(10000, 1000000));
-	CHECK(781956 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(380824 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(798641 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(951283 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(191615 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(734732 == rnf.generate_in_range(10000, 1000000));
+	  CHECK(781956 == rnf.generate_in_range(10000, 1000000));
 
-  } // End section : rng
+   }// End section : rng
 
-  SECTION("uuid generator") {
-	fil::uuid_generator uuid_gen("FyS", seed);
+   SECTION("uuid generator") {
+	  fil::uuid_generator uuid_gen("FyS", seed);
 
-	CHECK("11205cf98" == uuid_gen.generate_uuid());
-	CHECK("1120c2fb1" == uuid_gen.generate_uuid());
-	CHECK("1120e83f3" == uuid_gen.generate_uuid());
-	CHECK("11202ec7f" == uuid_gen.generate_uuid());
-	CHECK("1120b360c" == uuid_gen.generate_uuid());
-	CHECK("1120bee84" == uuid_gen.generate_uuid());
+	  CHECK("11205cf98" == uuid_gen.generate_uuid());
+	  CHECK("1120c2fb1" == uuid_gen.generate_uuid());
+	  CHECK("1120e83f3" == uuid_gen.generate_uuid());
+	  CHECK("11202ec7f" == uuid_gen.generate_uuid());
+	  CHECK("1120b360c" == uuid_gen.generate_uuid());
+	  CHECK("1120bee84" == uuid_gen.generate_uuid());
 
-  } // End section :
+   }// End section :
 
-} // End TestCase : rng_test_case
-
+}// End TestCase : rng_test_case

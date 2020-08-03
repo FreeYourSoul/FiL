@@ -27,24 +27,44 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <concept>
 
 namespace fil {
 
-using key_value = std::pair<std::string, std::string>;
+  using key_value = std::pair<std::string, std::string>;
+  
+template <typename T>
+concept Fil_Db = require ( T x ) {
+				  typename T::initializer_type;
+				  { x.set("str") } -> void;
+				  { x.get("str") } -> std::string;
+				  { x.multi_get(std::vector<std::string>{"str1", "str2"}) } -> std::vector<std::string>;
+				  { x.multi_set(std::vector<std::string>{std::pair("", "")}) } -> void;
+};
 
 template<typename DbPolicy>
 class kv_db : DbPolicy {
 
  public:
-   explicit kv_db(typename DbPolicy::initializer_type initializer) : DbPolicy(initializer) {}
+  explicit kv_db(typename DbPolicy::initializer_type initializer) : DbPolicy(std::move(initializer)) {}
 
    std::vector<key_value> multi_get(const std::vector<std::string>& keys) {
 	  return DbPolicy::multi_get(keys);
    }
 
-   key_value get(const std::string& key) {
-	  return DbPolicy::multi_get(key);
+  std::vector<std::string> get(const std::string& key) {
+    return DbPolicy::multi_get(key);
    }
+
+    std::string get(const std::string& key) {
+    return DbPolicy::multi_get(key);
+   }
+
+  template<typename T>
+  T get_as(const std::string& key) {
+    return DbPolicy::get_as<T>(key);
+  }
+  
 
    bool set(const key_value& to_add) {
 	  return DbPolicy::set(to_add);

@@ -32,7 +32,7 @@ add_library(kv_db STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fil/kv_db/key_value_db.hh
         )
 add_library(fys::fil::kv_db ALIAS kv_db)
-target_compile_features(kv_db INTERFACE cxx_std_17)
+target_compile_features(kv_db INTERFACE cxx_std_20)
 target_link_libraries(kv_db PUBLIC fys::fil)
 target_include_directories(kv_db PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/kv_db/include/)
 

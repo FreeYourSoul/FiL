@@ -23,21 +23,32 @@
 
 #pragma once
 
+#include <exception>
+#include <memory>
+
 #include "key_value_db.hh"
+
+// forward declarations
+namespace rocksdb {
+  class DB;
+}
+//! forward declarations
 
 namespace fil {
 
   class kv_rocksdb {
 
   public:
+	static constexpr bool is_transactional = true;
+
     struct initializer_type {
 
-      std::string connection_url;
+      std::string path_db_file;
       std::vector<key_value> initial_kv;
 
     };
 
-    kv_rocksdb(initializer_type initializer);
+    kv_rocksdb(const initializer_type& initializer);
 
     std::string get();
 
@@ -54,7 +65,7 @@ namespace fil {
 
     
   private:
-    
+    std::unique_ptr<rocksdb::DB> _db;
     
   };
   

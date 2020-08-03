@@ -30,6 +30,8 @@ target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_library(kv_db STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fil/kv_db/key_value_db.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/fil/kv_db/kv_rocksdb.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/internal/src/kv_db/kv_rocksdb.cpp
         )
 add_library(fys::fil::kv_db ALIAS kv_db)
 target_compile_features(kv_db INTERFACE cxx_std_20)

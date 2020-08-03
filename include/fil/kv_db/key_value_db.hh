@@ -24,47 +24,40 @@
 #ifndef FIL_INCLUDE_FIL_KV_DB_KEY_VALUE_DB_HH
 #define FIL_INCLUDE_FIL_KV_DB_KEY_VALUE_DB_HH
 
-#include <vector>
 #include <string>
 #include <utility>
-#include <concept>
+#include <vector>
+#include <type_traits>
 
 namespace fil {
 
-  using key_value = std::pair<std::string, std::string>;
-  
-template <typename T>
-concept Fil_Db = require ( T x ) {
-				  typename T::initializer_type;
-				  { x.set("str") } -> void;
-				  { x.get("str") } -> std::string;
-				  { x.multi_get(std::vector<std::string>{"str1", "str2"}) } -> std::vector<std::string>;
-				  { x.multi_set(std::vector<std::string>{std::pair("", "")}) } -> void;
+using key_value = std::pair<std::string, std::string>;
+
+template<typename T>
+struct is_transactional_db {
+   static const bool value = T::is_transactional;
 };
 
+template<typename DbPolicy, class Enable = void>
+class kv_db : DbPolicy {};
+
+
+// ******* Non-Transactional part *******
+
+
 template<typename DbPolicy>
-class kv_db : DbPolicy {
+class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> : DbPolicy {
 
  public:
-  explicit kv_db(typename DbPolicy::initializer_type initializer) : DbPolicy(std::move(initializer)) {}
+   explicit kv_db(const typename DbPolicy::initializer_type& initializer) : DbPolicy(initializer) {}
+
+   std::vector<std::string> get(const std::string& key) {
+	  return DbPolicy::multi_get(key);
+   }
 
    std::vector<key_value> multi_get(const std::vector<std::string>& keys) {
 	  return DbPolicy::multi_get(keys);
    }
-
-  std::vector<std::string> get(const std::string& key) {
-    return DbPolicy::multi_get(key);
-   }
-
-    std::string get(const std::string& key) {
-    return DbPolicy::multi_get(key);
-   }
-
-  template<typename T>
-  T get_as(const std::string& key) {
-    return DbPolicy::get_as<T>(key);
-  }
-  
 
    bool set(const key_value& to_add) {
 	  return DbPolicy::set(to_add);
@@ -73,7 +66,73 @@ class kv_db : DbPolicy {
    bool multi_set(const std::vector<key_value>& to_adds) {
 	  return DbPolicy::multi_set(to_adds);
    }
+
+   void inc_counter(const std::string &key_counter) {
+	  return DbPolicy::inc_counter(key_counter);
+   }
+
+   template<typename T>
+   T get_as(const std::string& key) {
+	  return DbPolicy::template get_as<T>(key);
+   }
+
 };
+
+
+// ******* Transactional part *******
+
+
+template<typename DbPolicy>
+class db_transaction : DbPolicy::transaction {
+ public:
+   explicit db_transaction(DbPolicy& db) : DbPolicy::transaction(), _db_ref(db) {}
+
+   std::vector<std::string> get(const std::string& key) {
+	  return _db_ref.multi_get(*this, key);
+   }
+
+   std::vector<key_value> multi_get(const std::vector<std::string>& keys) {
+	  return _db_ref.multi_get(*this, keys);
+   }
+
+   bool set(const key_value& to_add) {
+	  return _db_ref.set(*this, to_add);
+   }
+
+   bool multi_set(const std::vector<key_value>& to_adds) {
+	  return _db_ref.multi_set(*this, to_adds);
+   }
+
+   void inc_counter(const std::string &key_counter) {
+	  return _db_ref.inc_counter(*this, key_counter);
+   }
+
+   template<typename T>
+   T get_as(const std::string& key) {
+	  return _db_ref.template get_as<T>(*this, key);
+   }
+
+   bool commit() {
+	  return _db_ref.commit_transaction(*this);
+   }
+
+ private:
+   std::reference_wrapper<DbPolicy> _db_ref;
+};
+
+template<typename DbPolicy>
+class kv_db<DbPolicy, std::enable_if_t<is_transactional_db<DbPolicy>::value>> : DbPolicy {
+
+   using transaction_type = db_transaction<DbPolicy>;
+
+ public:
+   explicit kv_db(const typename DbPolicy::initializer_type& initializer) : DbPolicy(initializer) {}
+
+   std::unique_ptr<transaction_type> make_transaction() {
+	  return std::make_unique<transaction_type>(*this);
+   }
+};
+
 
 }// namespace fil
 

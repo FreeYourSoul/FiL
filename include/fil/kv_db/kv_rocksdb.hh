@@ -30,43 +30,60 @@
 
 // forward declarations
 namespace rocksdb {
-  class DB;
+class DB;
 }
 //! forward declarations
 
 namespace fil {
 
-  class kv_rocksdb {
+class kv_rocksdb {
 
-  public:
-	static constexpr bool is_transactional = true;
+ public:
+   static constexpr bool is_transactional = true;
+   class transaction {
+	public:
+	  explicit transaction(kv_rocksdb& db);
 
-    struct initializer_type {
+	  std::string get(const std::string& key);
 
-      std::string path_db_file;
-      std::vector<key_value> initial_kv;
+	  std::vector<std::string> multi_get(const std::vector<std::string>& keys);
 
-    };
+	  template<typename T>
+	  T get_as(const std::string& key) {
+		 std::string value = get(key);
+		 if constexpr (std::is_same_v<std::string, T>) {
+			return value;
+		 }
+		 if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+			return std::stoul(value);
+		 }
+		 if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+			return std::stoi(value);
+		 }
+		 if constexpr (std::is_floating_point_v<T>) {
+			return std::stod(value);
+		 }
+		 throw std::logic_error("get_as not implemented");
+	  }
 
-    kv_rocksdb(const initializer_type& initializer);
+	  bool set(const key_value& to_add);
 
-    std::string get();
+	  bool multi_set(const std::vector<key_value>& to_add);
 
-    std::vector<std::string> multi_get();
+	private:
+	  std::unique_ptr<rocksdb::Transaction> _transaction;
 
-    template<typename T>
-    T get_as(const std::string& key) {
-      throw std::logic_error("get_as not implemented");
-    }
+   };
 
-    bool set(const key_value& to_add);
+   struct initializer_type {
+	  std::string path_db_file;
+	  std::vector<key_value> initial_kv;
+   };
 
-   bool multi_set(const std::vector<key_value>& to_add);
+   explicit kv_rocksdb(const initializer_type& initializer);
 
-    
-  private:
-    std::unique_ptr<rocksdb::DB> _db;
-    
-  };
-  
-}
+ private:
+   std::unique_ptr<rocksdb::OptimisticTransactionDB> _db;
+};
+
+}// namespace fil

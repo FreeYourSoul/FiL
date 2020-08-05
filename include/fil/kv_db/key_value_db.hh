@@ -24,10 +24,11 @@
 #ifndef FIL_INCLUDE_FIL_KV_DB_KEY_VALUE_DB_HH
 #define FIL_INCLUDE_FIL_KV_DB_KEY_VALUE_DB_HH
 
+#include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
 namespace fil {
 
@@ -41,9 +42,7 @@ struct is_transactional_db {
 template<typename DbPolicy, class Enable = void>
 class kv_db : DbPolicy {};
 
-
 // ******* Non-Transactional part *******
-
 
 template<typename DbPolicy>
 class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> : DbPolicy {
@@ -67,7 +66,7 @@ class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> :
 	  return DbPolicy::multi_set(to_adds);
    }
 
-   void inc_counter(const std::string &key_counter) {
+   void inc_counter(const std::string& key_counter) {
 	  return DbPolicy::inc_counter(key_counter);
    }
 
@@ -75,12 +74,9 @@ class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> :
    T get_as(const std::string& key) {
 	  return DbPolicy::template get_as<T>(key);
    }
-
 };
 
-
 // ******* Transactional part *******
-
 
 template<typename DbPolicy>
 class db_transaction : DbPolicy::transaction {
@@ -103,7 +99,7 @@ class db_transaction : DbPolicy::transaction {
 	  return _db_ref.multi_set(*this, to_adds);
    }
 
-   void inc_counter(const std::string &key_counter) {
+   void inc_counter(const std::string& key_counter) {
 	  return _db_ref.inc_counter(*this, key_counter);
    }
 
@@ -132,7 +128,6 @@ class kv_db<DbPolicy, std::enable_if_t<is_transactional_db<DbPolicy>::value>> : 
 	  return std::make_unique<transaction_type>(*this);
    }
 };
-
 
 }// namespace fil
 

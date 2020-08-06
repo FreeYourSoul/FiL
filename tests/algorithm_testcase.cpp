@@ -251,4 +251,16 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
 
    }// End section : basic split_string test
 
+   SECTION("string join") {
+
+	  std::vector<std::string> strings { "this", "is", "a", "string", "split"};
+
+	  CHECK("thisisastringsplit" == fil::join(strings));
+
+	  CHECK("this is a string split" == fil::join(strings, " "));
+
+	  CHECK("this | | is | | a | | string | | split" == fil::join(strings, " | | "));
+
+   }// End section : string join
+
 }// end testcase : algorithm_testcase string

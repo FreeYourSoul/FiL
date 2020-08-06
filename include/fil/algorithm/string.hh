@@ -70,6 +70,25 @@ void split_string(const std::string& input, const std::vector<std::string>& sepa
    } while (pos_end < input.size());
 }
 
+std::string join(const std::vector<std::string>& to_join, const std::string& separator = "") {
+   auto size = separator.size() * to_join.size()
+	   + std::accumulate(to_join.begin(), to_join.end(), 0, [](auto v, const auto& j) { return v + j.size(); });
+
+   std::string result;
+   result.reserve(size);
+
+   bool first = true;
+   for (const auto& j : to_join) {
+	  if (first) {
+		 first = false;
+	  } else {
+		 result.append(separator);
+	  }
+	  result.append(j);
+   }
+   return result;
+}
+
 }// namespace fil
 
 #endif//FIL_STRING_HH

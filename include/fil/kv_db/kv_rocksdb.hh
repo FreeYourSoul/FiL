@@ -36,6 +36,10 @@ class DB;
 
 namespace fil {
 
+std::error_code put_error_code() { return std::error_code(0, except_cat::db {}); }
+std::error_code get_error_code() { return std::error_code(1, except_cat::db {}); }
+std::error_code commit_error_code() { return std::error_code(42, except_cat::db {}); }
+
 class kv_rocksdb {
 
  public:
@@ -44,9 +48,13 @@ class kv_rocksdb {
 	public:
 	  explicit transaction(kv_rocksdb& db);
 
-	  std::string get(const std::string& key);
+	  bool commit_transaction();
 
+	  std::string get(const std::string& key);
 	  std::vector<std::string> multi_get(const std::vector<std::string>& keys);
+
+	  bool set(const key_value& to_add);
+	  bool multi_set(const std::vector<key_value>& to_add);
 
 	  template<typename T>
 	  T get_as(const std::string& key) {
@@ -65,10 +73,6 @@ class kv_rocksdb {
 		 }
 		 throw std::logic_error("get_as not implemented");
 	  }
-
-	  bool set(const key_value& to_add);
-
-	  bool multi_set(const std::vector<key_value>& to_add);
 
 	private:
 	  std::unique_ptr<rocksdb::Transaction> _transaction;

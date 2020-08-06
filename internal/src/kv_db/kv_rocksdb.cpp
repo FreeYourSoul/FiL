@@ -9,8 +9,6 @@
 
 namespace fil {
 
-std::error_code put_error_code() { return std::error_code(0, except_cat::db {}); }
-
 kv_rocksdb::transaction::transaction(kv_rocksdb& db) {
    rocksdb::WriteOptions write_options;
    rocksdb::Transaction* txn = db._db->BeginTransaction(write_options);
@@ -24,7 +22,7 @@ std::string kv_rocksdb::transaction::get(const std::string& key) {
 
    auto s = _transaction->Get(opt, key, &result);
    if (!s.ok()) {
-	  throw fil::exception(put_error_code(), fmt::format("Error while getting key {} : {}", key, s.ToString()));
+	  throw fil::exception(get_error_code(), fmt::format("Error while getting key {} : {}", key, s.ToString()));
    }
    return result;
 }
@@ -42,7 +40,7 @@ std::vector<std::string> kv_rocksdb::transaction::multi_get(const std::vector<st
 
    for (const auto& s : status) {
 	  if (!s.ok()) {
-		 throw fil::exception(put_error_code(), fmt::format("Error while multi getting {} values : {}", keys.size(), s.ToString()));
+		 throw fil::exception(get_error_code(), fmt::format("Error while multi getting {} values : {}", keys.size(), s.ToString()));
 	  }
    }
    return results;
@@ -62,6 +60,13 @@ bool kv_rocksdb::transaction::multi_set(const std::vector<key_value>& to_adds) {
 	  set(to_add);
    }
    return true;
+}
+
+bool kv_rocksdb::transaction::commit_transaction() {
+   auto s = _transaction->Commit();
+   if (!s.ok()) {
+	  throw fil::exception(commit_error_code(), fmt::format("Commit Failure : {}", s.ToString()));
+   }
 }
 
 kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {

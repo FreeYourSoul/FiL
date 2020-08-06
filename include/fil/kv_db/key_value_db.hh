@@ -84,32 +84,32 @@ class db_transaction : DbPolicy::transaction {
    explicit db_transaction(DbPolicy& db) : DbPolicy::transaction(), _db_ref(db) {}
 
    std::vector<std::string> get(const std::string& key) {
-	  return _db_ref.multi_get(*this, key);
+	  return DbPolicy::transaction::multi_get(key);
    }
 
    std::vector<key_value> multi_get(const std::vector<std::string>& keys) {
-	  return _db_ref.multi_get(*this, keys);
+	  return DbPolicy::transaction::multi_get(keys);
    }
 
    bool set(const key_value& to_add) {
-	  return _db_ref.set(*this, to_add);
+	  return DbPolicy::transaction::set(to_add);
    }
 
    bool multi_set(const std::vector<key_value>& to_adds) {
-	  return _db_ref.multi_set(*this, to_adds);
+	  return DbPolicy::transaction::multi_set(to_adds);
    }
 
    void inc_counter(const std::string& key_counter) {
-	  return _db_ref.inc_counter(*this, key_counter);
+	  return DbPolicy::transaction::inc_counter(key_counter);
    }
 
    template<typename T>
    T get_as(const std::string& key) {
-	  return _db_ref.template get_as<T>(*this, key);
+	  return DbPolicy::transaction::template get_as<T>(key);
    }
 
    bool commit() {
-	  return _db_ref.commit_transaction(*this);
+	  return DbPolicy::transaction::commit_transaction();
    }
 
  private:

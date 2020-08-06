@@ -1,36 +1,28 @@
+find_package(Catch2 QUIET)
+include(Catch)
+
 enable_testing()
 
-add_executable(fsm_test_bin
+add_executable(header_only_test
         ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/fsm_testcase.cpp)
-target_link_libraries(fsm_test_bin fil)
-catch_discover_tests(fsm_test_bin)
-
-add_executable(cli_test_bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/cli_testcase.cpp)
-target_link_libraries(cli_test_bin fil)
-catch_discover_tests(cli_test_bin)
-
-add_executable(command_test_bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-        )
-target_link_libraries(command_test_bin fil)
-catch_discover_tests(command_test_bin)
-
-add_executable(datastructure_test_bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithm_testcase.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/fsm_testcase.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/cli_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/boundary_map_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rng_testcase.cpp
         )
-target_link_libraries(datastructure_test_bin fil)
-catch_discover_tests(datastructure_test_bin)
+target_link_libraries(header_only_test fys::fil)
+catch_discover_tests(header_only_test)
 
-add_executable(algorithm_test_bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/algorithm_testcase.cpp
-        rng_testcase.cpp)
-target_link_libraries(algorithm_test_bin fil)
-catch_discover_tests(algorithm_test_bin)
+if (WITH_FIL_ROCKSDB)
+
+    add_executable(kv_db_rocksdb_test
+            ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithm_testcase.cpp
+            rng_testcase.cpp)
+    target_link_libraries(kv_db_rocksdb_test fys::fil::kv_db fys::fil)
+    catch_discover_tests(kv_db_rocksdb_test)
+
+endif ()
 
 

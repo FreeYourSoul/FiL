@@ -7,14 +7,18 @@ endif ()
 
 project(fil CXX)
 
-# ---- Include guards ----
-if (PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-    message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.")
+include(cmake/utility/BuiltFromSource.cmake)
+include(CTest)
+
+option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
+
+if (IS_BUILT_FROM_SOURCE)
+    include(cmake/utility/DoxygenSupport.cmake)
+
+    set(WITH_FIL_ROCKSDB ON)
 endif ()
 
 find_package(fmt REQUIRED)
-
-include(cmake/utility/DoxygenSupport.cmake)
 
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
@@ -25,23 +29,12 @@ target_include_directories(fil INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
         ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
         ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
-target_compile_features(fil INTERFACE cxx_std_17)
+target_compile_features(fil INTERFACE cxx_std_20)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
-add_library(kv_db STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/fil/kv_db/key_value_db.hh
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/fil/kv_db/kv_rocksdb.hh
-        ${CMAKE_CURRENT_SOURCE_DIR}/internal/src/kv_db/kv_rocksdb.cpp
-        )
-add_library(fys::fil::kv_db ALIAS kv_db)
-target_compile_features(kv_db INTERFACE cxx_std_20)
-target_link_libraries(kv_db PUBLIC fys::fil)
-target_include_directories(kv_db PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/kv_db/include/)
+add_subdirectory(internal/src/kv_db)
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND BUILD_TESTING)
-    find_package(Catch2 QUIET)
-    include(Catch)
-    include(CTest)
-
+if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
+    message(STATUS "Tests will be built")
     add_subdirectory(tests)
 endif ()

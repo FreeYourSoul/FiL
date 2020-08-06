@@ -21,39 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_INCLUDE_FIL_KV_DB_KV_DB_EXCEPTION_HH
-#define FIL_INCLUDE_FIL_KV_DB_KV_DB_EXCEPTION_HH
+#include <catch2/catch.hpp>
 
-#include <stdexcept>
-#include <system_error>
+#include <fil/kv_db/kv_rocksdb.hh>
 
-#include <fmt/format.h>
+SECTION("kv_db_rocksdb_testcase", "[fil][kv_db][rocksdb]") {
 
-namespace fil {
-
-namespace except_cat {
-struct db : public std::error_category {
-   [[nodiscard]] const char* name() const noexcept override { return "fil::exception::db"; }
-   [[nodiscard]] std::string message(int I) const override {
-	  return fmt::format("Database Exception Category : {} : id {}", name(), I);
-   }
-};
-
-struct fil : public std::error_category {
-   [[nodiscard]] const char* name() const noexcept override { return "fil::exception"; }
-};
-}// namespace except_cat
-
-class exception : public std::runtime_error {
- public:
-   exception(const std::error_code& ec, const std::string& what) : std::runtime_error(what), _ec(ec) {}
-
-   [[nodiscard]] std::uint64_t code() const { return _ec.value(); }
-
- private:
-   std::error_code _ec;
-};
-
-}// namespace fil
-
-#endif//FIL_INCLUDE_FIL_KV_DB_KV_DB_EXCEPTION_HH
+}// End section : kv_db_rocksdb_testcase

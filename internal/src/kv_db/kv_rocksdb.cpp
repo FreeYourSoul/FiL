@@ -74,9 +74,10 @@ kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {
 
    rocksdb::OptimisticTransactionDB* txn_db;
    rocksdb::Options option = []() {
-				rocksdb::Options opt;
-				opt.create_if_missing = true;
-				return opt; }();
+	  rocksdb::Options opt;
+	  opt.create_if_missing = true;
+	  return opt;
+   }();
 
    auto status = rocksdb::OptimisticTransactionDB::Open(option, initializer.path_db_file, &txn_db);
 

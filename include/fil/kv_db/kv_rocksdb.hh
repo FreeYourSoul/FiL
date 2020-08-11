@@ -26,6 +26,11 @@
 #include <exception>
 #include <memory>
 
+#include <rocksdb/utilities/optimistic_transaction_db.h>
+#include <rocksdb/utilities/transaction.h>
+
+#include <fil/exception/exception.hh>
+
 #include "key_value_db.hh"
 
 // forward declarations
@@ -36,9 +41,9 @@ class DB;
 
 namespace fil {
 
-std::error_code put_error_code() { return std::error_code(0, except_cat::db {}); }
-std::error_code get_error_code() { return std::error_code(1, except_cat::db {}); }
-std::error_code commit_error_code() { return std::error_code(42, except_cat::db {}); }
+static std::error_code put_error_code() { return std::error_code(0, except_cat::db {}); }
+static std::error_code get_error_code() { return std::error_code(1, except_cat::db {}); }
+static std::error_code commit_error_code() { return std::error_code(42, except_cat::db {}); }
 
 class kv_rocksdb {
 
@@ -80,8 +85,8 @@ class kv_rocksdb {
    };
 
    struct initializer_type {
-	  std::string path_db_file;
-	  std::vector<key_value> initial_kv;
+	  std::string path_db_file{};
+	  std::vector<key_value> initial_kv{};
    };
 
    explicit kv_rocksdb(const initializer_type& initializer);
@@ -89,5 +94,7 @@ class kv_rocksdb {
  private:
    std::unique_ptr<rocksdb::OptimisticTransactionDB> _db;
 };
+
+using kv_rocksdb_type = kv_db<kv_rocksdb>;
 
 }// namespace fil

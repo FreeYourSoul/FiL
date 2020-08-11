@@ -25,6 +25,31 @@
 
 #include <fil/kv_db/kv_rocksdb.hh>
 
-SECTION("kv_db_rocksdb_testcase", "[fil][kv_db][rocksdb]") {
+TEST_CASE("kv_db_rocksdb_testcase", "[fil][kv_db][rocksdb]") {
 
-}// End section : kv_db_rocksdb_testcase
+   fil::kv_rocksdb::initializer_type arg{"tmp.db"};
+   fil::kv_rocksdb_type rocks_db(arg);
+
+   SECTION("test get") {
+
+   }
+
+   SECTION("test set") {
+
+   }
+
+   SECTION("test multiset") {
+
+   }
+
+   SECTION("test multiget") {
+
+   }
+
+   SECTION("test get_as") {
+
+   }
+
+
+}// End TestCase :
+

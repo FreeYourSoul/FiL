@@ -67,6 +67,7 @@ bool kv_rocksdb::transaction::commit_transaction() {
    if (!s.ok()) {
 	  throw fil::exception(commit_error_code(), fmt::format("Commit Failure : {}", s.ToString()));
    }
+   return true;
 }
 
 kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {

@@ -1,5 +1,5 @@
 # FiL
-C++ general Header only library
+Free instrument Library is a general purpose C++ library principally header-only 
 
 ## CLI
 Command line interface header only library

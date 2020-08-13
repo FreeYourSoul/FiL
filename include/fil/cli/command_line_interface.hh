@@ -47,6 +47,10 @@ class cli_base_action {
 	  }
    }
 
+   void add_helper_usage(std::string usage) {
+	  _usage = std::move(usage);
+   }
+
    void exec(std::string param) const {
 	  if (_handler_with_param) {
 		 _handler_with_param(std::move(param));
@@ -62,6 +66,7 @@ class cli_base_action {
  protected:
    std::string _name;
    std::string _helper;
+   std::string _usage;
 
    std::function<void()> _handler = nullptr;
    std::function<void(std::string)> _handler_with_param = nullptr;
@@ -79,7 +84,7 @@ class option : public internal::cli_base_action {
 
    [[nodiscard]] std::string
    generate_helper() const {
-	  return {};
+	  return fmt::format(FMT_STRING("{} : {}"), _name, _helper);
    }
 };
 
@@ -156,7 +161,23 @@ class sub_command : public internal::cli_base_action {
    }
 
    [[nodiscard]] std::string generate_helper() const {
-	  return {};
+	  std::string help = fmt::format(
+		  FMT_STRING("This a helper for the command {}:\n{}\n     {}\n"),
+		  _name, _helper, _usage.empty() ? "" : fmt::format("Usage : {}", _usage));
+
+	  if (!_options.empty()) {
+		 help = fmt::format(FMT_STRING("{} options :"), help);
+		 for (const auto& opt : _options) {
+			help = fmt::format(FMT_STRING("{}\n\t{}"), help, opt.generate_helper());
+		 }
+	  }
+	  if (!_sub_commands.empty()) {
+		 help = fmt::format(FMT_STRING("{}\n\nsub commands:"), help);
+		 for (const auto& sub : _sub_commands) {
+			help = fmt::format(FMT_STRING("{}\n\t{} : {}"), help, sub._name, sub._helper);
+		 }
+	  }
+	  return help.append("\n");
    }
 
  private:
@@ -238,6 +259,14 @@ class command_line_interface : public sub_command {
 
 namespace cli {
 
+/**
+ * Add a an option storing the argument into an output parameter string
+ *
+ * @param sub_command add the option in this sub_command
+ * @param opt option code of the option
+ * @param argument_string output parameter in which storing the argument of the option
+ * @param help helping string displayed when using --help
+ */
 static void
 add_argument_option(sub_command& sub_command, std::string opt, std::string& argument_string, std::string help = "") {
    sub_command.add_option(option(
@@ -246,6 +275,12 @@ add_argument_option(sub_command& sub_command, std::string opt, std::string& argu
 	   std::move(help)));
 }
 
+/**
+ * Do an aggregation of the argument of a sub_command into a vector
+ *
+ * @param sub_command command to do the aggregation from
+ * @param args_string output parameter : aggregate all the parameter into this vector
+ */
 static void
 add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string) {
    sub_command.on_parameter_handler([&args_string](std::string arg) { args_string.emplace_back(std::move(arg)); });

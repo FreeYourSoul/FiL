@@ -155,6 +155,11 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
   std::vector<std::string> cli_argument;
   cli.on_parameter_handler([&cli_argument](std::string param) { cli_argument.emplace_back(std::move(param)); });
 
+   SECTION("help") {
+	  char* args[] = {"cli", "--help"};
+	  cli.parse_command_line(2, args);
+   }
+
   SECTION("called alone") {
 	char *args[] = {"cli", "command_of_doom"};
 	cli.parse_command_line(2, args);

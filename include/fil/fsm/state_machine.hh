@@ -78,7 +78,7 @@ class state_machine {
 	  _transitions.emplace_back(std::make_tuple(before, after, std::forward<predicate>(pred)));
    }
 
-   void on_exit(state_type state_entry, callback&& on_exit) {
+   void on_entry(state_type state_entry, callback&& on_exit) {
 	  reserve_callbacks(state_entry);
 	  _on_entry_callbacks[index_state(state_entry)] = std::forward<callback>(on_exit);
    }

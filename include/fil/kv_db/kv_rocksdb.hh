@@ -48,7 +48,8 @@ static std::error_code commit_error_code() { return std::error_code(42, except_c
 class kv_rocksdb {
 
  public:
-   static constexpr bool is_transactional = true;
+   static const bool is_transactional = true;
+
    class transaction {
 	public:
 	  explicit transaction(kv_rocksdb& db);
@@ -56,7 +57,7 @@ class kv_rocksdb {
 	  bool commit_transaction();
 
 	  std::string get(const std::string& key);
-	  std::vector<std::string> multi_get(const std::vector<std::string>& keys);
+	  std::vector<key_value> multi_get(const std::vector<std::string>& keys);
 
 	  bool set(const key_value& to_add);
 	  bool multi_set(const std::vector<key_value>& to_add);

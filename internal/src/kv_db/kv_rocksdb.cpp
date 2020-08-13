@@ -1,3 +1,6 @@
+#include <optional>
+
+#include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction.h>
@@ -27,8 +30,9 @@ std::string kv_rocksdb::transaction::get(const std::string& key) {
    return result;
 }
 
-std::vector<std::string> kv_rocksdb::transaction::multi_get(const std::vector<std::string>& keys) {
-   std::vector<std::string> results;
+std::vector<key_value> kv_rocksdb::transaction::multi_get(const std::vector<std::string>& keys) {
+   std::vector<key_value> results;
+   std::vector<std::string> r;
    rocksdb::ReadOptions opt;
    std::vector<rocksdb::Slice> slicing;
 
@@ -36,12 +40,14 @@ std::vector<std::string> kv_rocksdb::transaction::multi_get(const std::vector<st
    for (const auto& key : keys) {
 	  slicing.emplace_back(key);
    }
-   auto status = _transaction->MultiGet(opt, slicing, &results);
+   auto status = _transaction->MultiGet(opt, slicing, &r);
 
-   for (const auto& s : status) {
-	  if (!s.ok()) {
-		 throw fil::exception(get_error_code(), fmt::format("Error while multi getting {} values : {}", keys.size(), s.ToString()));
+   results.reserve(r.size());
+   for (std::size_t i = 0; i < status.size(); ++i) {
+	  if (!status.at(i).ok()) {
+		 throw fil::exception(get_error_code(), fmt::format("Error while multi getting {} values : {}", keys.size(), status.at(i).ToString()));
 	  }
+	  results.emplace_back(keys.at(i), r.at(i));
    }
    return results;
 }
@@ -70,15 +76,19 @@ bool kv_rocksdb::transaction::commit_transaction() {
    return true;
 }
 
+void kv_rocksdb::transaction::add_counter(const std::string& key, std::int64_t to_add) {};
+
 kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {
 
    rocksdb::OptimisticTransactionDB* txn_db;
-   rocksdb::Options option = []() {
+   rocksdb::Options option = [&initializer]() {
 	  rocksdb::Options opt;
 	  opt.create_if_missing = true;
+	  if (initializer.merge_operator) {
+		 opt.merge_operator.reset(initializer.merge_operator);
+	  }
 	  return opt;
    }();
-
    auto status = rocksdb::OptimisticTransactionDB::Open(option, initializer.path_db_file, &txn_db);
 
    if (!status.ok()) {
@@ -86,6 +96,10 @@ kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {
    }
 
    _db.reset(txn_db);
+
+   for (auto&[k, v] : initializer.initial_kv) {
+      _db->Put(rocksdb::WriteOptions(), k, v);
+   }
 }
 
 }// namespace fil

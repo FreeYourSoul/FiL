@@ -28,6 +28,7 @@
 
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction.h>
+#include <rocksdb/merge_operator.h>
 
 #include <fil/exception/exception.hh>
 
@@ -45,10 +46,12 @@ static std::error_code put_error_code() { return std::error_code(0, except_cat::
 static std::error_code get_error_code() { return std::error_code(1, except_cat::db {}); }
 static std::error_code commit_error_code() { return std::error_code(42, except_cat::db {}); }
 
+
 class kv_rocksdb {
 
  public:
-   static constexpr bool is_transactional = true;
+   static const bool is_transactional = true;
+
    class transaction {
 	public:
 	  explicit transaction(kv_rocksdb& db);
@@ -56,7 +59,7 @@ class kv_rocksdb {
 	  bool commit_transaction();
 
 	  std::string get(const std::string& key);
-	  std::vector<std::string> multi_get(const std::vector<std::string>& keys);
+	  std::vector<key_value> multi_get(const std::vector<std::string>& keys);
 
 	  bool set(const key_value& to_add);
 	  bool multi_set(const std::vector<key_value>& to_add);
@@ -79,6 +82,8 @@ class kv_rocksdb {
 		 throw std::logic_error("get_as not implemented");
 	  }
 
+	  void add_counter(const std::string& key, std::int64_t to_add);
+
 	private:
 	  std::unique_ptr<rocksdb::Transaction> _transaction;
 
@@ -87,12 +92,17 @@ class kv_rocksdb {
    struct initializer_type {
 	  std::string path_db_file{};
 	  std::vector<key_value> initial_kv{};
+
+	  //! rocksdb merge operator
+      rocksdb::MergeOperator* merge_operator = nullptr;
+
    };
 
    explicit kv_rocksdb(const initializer_type& initializer);
 
  private:
    std::unique_ptr<rocksdb::OptimisticTransactionDB> _db;
+
 };
 
 using kv_rocksdb_type = kv_db<kv_rocksdb>;

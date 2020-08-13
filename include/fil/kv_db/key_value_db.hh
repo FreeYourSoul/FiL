@@ -34,18 +34,15 @@ namespace fil {
 
 using key_value = std::pair<std::string, std::string>;
 
-template<typename T>
-struct is_transactional_db {
-   static const bool value = T::is_transactional;
-};
-
 template<typename DbPolicy, class Enable = void>
-class kv_db : DbPolicy {};
+class kv_db : public DbPolicy {};
 
 // ******* Non-Transactional part *******
 
+// TODO : Enforce that db has the method they should have with concept
+//        It should also remove the SFINAE code and become specialization of the DbPolicy
 template<typename DbPolicy>
-class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> : DbPolicy {
+class kv_db<DbPolicy, std::enable_if_t<!DbPolicy::is_transactional>> : public DbPolicy {
 
  public:
    explicit kv_db(const typename DbPolicy::initializer_type& initializer) : DbPolicy(initializer) {}
@@ -78,50 +75,14 @@ class kv_db<DbPolicy, std::enable_if_t<!is_transactional_db<DbPolicy>::value>> :
 
 // ******* Transactional part *******
 
+
+// TODO : Enforce that Transaction has the method they should have with concept
+//        It should also remove the SFINAE code and become specialization of the DbPolicy
 template<typename DbPolicy>
-class db_transaction : DbPolicy::transaction {
+class kv_db<DbPolicy, std::enable_if_t<DbPolicy::is_transactional>> : public DbPolicy {
  public:
-   explicit db_transaction(DbPolicy& db) : DbPolicy::transaction(), _db_ref(db) {}
+   using transaction_type = typename DbPolicy::transaction;
 
-   std::vector<std::string> get(const std::string& key) {
-	  return DbPolicy::transaction::multi_get(key);
-   }
-
-   std::vector<key_value> multi_get(const std::vector<std::string>& keys) {
-	  return DbPolicy::transaction::multi_get(keys);
-   }
-
-   bool set(const key_value& to_add) {
-	  return DbPolicy::transaction::set(to_add);
-   }
-
-   bool multi_set(const std::vector<key_value>& to_adds) {
-	  return DbPolicy::transaction::multi_set(to_adds);
-   }
-
-   void inc_counter(const std::string& key_counter) {
-	  return DbPolicy::transaction::inc_counter(key_counter);
-   }
-
-   template<typename T>
-   T get_as(const std::string& key) {
-	  return DbPolicy::transaction::template get_as<T>(key);
-   }
-
-   bool commit() {
-	  return DbPolicy::transaction::commit_transaction();
-   }
-
- private:
-   std::reference_wrapper<DbPolicy> _db_ref;
-};
-
-template<typename DbPolicy>
-class kv_db<DbPolicy, std::enable_if_t<is_transactional_db<DbPolicy>::value>> : DbPolicy {
-
-   using transaction_type = db_transaction<DbPolicy>;
-
- public:
    explicit kv_db(const typename DbPolicy::initializer_type& initializer) : DbPolicy(initializer) {}
 
    std::unique_ptr<transaction_type> make_transaction() {

@@ -39,6 +39,8 @@ class kv_db : public DbPolicy {};
 
 // ******* Non-Transactional part *******
 
+// TODO : Enforce that db has the method they should have with concept
+//        It should also remove the SFINAE code and become specialization of the DbPolicy
 template<typename DbPolicy>
 class kv_db<DbPolicy, std::enable_if_t<!DbPolicy::is_transactional>> : public DbPolicy {
 
@@ -74,6 +76,8 @@ class kv_db<DbPolicy, std::enable_if_t<!DbPolicy::is_transactional>> : public Db
 // ******* Transactional part *******
 
 
+// TODO : Enforce that Transaction has the method they should have with concept
+//        It should also remove the SFINAE code and become specialization of the DbPolicy
 template<typename DbPolicy>
 class kv_db<DbPolicy, std::enable_if_t<DbPolicy::is_transactional>> : public DbPolicy {
  public:

@@ -87,3 +87,30 @@ TEST_CASE("kv_db_rocksdb_testcase", "[fil][kv_db][rocksdb]") {
    }
 
 }// End TestCase :
+
+
+TEST_CASE("kv_db_rocksdb_testcase default setting", "[fil][kv_db][rocksdb]") {
+   fil::kv_rocksdb::initializer_type arg {"tmp.db", {{"1", "White Chocobo"}, {"4", "Black Chocobo"}, {"2", "Green Chocobo"}, {"3", "Yellow Chocobo"}}};
+   fil::kv_rocksdb_type rocks_db(arg);
+
+   auto trans = rocks_db.make_transaction();
+
+   SECTION("Test default key/values are set") {
+      auto res = trans->multi_get({"1", "2", "3", "4"});
+
+      CHECK(4 == res.size());
+      CHECK("1" == res.at(0).first);
+      CHECK("White Chocobo" == res.at(0).second);
+
+      CHECK("2" == res.at(1).first);
+      CHECK("Green Chocobo" == res.at(1).second);
+
+      CHECK("3" == res.at(2).first);
+      CHECK("Yellow Chocobo" == res.at(2).second);
+
+      CHECK("4" == res.at(3).first);
+      CHECK("Black Chocobo" == res.at(3).second);
+   }// End section : Test default key/values are set
+
+
+}// End TestCase : kv_db_rocksdb_testcase

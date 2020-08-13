@@ -1,3 +1,6 @@
+#include <optional>
+
+#include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction.h>
@@ -73,15 +76,19 @@ bool kv_rocksdb::transaction::commit_transaction() {
    return true;
 }
 
+void kv_rocksdb::transaction::add_counter(const std::string& key, std::int64_t to_add) {};
+
 kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {
 
    rocksdb::OptimisticTransactionDB* txn_db;
-   rocksdb::Options option = []() {
+   rocksdb::Options option = [&initializer]() {
 	  rocksdb::Options opt;
 	  opt.create_if_missing = true;
+	  if (initializer.merge_operator) {
+		 opt.merge_operator.reset(initializer.merge_operator);
+	  }
 	  return opt;
    }();
-
    auto status = rocksdb::OptimisticTransactionDB::Open(option, initializer.path_db_file, &txn_db);
 
    if (!status.ok()) {
@@ -89,6 +96,10 @@ kv_rocksdb::kv_rocksdb(const initializer_type& initializer) {
    }
 
    _db.reset(txn_db);
+
+   for (auto&[k, v] : initializer.initial_kv) {
+      _db->Put(rocksdb::WriteOptions(), k, v);
+   }
 }
 
 }// namespace fil

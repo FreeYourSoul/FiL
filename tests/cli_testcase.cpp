@@ -273,8 +273,14 @@ TEST_CASE("cli_test_case utility", "[cli]") {
 							  [&action_sub_has_been_called]() { action_sub_has_been_called = true; },
 							  "Sub Command Helper doc");
 
-  std::string arg_opt;
-  fil::cli::add_argument_option(sub, "--oo", arg_opt);
+   std::string arg_opt;
+   fil::cli::add_argument_option(sub, "--oo", arg_opt);
+
+   std::int64_t arg_int_opt;
+   fil::cli::add_argument_option(sub, "--ooint", arg_int_opt);
+
+   std::uint64_t arg_uint_opt;
+   fil::cli::add_argument_option(sub, "--oouint", arg_uint_opt);
 
   std::vector<std::string> vec_arg;
   fil::cli::add_multi_arg(sub, vec_arg);
@@ -282,14 +288,32 @@ TEST_CASE("cli_test_case utility", "[cli]") {
   cli.add_sub_command(std::move(sub));
   cli.set_sub_command_only(true);
 
-  SECTION("add_argument_option") {
-	char *args[] = {"cli", "command_of_doom", "--oo", "argumentation_of_doom"};
-	cli.parse_command_line(4, args);
+   SECTION("add_argument_option") {
+	  char *args[] = {"cli", "command_of_doom", "--oo", "argumentation_of_doom"};
+	  cli.parse_command_line(4, args);
 
-	CHECK_FALSE(action_base_has_been_called);
-	CHECK(action_sub_has_been_called);
-	CHECK("argumentation_of_doom" == arg_opt);
-  } // End section :
+	  CHECK_FALSE(action_base_has_been_called);
+	  CHECK(action_sub_has_been_called);
+	  CHECK("argumentation_of_doom" == arg_opt);
+   } // End section :
+
+   SECTION("add_argument_option int") {
+	  char *args[] = {"cli", "command_of_doom", "--ooint", "-42"};
+	  cli.parse_command_line(4, args);
+
+	  CHECK_FALSE(action_base_has_been_called);
+	  CHECK(action_sub_has_been_called);
+	  CHECK(-42 == arg_int_opt);
+   } // End section :
+
+   SECTION("add_argument_option uint") {
+	  char *args[] = {"cli", "command_of_doom", "--oouint", "42"};
+	  cli.parse_command_line(4, args);
+
+	  CHECK_FALSE(action_base_has_been_called);
+	  CHECK(action_sub_has_been_called);
+	  CHECK(42 == arg_uint_opt);
+   } // End section :
 
   SECTION("add_multi_arg") {
 	char *args[] = {"cli", "command_of_doom", "argumentation_of_doom1", "argumentation_of_doom2"};

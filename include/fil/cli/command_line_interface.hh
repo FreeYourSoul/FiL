@@ -24,6 +24,7 @@
 #ifndef FIL_COMMAND_LINE_INTERFACE_HH
 #define FIL_COMMAND_LINE_INTERFACE_HH
 
+#include <regex>
 #include <stdexcept>
 #include <string>
 
@@ -225,7 +226,7 @@ class sub_command : public internal::cli_base_action {
 	  }
 	  if (it->has_param()) {
 		 ++index;
-		 if (index >= args.size() || args.at(index).front() == '-') {
+		 if (index >= args.size() || (args.at(index).front() == '-' && !std::regex_match(args.at(index), std::regex("[(-|+)|][0-9]+")))) {
 			throw std::invalid_argument(fmt::format(FMT_STRING("error usage : Option {} require a parameter :\n{}"),
 													option_name, it->generate_helper()));
 		 }
@@ -264,18 +265,18 @@ class command_line_interface : public sub_command {
 namespace cli {
 
 /**
- * Add a an option storing the argument into an output parameter string
+ * Add a an option storing the argument into an output parameter
  *
  * @param sub_command add the option in this sub_command
  * @param opt option code of the option
- * @param argument_string output parameter in which storing the argument of the option
+ * @param argument output parameter in which storing the argument of the option
  * @param help helping string displayed when using --help
  */
-static void
-add_argument_option(sub_command& sub_command, std::string opt, std::string& argument_string, std::string help = "") {
+template<typename T>
+static void add_argument_option(sub_command& sub_command, std::string opt, T& argument, std::string help = "") {
    sub_command.add_option(option(
 	   std::move(opt),
-	   [&argument_string](std::string arg) { argument_string = std::move(arg); },
+	   [&argument](T arg) { argument = std::move(arg); },
 	   std::move(help)));
 }
 

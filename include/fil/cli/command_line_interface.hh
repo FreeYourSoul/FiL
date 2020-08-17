@@ -82,6 +82,10 @@ class option : public internal::cli_base_action {
    explicit option(std::string name, std::function<void(std::string)> handler, std::string helper = "")
 	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)) {}
 
+   explicit option(std::string name, std::function<void(std::int64_t)> h, std::string helper = "")
+	   : internal::cli_base_action(
+		   std::move(name), [h = std::move(h)](std::string str) { h(std::stol(str)); }, std::move(helper)) {}
+
    [[nodiscard]] std::string
    generate_helper() const {
 	  return fmt::format(FMT_STRING("{} : {}"), _name, _helper);

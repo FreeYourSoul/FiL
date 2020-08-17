@@ -147,6 +147,11 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
 							 [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); },
 							 "command with arg"));
 
+   std::vector<std::int64_t> opt_int_called;
+   sub.add_option(fil::option("--opt-with-int",
+							  [&opt_int_called](std::int64_t arg) { opt_int_called.emplace_back(arg); },
+							  "command with integer arg"));
+
   std::vector<std::string> sub_argument;
   sub.on_parameter_handler([&sub_argument](std::string param) { sub_argument.emplace_back(std::move(param)); });
 
@@ -178,15 +183,26 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
 	CHECK(opt_no_arg_called);
   }
 
-  SECTION("with one option with arg") {
-	char *args[] = {"cli", "command_of_doom", "--opt-with-arg", "this_is_an_argument"};
-	cli.parse_command_line(4, args);
+   SECTION("with one option with arg") {
+	  char *args[] = {"cli", "command_of_doom", "--opt-with-arg", "this_is_an_argument"};
+	  cli.parse_command_line(4, args);
 
-	CHECK_FALSE(action_base_has_been_called);
-	CHECK(action_sub_has_been_called);
-	REQUIRE(1 == opt_arg_called.size());
-	CHECK("this_is_an_argument" == opt_arg_called.at(0));
-  }
+	  CHECK_FALSE(action_base_has_been_called);
+	  CHECK(action_sub_has_been_called);
+	  REQUIRE(1 == opt_arg_called.size());
+	  CHECK("this_is_an_argument" == opt_arg_called.at(0));
+   }
+
+   SECTION("with one option with int arg") {
+	  char *args[] = {"cli", "command_of_doom", "--opt-with-int", "42", "--opt-with-int", "1337"};
+	  cli.parse_command_line(6, args);
+
+	  CHECK_FALSE(action_base_has_been_called);
+	  CHECK(action_sub_has_been_called);
+	  REQUIRE(2 == opt_int_called.size());
+	  CHECK(42 == opt_int_called.at(0));
+	  CHECK(1337 == opt_int_called.at(1));
+   }
 
   SECTION("with options") {
 	char *args[] = {

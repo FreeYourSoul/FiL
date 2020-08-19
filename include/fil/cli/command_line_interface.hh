@@ -85,11 +85,11 @@ class option : public internal::cli_base_action {
 
    explicit option(std::string name, std::function<void(std::int64_t)> h, std::string helper = "")
 	   : internal::cli_base_action(
-		   std::move(name), [h = std::move(h)](std::string str) { h(std::stol(str)); }, std::move(helper)) {}
+		   std::move(name), [h = std::move(h)](const std::string& str) { h(std::stol(str)); }, std::move(helper)) {}
 
    [[nodiscard]] std::string
    generate_helper() const {
-	  return fmt::format(FMT_STRING("{} : {}"), _name, _helper);
+	  return fmt::format(FMT_STRING("{}{} : {}"), _name, _handler_with_param ? "<arg>" : "", _helper);
    }
 };
 
@@ -104,22 +104,34 @@ class option : public internal::cli_base_action {
  */
 class sub_command : public internal::cli_base_action {
  public:
-   explicit sub_command(std::string name, std::function<void()> handler, std::string helper)
-	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)) {
+   explicit sub_command(std::string name, std::function<void()> handler, std::string helper,
+						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
+		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
-		  "--help", [this]() { fmt::print(generate_helper()); }, "Display this helper"));
+		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
    }
 
-   explicit sub_command(std::string name, std::function<void(std::string)> handler, std::string helper)
-	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)) {
+//   explicit sub_command(std::string name, std::function<void(std::string)> handler, std::string helper,
+//						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+//	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
+//		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
+//	  _options.emplace_back(option(
+//		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
+//   }
+
+   explicit sub_command(std::string name, std::string helper,
+						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+	   : internal::cli_base_action(std::move(name), [](){}, std::move(helper)), _sub_command_only(true),
+		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
-		  "--help", [this]() { fmt::print(generate_helper()); }, "Display this helper"));
+		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
    }
 
    void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }
 
-   void add_sub_command(sub_command&& command) {
-	  _sub_commands.emplace_back(std::move(command));
+   void add_sub_command(const sub_command& command) {
+	  _sub_commands.emplace_back(command);
    }
 
    void add_option(option&& opt) {
@@ -253,6 +265,9 @@ class command_line_interface : public sub_command {
    explicit command_line_interface(std::function<void()> handler, std::string helper = "")
 	   : sub_command({}, std::move(handler), std::move(helper)) {}
 
+   explicit command_line_interface(std::vector<sub_command> sub_commands, std::function<void()> handler, std::string helper = "")
+	   : sub_command({}, std::move(handler), std::move(helper), std::move(sub_commands)) {}
+
    bool parse_command_line(int argc, char** argv) {
 	  if (argc > 0) {
 		 std::vector<std::string> arguments(argv, argv + argc);
@@ -269,7 +284,7 @@ namespace cli {
  *
  * @param sub_command add the option in this sub_command
  * @param opt option code of the option
- * @param argument output parameter in which storing the argument of the option
+ * @param argument output parameter in which storing the argument of the option (can be integral or string)
  * @param help helping string displayed when using --help
  */
 template<typename T>

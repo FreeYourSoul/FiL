@@ -26,14 +26,15 @@ In order to use it, a base class for the cli has to be used (internally this cla
 * Utility function to automatically add recurrent type of options exists:
 ```c++
 /**
- * Add a an option storing the argument into an output parameter string
+ * Add a an option storing the argument into an output parameter
  *
  * @param sub_command add the option in this sub_command
  * @param opt option code of the option
- * @param argument_string output parameter in which storing the argument of the option
+ * @param argument output parameter in which storing the argument of the option (can be integral or string)
  * @param help helping string displayed when using --help
  */
-add_argument_option(sub_command& sub_command, std::string opt, std::string& argument_string, std::string help = "");
+template<typename T>
+add_argument_option(sub_command& sub_command, std::string opt, T& argument, std::string help = "");
 
 /**
  * Do an aggregation of the argument of a sub_command into a vector

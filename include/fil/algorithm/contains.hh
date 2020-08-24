@@ -46,7 +46,7 @@ template<typename T, typename R, typename Accessor>
 [[nodiscard]] bool all_contains(const std::vector<T>& to_check, const std::vector<R>& container, Accessor&& accessor) {
    return std::all_of(to_check.cbegin(), to_check.cend(), [container, &accessor](const T& lhs) {
 	  return std::find_if(container.cbegin(), container.cend(),
-						  [&lhs, &accessor](const auto& v) { return accessor(lhs) == accessor(v); })
+						  [&lhs, &accessor](const auto& v) { return lhs == accessor(v); })
 		  != container.cend();
    });
 }

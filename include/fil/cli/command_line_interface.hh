@@ -288,7 +288,7 @@ namespace cli {
  * @param help helping string displayed when using --help
  */
 template<typename T>
-static void add_argument_option(sub_command& sub_command, std::string opt, T& argument, std::string help = "") {
+[[maybe_unused]] static void add_argument_option(sub_command& sub_command, std::string opt, T& argument, std::string help = "") {
    sub_command.add_option(option(
 	   std::move(opt),
 	   [&argument](T arg) { argument = std::move(arg); },
@@ -301,8 +301,7 @@ static void add_argument_option(sub_command& sub_command, std::string opt, T& ar
  * @param sub_command command to do the aggregation from
  * @param args_string output parameter : aggregate all the parameter into this vector
  */
-static void
-add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string) {
+[[maybe_unused]] static void add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string) {
    sub_command.on_parameter_handler([&args_string](std::string arg) { args_string.emplace_back(std::move(arg)); });
 }
 

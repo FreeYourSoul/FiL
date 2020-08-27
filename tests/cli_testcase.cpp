@@ -31,20 +31,23 @@ TEST_CASE("cli_test_case Simple", "[cli]") {
 	   [&action_base_has_been_called]() { action_base_has_been_called = true; },
 	   "A Simple Command Line tool");
 
-   bool opt_no_arg_called = false;
-   cli.add_option(fil::option(
-	   "--opt-no-arg",
-	   [&opt_no_arg_called]() { opt_no_arg_called = true; },
-	   "command without arg"));
-
    std::vector<std::string> opt_arg_called;
-   cli.add_option(fil::option(
+   const auto& call_handler_with_arg = cli.add_option(fil::option(
 	   "--opt-with-arg",
 	   [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); },
 	   "command with arg"));
 
+   bool opt_no_arg_called = false;
+   const auto& call_handler_without_arg = cli.add_option(fil::option(
+	   "--opt-no-arg",
+	   [&opt_no_arg_called]() { opt_no_arg_called = true; },
+	   "command without arg"));
+
    std::vector<std::string> cli_argument;
    cli.on_parameter_handler([&cli_argument](std::string param) { cli_argument.emplace_back(std::move(param)); });
+
+   CHECK_FALSE(call_handler_without_arg);
+   CHECK_FALSE(call_handler_with_arg);
 
    SECTION("called alone") {
 	  char* args[] = {"cli"};
@@ -57,8 +60,11 @@ TEST_CASE("cli_test_case Simple", "[cli]") {
 	  char* args[] = {"cli", "--opt-no-arg"};
 	  cli.parse_command_line(2, args);
 
+	  fmt::print("call_handler & = {}\n",  static_cast<const void *>(&call_handler_without_arg));
+
 	  CHECK(action_base_has_been_called);
 	  CHECK(opt_no_arg_called);
+	  CHECK(call_handler_without_arg);
    }
 
    SECTION("with one option with argument") {
@@ -68,6 +74,7 @@ TEST_CASE("cli_test_case Simple", "[cli]") {
 	  CHECK(action_base_has_been_called);
 	  REQUIRE(1 == opt_arg_called.size());
 	  CHECK("this_is_an_argument" == opt_arg_called.at(0));
+	  CHECK(call_handler_with_arg);
    }
 
    SECTION("with options") {
@@ -150,7 +157,7 @@ TEST_CASE("cli_test_case OneLiner Constructor", "[cli]") {
 
    SECTION("sub_com1 only subcommand allowed") {
 	  char* args[] = {"cli", "sub_com_1"};
-	  CHECK_THROWS(cli.parse_command_line(1, args));
+	  CHECK_THROWS(cli.parse_command_line(2, args));
    }
 
    SECTION("sub_com1 inner_inner") {

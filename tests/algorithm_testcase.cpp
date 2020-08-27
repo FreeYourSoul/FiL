@@ -146,6 +146,26 @@ TEST_CASE("algorithm_testcase all_contains", "[algorithm]") {
 
    }// End section : All in vector : custom Accessor
 
+   SECTION("All in vector : custom Accessor And different vec type") {
+
+	  struct AnotherType {
+		 std::string chocobo {};
+		 std::uint32_t pepe {0};
+	  };
+
+	  std::vector<AnotherType> success =
+		  {{"name1", 1}, {"name2", 2}, {"name3", 3}, {"name4", 4}, {"name5", 6}, {"name6", 6}, {"name7", 7}, {"name8", 8}, {"name42", 42}};
+
+	  CHECK(fil::all_contains(initial_vector, success,
+							  [](const AnotherType& elem) { return TestingType {elem.chocobo, elem.pepe}; }));
+
+	  initial_vector.emplace_back(TestingType {"nannnan", 22342});
+
+	  CHECK_FALSE(fil::all_contains(initial_vector, success,
+									[](const auto& elem) { return TestingType {elem.chocobo, elem.pepe}; }));
+
+   }// End section : All in vector : custom Accessor  And different vec type
+
 }// end testcase : algorithm_testcase all_contains
 
 TEST_CASE("algorithm_testcase string", "[algorithm]") {
@@ -194,7 +214,8 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
    SECTION("basic split_string check fragment with limitation") {
 
 	  std::vector<std::string> fragments;
-	  fil::split_string("this;contains;three;semi-column", ";", [&fragments](std::string fragment) { fragments.emplace_back(std::move(fragment)); }, 2);
+	  fil::split_string(
+		  "this;contains;three;semi-column", ";", [&fragments](std::string fragment) { fragments.emplace_back(std::move(fragment)); }, 2);
 	  REQUIRE(2 == fragments.size());
 	  REQUIRE("this" == fragments.at(0));
 	  REQUIRE("contains;three;semi-column" == fragments.at(1));
@@ -242,8 +263,9 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
    SECTION("basic split_string multi separator long separator with limitation") {
 
 	  std::vector<std::string> fragments;
-	  fil::split_string("this//////contains:three[-----]semi-column", {"[-----]", ":", "//////"},
-						[&fragments](std::string fragment) { fragments.emplace_back(std::move(fragment)); }, 3);
+	  fil::split_string(
+		  "this//////contains:three[-----]semi-column", {"[-----]", ":", "//////"},
+		  [&fragments](std::string fragment) { fragments.emplace_back(std::move(fragment)); }, 3);
 	  REQUIRE(3 == fragments.size());
 	  REQUIRE("this" == fragments.at(0));
 	  REQUIRE("contains" == fragments.at(1));
@@ -253,7 +275,7 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
 
    SECTION("string join") {
 
-	  std::vector<std::string> strings { "this", "is", "a", "string", "split"};
+	  std::vector<std::string> strings {"this", "is", "a", "string", "split"};
 
 	  CHECK("thisisastringsplit" == fil::join(strings));
 

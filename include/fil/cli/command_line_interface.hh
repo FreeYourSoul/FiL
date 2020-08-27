@@ -42,18 +42,21 @@ class cli_base_action {
    explicit cli_base_action(std::string name, std::function<void(std::string)> handler, std::string helper = "")
 	   : _name(std::move(name)), _helper(std::move(helper)), _handler_with_param(std::move(handler)) {}
 
-   void exec() const {
-	  if (_handler) {
-		 _handler();
-	  }
-   }
-
    void add_helper_usage(std::string usage) {
 	  _usage = std::move(usage);
    }
 
+   void exec() const {
+	  if (_handler) {
+		 _called = true;
+		 fmt::print("call_handler exec & = {}\n", static_cast<void *>(&_called));
+		 _handler();
+	  }
+   }
+
    void exec(std::string param) const {
 	  if (_handler_with_param) {
+		 _called = true;
 		 _handler_with_param(std::move(param));
 	  }
    }
@@ -64,11 +67,17 @@ class cli_base_action {
    [[nodiscard]] bool
    has_param() const { return _handler_with_param != nullptr; }
 
+   //! retrieve a handler to know if the current action has been called after a parse command
+   std::reference_wrapper<const bool> has_been_called_handler() const { return _called; }
+
  protected:
    std::string _name;
    std::string _helper;
    std::string _usage;
 
+   mutable bool _called = false;
+
+ private:
    std::function<void()> _handler = nullptr;
    std::function<void(std::string)> _handler_with_param = nullptr;
 };
@@ -89,7 +98,7 @@ class option : public internal::cli_base_action {
 
    [[nodiscard]] std::string
    generate_helper() const {
-	  return fmt::format(FMT_STRING("{}{} : {}"), _name, _handler_with_param ? "<arg>" : "", _helper);
+	  return fmt::format(FMT_STRING("{}{} : {}"), _name, has_param() ? "<arg>" : "", _helper);
    }
 };
 
@@ -112,17 +121,19 @@ class sub_command : public internal::cli_base_action {
 		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
    }
 
-//   explicit sub_command(std::string name, std::function<void(std::string)> handler, std::string helper,
-//						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
-//	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
-//		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
-//	  _options.emplace_back(option(
-//		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
-//   }
+   //   explicit sub_command(std::string name, std::function<void(std::string)> handler, std::string helper,
+   //						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+   //	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
+   //		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
+   //	  _options.emplace_back(option(
+   //		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
+   //   }
 
    explicit sub_command(std::string name, std::string helper,
 						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
-	   : internal::cli_base_action(std::move(name), [](){}, std::move(helper)), _sub_command_only(true),
+	   : internal::cli_base_action(
+		   std::move(name), []() {}, std::move(helper)),
+		 _sub_command_only(true),
 		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
 		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
@@ -130,16 +141,18 @@ class sub_command : public internal::cli_base_action {
 
    void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }
 
-   void add_sub_command(const sub_command& command) {
+   const bool& add_sub_command(const sub_command& command) {
 	  _sub_commands.emplace_back(command);
+	  return _sub_commands.back().has_been_called_handler();
    }
 
-   void add_option(option&& opt) {
+   const bool& add_option(option&& opt) {
 	  if (opt.name().front() != '-') {
 		 fmt::print("Error Option {} : An option has to start with '-' character", opt.name());
-		 return;
+		 throw std::invalid_argument("CLI error option should start with '-'");
 	  }
 	  _options.emplace_back(std::move(opt));
+	  return _options.back().has_been_called_handler();
    }
 
    void set_sub_command_only(bool is_sub_command_only) {
@@ -173,7 +186,7 @@ class sub_command : public internal::cli_base_action {
 												 _name,
 												 generate_helper()));
 	  }
-	  _handler();
+	  exec();
 	  return true;
    }
 

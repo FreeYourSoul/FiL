@@ -24,6 +24,7 @@
 #ifndef FIL_COMMAND_LINE_INTERFACE_HH
 #define FIL_COMMAND_LINE_INTERFACE_HH
 
+#include <list>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -49,7 +50,6 @@ class cli_base_action {
    void exec() const {
 	  if (_handler) {
 		 _called = true;
-		 fmt::print("call_handler exec & = {}\n", static_cast<void *>(&_called));
 		 _handler();
 	  }
    }
@@ -114,7 +114,7 @@ class option : public internal::cli_base_action {
 class sub_command : public internal::cli_base_action {
  public:
    explicit sub_command(std::string name, std::function<void()> handler, std::string helper,
-						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+						std::list<sub_command> sub_commands = {}, std::list<option> options = {})
 	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
 		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
@@ -130,7 +130,7 @@ class sub_command : public internal::cli_base_action {
    //   }
 
    explicit sub_command(std::string name, std::string helper,
-						std::vector<sub_command> sub_commands = {}, std::vector<option> options = {})
+						std::list<sub_command> sub_commands = {}, std::list<option> options = {})
 	   : internal::cli_base_action(
 		   std::move(name), []() {}, std::move(helper)),
 		 _sub_command_only(true),
@@ -266,8 +266,11 @@ class sub_command : public internal::cli_base_action {
 
    std::function<void(std::string)> _handler_on_param;
 
-   std::vector<sub_command> _sub_commands;
-   std::vector<option> _options;
+   // usage of list instead of vector in order to not have a re-allocation of the elements when pushed, enforcing that the handlers
+   // retrieved when call add_option or add_subcommand are not corrupted.
+   // ps: command line parsing is far from being hot path of an application, the loss of memory locality is better than a bad api
+   std::list<sub_command> _sub_commands;
+   std::list<option> _options;
 };
 
 /**
@@ -278,7 +281,7 @@ class command_line_interface : public sub_command {
    explicit command_line_interface(std::function<void()> handler, std::string helper = "")
 	   : sub_command({}, std::move(handler), std::move(helper)) {}
 
-   explicit command_line_interface(std::vector<sub_command> sub_commands, std::function<void()> handler, std::string helper = "")
+   explicit command_line_interface(std::list<sub_command> sub_commands, std::function<void()> handler, std::string helper = "")
 	   : sub_command({}, std::move(handler), std::move(helper), std::move(sub_commands)) {}
 
    bool parse_command_line(int argc, char** argv) {

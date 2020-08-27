@@ -60,8 +60,6 @@ TEST_CASE("cli_test_case Simple", "[cli]") {
 	  char* args[] = {"cli", "--opt-no-arg"};
 	  cli.parse_command_line(2, args);
 
-	  fmt::print("call_handler & = {}\n",  static_cast<const void *>(&call_handler_without_arg));
-
 	  CHECK(action_base_has_been_called);
 	  CHECK(opt_no_arg_called);
 	  CHECK(call_handler_without_arg);

@@ -1,4 +1,4 @@
-{branch ? "master",stdenv, cmake, rocksdb, catch2, fmt}:
+{branch ? "v1.0.0", stdenv, cmake, rocksdb, catch2, fmt}:
 
 stdenv.mkDerivation rec {
 

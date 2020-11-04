@@ -18,22 +18,54 @@ if (IS_BUILT_FROM_SOURCE)
     set(WITH_FIL_ROCKSDB ON)
 endif ()
 
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
 find_package(fmt REQUIRED)
 
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
 target_include_directories(fil INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/cli)
+  $<BUILD_INTERFACE:
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/cli>
+  $<INSTALL_INTERFACE:include>)
+      
 target_compile_features(fil INTERFACE cxx_std_20)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(internal/src/kv_db)
 
+write_basic_package_version_file(
+    "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
+    VERSION 0.1
+    COMPATIBILITY AnyNewerVersion
+    )
+configure_package_config_file(
+    "${PROJECT_SOURCE_DIR}/cmake/filConfig.cmake.in"
+    "${PROJECT_BINARY_DIR}/filConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/fil
+    )
+  
+install(TARGETS fil
+  EXPORT filTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PUBLIC_HEADER DESTINATION include COMPONENT Development
+  BUNDLE DESTINATION bin COMPONENT Runtime
+)
+install(EXPORT filTargets NAMESPACE fys:: DESTINATION lib/cmake/fil)
+install(FILES "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
+    "${PROJECT_BINARY_DIR}/filConfig.cmake"
+    DESTINATION lib/cmake/fil)
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
+
+      
 if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
     message(STATUS "Tests will be built")
     add_subdirectory(tests)

@@ -40,9 +40,11 @@ target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(internal/src/kv_db)
 
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version_str)
+
 write_basic_package_version_file(
     "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
-    VERSION 0.1
+    VERSION ${version_str}
     COMPATIBILITY AnyNewerVersion
     )
 configure_package_config_file(

@@ -1,4 +1,4 @@
-{branch ? "v1.0.0", stdenv, cmake, rocksdb, catch2, fmt}:
+{rev ? "c178d7e0625c87188ebd2b1bcd8cfc482376f10b", stdenv, cmake, rocksdb, catch2, fmt}:
 
 stdenv.mkDerivation rec {
 
@@ -7,7 +7,7 @@ stdenv.mkDerivation rec {
 
     src = builtins.fetchGit{
         url = "https://github.com/FreeYourSoul/Fil.git";
-        ref = "${branch}";
+	rev = "${rev}";
     };
 
     cmakeFlags = "

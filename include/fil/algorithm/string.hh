@@ -24,6 +24,7 @@
 #ifndef FIL_STRING_HH
 #define FIL_STRING_HH
 
+#include <numeric>
 #include <string>
 
 namespace fil {

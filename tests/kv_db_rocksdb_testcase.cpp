@@ -88,6 +88,93 @@ TEST_CASE("kv_db_rocksdb_testcase", "[fil][kv_db][rocksdb]") {
 
 }// End TestCase :
 
+TEST_CASE("kv_db_rocksdb_testcase listing") {
+
+   fil::kv_rocksdb::initializer_type arg {"tmp.db"};
+   fil::kv_rocksdb_type rocks_db(arg);
+
+   auto trans = rocks_db.make_transaction();
+
+   trans->set({"Key1_chocobo1", "chocobo1"});
+   trans->set({"Key1_chocobo2", "chocobo2"});
+   trans->set({"Key1_chocobo3", "chocobo3"});
+   trans->set({"Key1_chocobo4", "chocobo4"});
+   trans->set({"Key1_chocobo5", "chocobo5"});
+   trans->set({"Key2_chocobo1", "chocobo1"});
+   trans->set({"Key2_chocobo2", "chocobo2"});
+   trans->set({"Key3_chocobo1", "chocobo1"});
+
+   SECTION("test listing : default") {
+	  std::vector<std::pair<std::string, std::string>> listing;
+
+	  trans->list("Key1", [&listing](const std::string& key, const std::string& value) {
+		listing.emplace_back(key, value);
+	  });
+
+	  CHECK(5 == listing.size());
+	  CHECK("Key1_chocobo1" == listing[0].first);
+	  CHECK("chocobo1" == listing[0].second);
+
+	  CHECK("Key1_chocobo2" == listing[1].first);
+	  CHECK("chocobo2" == listing[1].second);
+
+	  CHECK("Key1_chocobo3" == listing[2].first);
+	  CHECK("chocobo3" == listing[2].second);
+
+	  CHECK("Key1_chocobo4" == listing[3].first);
+	  CHECK("chocobo4" == listing[3].second);
+
+	  CHECK("Key1_chocobo5" == listing[4].first);
+	  CHECK("chocobo5" == listing[4].second);
+   }
+
+   SECTION("test listing : defined end") {
+	  std::vector<std::pair<std::string, std::string>> listing;
+
+	  trans->list("Key1_chocobo3", "Key2_chocobo2", [&listing](const std::string& key, const std::string& value) {
+		listing.emplace_back(key, value);
+	  });
+
+	  CHECK(4 == listing.size());
+	  CHECK("Key1_chocobo3" == listing[0].first);
+	  CHECK("chocobo3" == listing[0].second);
+
+	  CHECK("Key1_chocobo4" == listing[1].first);
+	  CHECK("chocobo4" == listing[1].second);
+
+	  CHECK("Key1_chocobo5" == listing[2].first);
+	  CHECK("chocobo5" == listing[2].second);
+
+	  CHECK("Key2_chocobo1" == listing[3].first);
+	  CHECK("chocobo1" == listing[3].second);
+   }
+
+   SECTION("test listing : defined end after whole key set") {
+	  std::vector<std::pair<std::string, std::string>> listing;
+
+	  trans->list("Key2_chocobo2", "Key4", [&listing](const std::string& key, const std::string& value) {
+		listing.emplace_back(key, value);
+	  });
+
+	  CHECK(2 == listing.size());
+	  CHECK("Key2_chocobo2" == listing[0].first);
+	  CHECK("chocobo2" == listing[0].second);
+
+	  CHECK("Key3_chocobo1" == listing[1].first);
+	  CHECK("chocobo1" == listing[1].second);
+   }
+
+   SECTION("test listing : nothing in the range") {
+	  std::vector<std::pair<std::string, std::string>> listing;
+
+	  trans->list("Key42", [&listing](const std::string& key, const std::string& value) {
+		listing.emplace_back(key, value);
+	  });
+
+	  CHECK(listing.empty());
+   }
+
+}
 
 TEST_CASE("kv_db_rocksdb_testcase default setting", "[fil][kv_db][rocksdb]") {
    fil::kv_rocksdb::initializer_type arg {"tmp.db", {{"1", "White Chocobo"}, {"4", "Black Chocobo"}, {"2", "Green Chocobo"}, {"3", "Yellow Chocobo"}}};

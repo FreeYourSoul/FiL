@@ -67,6 +67,18 @@ class kv_db<DbPolicy, std::enable_if_t<!DbPolicy::is_transactional>> : public Db
 	  return DbPolicy::inc_counter(key_counter);
    }
 
+   template<typename Handler>
+   void list(std::string_view start_key, std::string_view end_key, Handler&& handler) {
+	  DbPolicy::list(start_key, end_key, std::forward<Handler>(handler));
+   }
+
+   template<typename Handler>
+   void list(std::string_view start_key, Handler&& handler) {
+	  std::string end(start_key);
+	  ++end.back();
+	  DbPolicy::list(start_key, end, std::forward<Handler>(handler));
+   }
+
    template<typename T>
    T get_as(const std::string& key) {
 	  return DbPolicy::template get_as<T>(key);

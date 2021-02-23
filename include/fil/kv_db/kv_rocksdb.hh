@@ -64,6 +64,27 @@ class kv_rocksdb {
 	  bool set(const key_value& to_add);
 	  bool multi_set(const std::vector<key_value>& to_add);
 
+	  template<typename Handler>
+	  void list(std::string_view start, std::string_view end_key, Handler&& handler) {
+		 auto *it = _transaction->GetIterator(rocksdb::ReadOptions{});
+		 for (it->Seek(rocksdb::Slice(start)); it->Valid(); it->Next()) {
+			std::string key = it->key().ToString();
+			if (key.compare(end_key) < 0) {
+				std::forward<Handler>(handler)(key, it->value().ToString());
+			}
+			else {
+			   break;
+			}
+		 }
+	  }
+
+	  template<typename Handler>
+	  void list(std::string_view start, Handler&& handler) {
+		 std::string end(start);
+		 ++end.back();
+		 list(start, end, std::forward<Handler>(handler));
+	  }
+
 	  template<typename T>
 	  T get_as(const std::string& key) {
 		 std::string value = get(key);

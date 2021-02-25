@@ -21,34 +21,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
-#define FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+#ifndef FIL_TYPE_TRAITS_HH
+#define FIL_TYPE_TRAITS_HH
 
-#include <array>
+#include <type_traits>
 
 namespace fil {
 
-template <typename T, unsigned SIZE>
-class fixed_circular_buffer {
+  namespace details {
+template<typename>
+struct is_std_vector : std::false_type {};
 
- public:
-   fixed_circular_buffer(std::optional<T> fill_with) {
-	  if (fill_with.has_value()) {
-	  	std::fill(_buffer.begin(), _buffer.end(), fill_with.value());
-	  }
-   }
+template<typename T, typename A>
+struct is_std_vector<std::vector<T,A>> : std::true_type {};
+    
+  }
 
-   void push(T&& to_push) {
-	  _buffer[_index] = std::forward<T>(to_push);
-	  _index = (_index + 1) % SIZE;
-   }
-
- private:
-   std::array<T, SIZE> _buffer{};
-
-   std::uint32_t _index = 0;
-};
-
+  template<typename T>
+  concept is_std_vector = details::is_std_vector<T>::value;
+  
 }
 
-#endif//FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+#endif //FIL_TYPE_TRAITS_HH

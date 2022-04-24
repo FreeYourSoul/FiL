@@ -118,7 +118,7 @@ class sub_command : public internal::cli_base_action {
 	   : internal::cli_base_action(std::move(name), std::move(handler), std::move(helper)), _sub_command_only(false),
 		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
-		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
+				       "--help", [this]() { fmt::print("{}", this->generate_helper()); }, "Display this helper"));
    }
 
    explicit sub_command(std::string name, std::string helper,

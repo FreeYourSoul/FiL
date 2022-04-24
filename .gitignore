@@ -1,3 +1,7 @@
+result
+build
+CMakeFiles/
+
 # Prerequisites
 *.d
 

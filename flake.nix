@@ -13,14 +13,16 @@
 
           src = pkgs.fetchgit {
             url = "https://github.com/FreeYourSoul/Fil.git";
-            rev = "c178d7e0625c87188ebd2b1bcd8cfc482376f10b";
-	    sha256 = "sha256-t0plapDg5y29fH696HT7mF7n9YKm2r3/vezV14PG4vI=";
+            rev = "ebdb5883b81e1b3764e43bcc79b4e72f3db03f32";
+	    sha256 = "sha256-s4qhNVtWsqs41QlvWkh9906nAkBkChkqvSBXd4Fql3U=";
           };
 
           cmakeFlags =
             "\n -DBUILD_SERVICE_WORLD=OFF\n -DBUILD_SERVICE_QUEST=OFF\n -DBUILD_SERVICE_ARENA=OFF\n -DBUILD_SERVICE_INVENTORY=OFF\n -DBUILD_DISP_CHAT=OFF\n -DBUILD_DISP_GATEWAY=OFF\n -DBUILD_DISPATCHER=ON\n";
 
           buildInputs = with pkgs; [ cmake rocksdb catch2 fmt ];
+
+
         };
 
         fil = defaultPackage;

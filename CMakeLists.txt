@@ -18,8 +18,11 @@ if (IS_BUILT_FROM_SOURCE)
     set(WITH_FIL_ROCKSDB ON)
 endif ()
 
-include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
+set(FIL_CMAKECONFIG_INSTALL_DIR "share/cmake/fil" CACHE STRING "install path for FilConfig.cmake")
 
 find_package(fmt REQUIRED)
 
@@ -51,7 +54,7 @@ write_basic_package_version_file(
 configure_package_config_file(
     "${PROJECT_SOURCE_DIR}/cmake/filConfig.cmake.in"
     "${PROJECT_BINARY_DIR}/filConfig.cmake"
-    INSTALL_DESTINATION lib/cmake/fil
+    INSTALL_DESTINATION ${FIL_CMAKECONFIG_INSTALL_DIR}
     )
   
 install(TARGETS fil
@@ -59,15 +62,17 @@ install(TARGETS fil
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES ${PROJECT_SOURCE_DIR}/include/fil
   PUBLIC_HEADER DESTINATION include COMPONENT Development
   BUNDLE DESTINATION bin COMPONENT Runtime
 )
-install(EXPORT filTargets NAMESPACE fys:: DESTINATION lib/cmake/fil)
-install(FILES "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
-    "${PROJECT_BINARY_DIR}/filConfig.cmake"
-    DESTINATION lib/cmake/fil)
+install(EXPORT filTargets NAMESPACE fys:: DESTINATION ${FIL_CMAKECONFIG_INSTALL_DIR})
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/filConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/filConfig.cmake"
+    DESTINATION ${FIL_CMAKECONFIG_INSTALL_DIR})
+  
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
-
       
 if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
     message(STATUS "Tests will be built")

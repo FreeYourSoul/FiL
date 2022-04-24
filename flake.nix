@@ -13,8 +13,8 @@
 
           src = pkgs.fetchgit {
             url = "https://github.com/FreeYourSoul/Fil.git";
-            rev = "ebdb5883b81e1b3764e43bcc79b4e72f3db03f32";
-	    sha256 = "sha256-s4qhNVtWsqs41QlvWkh9906nAkBkChkqvSBXd4Fql3U=";
+            rev = "ec22b39f4881f57365740673f307dad9ba8b2cbe";
+	    sha256 = "sha256-VfD8LighuLfl+izgICryoFtA96x5V0EM4macgQBe8fk=";
           };
 
           cmakeFlags =

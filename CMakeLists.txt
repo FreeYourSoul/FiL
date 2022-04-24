@@ -7,13 +7,13 @@ endif ()
 
 project(fil CXX)
 
-include(cmake/utility/BuiltFromSource.cmake)
+include(misc/cmake/utility/BuiltFromSource.cmake)
 include(CTest)
 
 option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
 
 if (IS_BUILT_FROM_SOURCE)
-    include(cmake/utility/DoxygenSupport.cmake)
+    include(misc/cmake/utility/DoxygenSupport.cmake)
 
     set(WITH_FIL_ROCKSDB ON)
 endif ()
@@ -52,7 +52,7 @@ write_basic_package_version_file(
     COMPATIBILITY AnyNewerVersion
     )
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/cmake/filConfig.cmake.in"
+    "${PROJECT_SOURCE_DIR}/misc/cmake/filConfig.cmake.in"
     "${PROJECT_BINARY_DIR}/filConfig.cmake"
     INSTALL_DESTINATION ${FIL_CMAKECONFIG_INSTALL_DIR}
     )
@@ -72,7 +72,9 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/filConfig.cmake"
     DESTINATION ${FIL_CMAKECONFIG_INSTALL_DIR})
   
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/pkgconfig/fil.pc" DESTINATION  ${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig)
+  
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/fil DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR})
       
 if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
     message(STATUS "Tests will be built")

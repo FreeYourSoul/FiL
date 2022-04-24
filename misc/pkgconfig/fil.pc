@@ -1,0 +1,9 @@
+prefix=${pcfiledir}/../../
+libdir=${pcfiledir}/../
+includedir=${prefix}/include
+
+Name: fil
+Description: C++ utility library 
+URL: https://github.com/FreeYourSoul/FiL
+Version: 1.0.1
+Cflags: -I${includedir}

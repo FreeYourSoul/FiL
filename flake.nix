@@ -20,8 +20,9 @@
           cmakeFlags =
             "\n -DBUILD_SERVICE_WORLD=OFF\n -DBUILD_SERVICE_QUEST=OFF\n -DBUILD_SERVICE_ARENA=OFF\n -DBUILD_SERVICE_INVENTORY=OFF\n -DBUILD_DISP_CHAT=OFF\n -DBUILD_DISP_GATEWAY=OFF\n -DBUILD_DISPATCHER=ON\n";
 
-          buildInputs = with pkgs; [ cmake rocksdb catch2 fmt ];
+          buildInputs = with pkgs; [ rocksdb catch2 fmt ];
 
+	  nativeBuildInputs = with pkgs; [ cmake pkgconfig ];
 
         };
 

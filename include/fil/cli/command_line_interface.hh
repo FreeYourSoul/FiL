@@ -128,7 +128,7 @@ class sub_command : public internal::cli_base_action {
 		 _sub_command_only(true),
 		 _sub_commands(std::move(sub_commands)), _options(std::move(options)) {
 	  _options.emplace_back(option(
-		  "--help", [this]() { fmt::print(this->generate_helper()); }, "Display this helper"));
+				       "--help", [this]() { fmt::print("{}", this->generate_helper()); }, "Display this helper"));
    }
 
    void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }

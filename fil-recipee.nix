@@ -11,9 +11,6 @@ stdenv.mkDerivation rec {
     rev = "${rev}";
   };
 
-  cmakeFlags =
-    "\n    -DBUILD_SERVICE_WORLD=OFF\n    -DBUILD_SERVICE_QUEST=OFF\n    -DBUILD_SERVICE_ARENA=OFF\n    -DBUILD_SERVICE_INVENTORY=OFF\n    -DBUILD_DISP_CHAT=OFF\n    -DBUILD_DISP_GATEWAY=OFF\n    -DBUILD_DISPATCHER=ON\n    ";
-
   buildInputs = [ cmake rocksdb catch2 fmt ];
 
 }

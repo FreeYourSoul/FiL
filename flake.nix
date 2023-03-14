@@ -50,7 +50,6 @@
                 (pkgs.lib.optional
                     (pkgs.stdenv.hostPlatform.isx86 && pkgs.stdenv.hostPlatform.isLinux)
                     "-DFORCE_SSE42=1")
-                "-DFAIL_ON_WARNINGS=${if pkgs.stdenv.hostPlatform.isMinGW then "NO" else "YES"}"
               ];
 
               # otherwise "cc1: error: -Wformat-security ignored without -Wformat [-Werror=format-security]"

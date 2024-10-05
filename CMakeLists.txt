@@ -15,7 +15,7 @@ option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
 if (IS_BUILT_FROM_SOURCE)
     include(misc/cmake/utility/DoxygenSupport.cmake)
 
-    set(WITH_FIL_ROCKSDB ON)
+#    set(WITH_FIL_ROCKSDB ON)
 endif ()
 
 include(GNUInstallDirs)
@@ -38,7 +38,7 @@ target_include_directories(fil INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include/cli>
   $<INSTALL_INTERFACE:include>)
       
-target_compile_features(fil INTERFACE cxx_std_20)
+target_compile_features(fil INTERFACE cxx_std_23)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(internal/src/kv_db)

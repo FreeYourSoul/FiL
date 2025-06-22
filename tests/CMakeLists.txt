@@ -9,7 +9,7 @@ add_executable(header_only_test
         ${CMAKE_CURRENT_SOURCE_DIR}/cli_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/boundary_map_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rng_testcase.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/soa_vector.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/soa.cpp
         )
 target_link_libraries(header_only_test fys::fil Catch2::Catch2WithMain)
 catch_discover_tests(header_only_test)

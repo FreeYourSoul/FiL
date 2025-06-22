@@ -15,69 +15,80 @@ option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
 if (IS_BUILT_FROM_SOURCE)
     include(misc/cmake/utility/DoxygenSupport.cmake)
 
-#    set(WITH_FIL_ROCKSDB ON)
+    #    set(WITH_FIL_ROCKSDB ON)
 endif ()
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-# GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
-set(FIL_CMAKECONFIG_INSTALL_DIR "share/cmake/fil" CACHE STRING "install path for FilConfig.cmake")
 
 find_package(fmt REQUIRED)
 
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
 target_include_directories(fil INTERFACE
-  $<BUILD_INTERFACE:
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/cli>
-  $<INSTALL_INTERFACE:include>)
-      
+        $<BUILD_INTERFACE:
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/cli>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
 target_compile_features(fil INTERFACE cxx_std_23)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(internal/src/kv_db)
 
+#
+# installation
+#
+set(CMAKE_INSTALL_LIBDIR lib CACHE PATH "Installation directory for libraries")
+set(CMAKE_INSTALL_INCLUDEDIR include CACHE PATH "Installation directory for header files")
+
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version_str)
 message(STATUS "version = ${version_str}")
 
 write_basic_package_version_file(
-    "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
-    VERSION "${version_str}"
-    COMPATIBILITY AnyNewerVersion
-    )
+        "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
+        VERSION "${version_str}"
+        COMPATIBILITY AnyNewerVersion
+)
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/misc/cmake/filConfig.cmake.in"
-    "${PROJECT_BINARY_DIR}/filConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}
-    )
-
-message(">> ${CMAKE_INSTALL_DATADIR} :: ${CMAKE_INSTALL_LIBDIR} :: ${CMAKE_INSTALL_BINDIR}")
+        "${PROJECT_SOURCE_DIR}/misc/cmake/filConfig.cmake.in"
+        "${PROJECT_BINARY_DIR}/filConfig.cmake"
+        INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/fil"
+        PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+)
+message("CMAKE_INSTALL_LIBDIR ----" ${CMAKE_INSTALL_LIBDIR})
+message("CMAKE_INSTALL_BINDIR ----" ${CMAKE_INSTALL_BINDIR})
+message("CMAKE_INSTALL_INCLUDEDIR ----" ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(TARGETS fil
-  EXPORT filTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_DATADIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  INCLUDES ${PROJECT_SOURCE_DIR}/include/fil
-  PUBLIC_HEADER DESTINATION include COMPONENT Development
-  BUNDLE DESTINATION bin COMPONENT Runtime
+        EXPORT filTargets
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
-install(EXPORT filTargets NAMESPACE fys:: DESTINATION ${CMAKE_INSTALL_DATADIR}/fil)
+install(EXPORT filTargets
+        FILE filTargets.cmake
+        NAMESPACE fys::
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/fil"
+)
+
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/filConfigVersion.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/filConfig.cmake"
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/fil)
-  
-install(FILES "${PROJECT_SOURCE_DIR}/misc/pkgconfig/fil.pc" DESTINATION  ${CMAKE_INSTALL_DATADIR}/pkgconfig)
-  
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/fil DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-      
+        "${PROJECT_BINARY_DIR}/filConfig.cmake"
+        "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/fil"
+)
+
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        FILES_MATCHING PATTERN "*.h*"
+)
+
 if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
     message(STATUS "Tests will be built")
     add_subdirectory(tests)

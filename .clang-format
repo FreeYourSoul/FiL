@@ -2,21 +2,21 @@
 BasedOnStyle: LLVM
 AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: false
-AlignOperands: false
-AllowAllArgumentsOnNextLine: false
-AllowAllConstructorInitializersOnNextLine: false
-AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortBlocksOnASingleLine: Empty
+AlignConsecutiveAssignments: true
+AlignOperands: AlignAfterOperator
+AllowAllArgumentsOnNextLine: true
+BreakFunctionDefinitionParameters: false
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterReturnType: None
-AlwaysBreakTemplateDeclarations: MultiLine
+AllowShortEnumsOnASingleLine: false
+BreakAfterReturnType: None
+BreakTemplateDeclarations: MultiLine
 BreakBeforeBraces: Custom
-BreakStringLiterals: true
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
@@ -29,25 +29,34 @@ BraceWrapping:
   BeforeElse: false
   IndentBraces: false
   SplitEmptyFunction: false
-  SplitEmptyRecord: false
+  SplitEmptyRecord: true
+BinPackArguments: true
+BinPackParameters: BinPack
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeTernaryOperators: false
-BreakConstructorInitializers: BeforeColon
-BreakInheritanceList: BeforeColon
-ColumnLimit: 0
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+ColumnLimit: 140
 CompactNamespaces: false
 ContinuationIndentWidth: 4
-IndentCaseLabels: false
+IndentCaseLabels: true
 IndentPPDirectives: None
-IndentWidth: 3
-KeepEmptyLinesAtTheStartOfBlocks: true
+IndentWidth: 4
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: true
+  AtStartOfFile: true
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 PointerAlignment: Left
-ReflowComments: false
-SpaceAfterCStyleCast: false
+AlignArrayOfStructures: Left
+AlignEscapedNewlines: LeftWithLastLine
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 2
+SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
@@ -55,13 +64,26 @@ SpaceBeforeCpp11BracedList: true
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false
 SpaceBeforeRangeBasedForLoopColon: true
-SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 0
+SpacesInParens: Custom
+SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
+LambdaBodyIndentation: Signature
 TabWidth: 4
-UseTab: ForContinuationAndIndentation
+UseTab: Never
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: true
+RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
+IndentRequiresClause: false
+ReferenceAlignment: Pointer
+SortIncludes: CaseInsensitive
+IncludeBlocks: Preserve
+Language: Cpp
+Standard: Latest

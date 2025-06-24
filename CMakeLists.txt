@@ -5,7 +5,12 @@ else ()
     cmake_policy(VERSION 3.15)
 endif ()
 
-project(fil CXX)
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version_str)
+message(STATUS "version = ${version_str}")
+
+project(fil VERSION ${version_str}
+        DESCRIPTION "Fil is a set of libraries to provides quick and efficients tools not provided by the standard."
+        LANGUAGES CXX)
 
 include(misc/cmake/utility/BuiltFromSource.cmake)
 include(CTest)
@@ -46,9 +51,6 @@ add_subdirectory(internal/src/kv_db)
 #
 set(CMAKE_INSTALL_LIBDIR lib CACHE PATH "Installation directory for libraries")
 set(CMAKE_INSTALL_INCLUDEDIR include CACHE PATH "Installation directory for header files")
-
-file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version_str)
-message(STATUS "version = ${version_str}")
 
 write_basic_package_version_file(
         "${PROJECT_BINARY_DIR}/filConfigVersion.cmake"

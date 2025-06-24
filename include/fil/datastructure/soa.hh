@@ -68,7 +68,7 @@ template<typename T> class soa_struct_t {
  * @tparam struct_types Variadic template parameter pack representing the types
  * of elements present in each structure.
  */
-template<nothrow_movable... struct_types> class soa {
+template<typename... struct_types> class soa {
 
   public:
     //! number of elements in the structure handled by the soa class
@@ -179,7 +179,7 @@ template<nothrow_movable... struct_types> class soa {
     struct_id next_free_index_ {0, 0};
 };
 
-template<nothrow_movable... struct_types> template<typename T> class soa<struct_types...>::iterator_t {
+template<typename... struct_types> template<typename T> class soa<struct_types...>::iterator_t {
     friend class soa;
     friend class soa_struct_t<soa>;
 
@@ -222,7 +222,7 @@ template<nothrow_movable... struct_types> template<typename T> class soa<struct_
 //
 //
 
-template<nothrow_movable... struct_types> struct soa<struct_types...>::struct_id {
+template<typename... struct_types> struct soa<struct_types...>::struct_id {
     struct_id next_generation() const noexcept;
 
     explicit constexpr struct_id(std::uint32_t i, std::uint8_t g = 0) noexcept;
@@ -233,14 +233,14 @@ template<nothrow_movable... struct_types> struct soa<struct_types...>::struct_id
     std::uint8_t generation;
 };
 
-template<nothrow_movable... struct_types>
+template<typename... struct_types>
 constexpr soa<struct_types...>::struct_id::struct_id(std::uint32_t i, std::uint8_t g) noexcept
     : offset(i)
     , generation(g) {}
 
 template<typename T> typename T::struct_id soa_struct_t<T>::struct_id() const { return soa_->reverse_indexes_[offset_]; }
 
-template<nothrow_movable... struct_types> template<typename... Us> soa<struct_types...>::struct_id soa<struct_types...>::insert(Us... us) {
+template<typename... struct_types> template<typename... Us> soa<struct_types...>::struct_id soa<struct_types...>::insert(Us... us) {
 
     std::invoke(
         [this]<std::size_t... Is, typename T>(std::index_sequence<Is...>, T to_insert) {
@@ -263,7 +263,7 @@ template<nothrow_movable... struct_types> template<typename... Us> soa<struct_ty
 }
 // soa definition
 //
-template<nothrow_movable... struct_types> bool soa<struct_types...>::erase(struct_id id) {
+template<typename... struct_types> bool soa<struct_types...>::erase(struct_id id) {
     if (!has_id(id))
         return false;
 
@@ -290,8 +290,8 @@ template<nothrow_movable... struct_types> bool soa<struct_types...>::erase(struc
 
     return true;
 }
-template<nothrow_movable... struct_types> bool soa<struct_types...>::erase(const_iterator it) { return erase(*it); }
-template<nothrow_movable... struct_types> void soa<struct_types...>::reserve(std::size_t size) {
+template<typename... struct_types> bool soa<struct_types...>::erase(const_iterator it) { return erase(*it); }
+template<typename... struct_types> void soa<struct_types...>::reserve(std::size_t size) {
     std::invoke([this, size]<std::size_t... Is>(std::index_sequence<Is...>) { (std::get<Is>(data_).reserve(size), ...); },
                 struct_number {});
 
@@ -299,25 +299,20 @@ template<nothrow_movable... struct_types> void soa<struct_types...>::reserve(std
     reverse_indexes_.reserve(size);
     next_free_index_ = struct_id {static_cast<std::uint32_t>(size), 0};
 }
-template<nothrow_movable... struct_types> soa_struct_t<soa<struct_types...>> soa<struct_types...>::operator[](struct_id k) {
+template<typename... struct_types> soa_struct_t<soa<struct_types...>> soa<struct_types...>::operator[](struct_id k) {
     return {this, indexes_[k.offset].offset};
 }
-template<nothrow_movable... struct_types>
-typename soa<struct_types...>::const_soa_struct soa<struct_types...>::operator[](struct_id k) const {
+template<typename... struct_types> typename soa<struct_types...>::const_soa_struct soa<struct_types...>::operator[](struct_id k) const {
     return {this, indexes_[k.offset].offset};
 }
-template<nothrow_movable... struct_types> bool soa<struct_types...>::has_id(struct_id id) const {
+template<typename... struct_types> bool soa<struct_types...>::has_id(struct_id id) const {
     return std::ranges::any_of(reverse_indexes_, [id](auto& i) { return i == id; });
 }
-template<nothrow_movable... struct_types> typename soa<struct_types...>::iterator soa<struct_types...>::begin() { return {this, 0}; }
-template<nothrow_movable... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::begin() const {
-    return {this, 0};
-}
-template<nothrow_movable... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::cbegin() const {
-    return {this, 0};
-}
-template<nothrow_movable... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::end() const { return {}; }
-template<nothrow_movable... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::cend() const { return {}; }
+template<typename... struct_types> typename soa<struct_types...>::iterator soa<struct_types...>::begin() { return {this, 0}; }
+template<typename... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::begin() const { return {this, 0}; }
+template<typename... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::cbegin() const { return {this, 0}; }
+template<typename... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::end() const { return {}; }
+template<typename... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::cend() const { return {}; }
 
 // ------------------------------------------------------------------------------------------------------------------------------------
 // utility functions

@@ -26,110 +26,107 @@
 #include <iostream>
 
 TEST_CASE("cli_test_case Simple", "[cli]") {
-   bool action_base_has_been_called = false;
-   fil::command_line_interface cli(
-	   [&action_base_has_been_called]() { action_base_has_been_called = true; },
-	   "A Simple Command Line tool");
+    bool action_base_has_been_called = false;
+    fil::command_line_interface cli([&action_base_has_been_called]() { action_base_has_been_called = true; }, "A Simple Command Line tool");
 
-   std::vector<std::string> opt_arg_called;
-   const auto& call_handler_with_arg = cli.add_option(fil::option(
-	   "--opt-with-arg",
-	   [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); },
-	   "command with arg"));
+    std::vector<std::string> opt_arg_called;
+    const auto& call_handler_with_arg = cli.add_option(fil::option(
+        "--opt-with-arg", [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); }, "command with arg"));
 
-   bool opt_no_arg_called = false;
-   const auto& call_handler_without_arg = cli.add_option(fil::option(
-	   "--opt-no-arg",
-	   [&opt_no_arg_called]() { opt_no_arg_called = true; },
-	   "command without arg"));
+    bool opt_no_arg_called = false;
+    const auto& call_handler_without_arg =
+        cli.add_option(fil::option("--opt-no-arg", [&opt_no_arg_called]() { opt_no_arg_called = true; }, "command without arg"));
 
-   std::vector<std::string> cli_argument;
-   cli.on_parameter_handler([&cli_argument](std::string param) { cli_argument.emplace_back(std::move(param)); });
+    std::vector<std::string> cli_argument;
+    cli.on_parameter_handler([&cli_argument](std::string param) { cli_argument.emplace_back(std::move(param)); });
 
-   CHECK_FALSE(call_handler_without_arg);
-   CHECK_FALSE(call_handler_with_arg);
+    CHECK_FALSE(call_handler_without_arg);
+    CHECK_FALSE(call_handler_with_arg);
 
-   SECTION("called alone") {
-	  char* args[] = {"cli"};
-	  cli.parse_command_line(1, args);
+    SECTION("called alone") {
+        char* args[] = {const_cast<char*>("cli")};
+        cli.parse_command_line(1, args);
 
-	  CHECK(action_base_has_been_called);
-   }
+        CHECK(action_base_has_been_called);
+    }
 
-   SECTION("with one option") {
-	  char* args[] = {"cli", "--opt-no-arg"};
-	  cli.parse_command_line(2, args);
+    SECTION("with one option") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("--opt-no-arg")};
+        cli.parse_command_line(2, args);
 
-	  CHECK(action_base_has_been_called);
-	  CHECK(opt_no_arg_called);
-	  CHECK(call_handler_without_arg);
-   }
+        CHECK(action_base_has_been_called);
+        CHECK(opt_no_arg_called);
+        CHECK(call_handler_without_arg);
+    }
 
-   SECTION("with one option with argument") {
-	  char* args[] = {"cli", "--opt-with-arg", "this_is_an_argument"};
-	  cli.parse_command_line(3, args);
+    SECTION("with one option with argument") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("--opt-with-arg"), const_cast<char*>("this_is_an_argument")};
+        cli.parse_command_line(3, args);
 
-	  CHECK(action_base_has_been_called);
-	  REQUIRE(1 == opt_arg_called.size());
-	  CHECK("this_is_an_argument" == opt_arg_called.at(0));
-	  CHECK(call_handler_with_arg);
-   }
+        CHECK(action_base_has_been_called);
+        REQUIRE(1 == opt_arg_called.size());
+        CHECK("this_is_an_argument" == opt_arg_called.at(0));
+        CHECK(call_handler_with_arg);
+    }
 
-   SECTION("with options") {
-	  char* args[] = {
-		  "cli",
-		  "--opt-with-arg", "this_is_an_argument",
-		  "--opt-with-arg", "option_arg_2",
-		  "--opt-with-arg", "option_arg_3",
-		  "--opt-no-arg"};
+    SECTION("with options") {
+        char* args[] = {const_cast<char*>("cli"),
+                        const_cast<char*>("--opt-with-arg"),
+                        const_cast<char*>("this_is_an_argument"),
+                        const_cast<char*>("--opt-with-arg"),
+                        const_cast<char*>("option_arg_2"),
+                        const_cast<char*>("--opt-with-arg"),
+                        const_cast<char*>("option_arg_3"),
+                        const_cast<char*>("--opt-no-arg")};
 
-	  cli.parse_command_line(8, args);
+        cli.parse_command_line(8, args);
 
-	  CHECK(action_base_has_been_called);
-	  CHECK(opt_no_arg_called);
-	  REQUIRE(3 == opt_arg_called.size());
-	  CHECK("this_is_an_argument" == opt_arg_called.at(0));
-	  CHECK("option_arg_2" == opt_arg_called.at(1));
-	  CHECK("option_arg_3" == opt_arg_called.at(2));
-   }
+        CHECK(action_base_has_been_called);
+        CHECK(opt_no_arg_called);
+        REQUIRE(3 == opt_arg_called.size());
+        CHECK("this_is_an_argument" == opt_arg_called.at(0));
+        CHECK("option_arg_2" == opt_arg_called.at(1));
+        CHECK("option_arg_3" == opt_arg_called.at(2));
+    }
 
-   SECTION("with one argument") {
-	  char* args[] = {"cli", "cli_argument_1"};
-	  cli.parse_command_line(2, args);
+    SECTION("with one argument") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("cli_argument_1")};
+        cli.parse_command_line(2, args);
 
-	  CHECK(action_base_has_been_called);
-	  REQUIRE(1 == cli_argument.size());
-	  CHECK("cli_argument_1" == cli_argument.at(0));
-   }
+        CHECK(action_base_has_been_called);
+        REQUIRE(1 == cli_argument.size());
+        CHECK("cli_argument_1" == cli_argument.at(0));
+    }
 
-   SECTION("with arguments") {
-	  char* args[] = {"cli", "cli_argument_1", "cli_argument_2", "cli_argument_3"};
-	  cli.parse_command_line(4, args);
+    SECTION("with arguments") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("cli_argument_1"), const_cast<char*>("cli_argument_2"),
+                        const_cast<char*>("cli_argument_3")};
+        cli.parse_command_line(4, args);
 
-	  CHECK(action_base_has_been_called);
-	  REQUIRE(3 == cli_argument.size());
-	  CHECK("cli_argument_1" == cli_argument.at(0));
-	  CHECK("cli_argument_2" == cli_argument.at(1));
-	  CHECK("cli_argument_3" == cli_argument.at(2));
-   }
+        CHECK(action_base_has_been_called);
+        REQUIRE(3 == cli_argument.size());
+        CHECK("cli_argument_1" == cli_argument.at(0));
+        CHECK("cli_argument_2" == cli_argument.at(1));
+        CHECK("cli_argument_3" == cli_argument.at(2));
+    }
 
-   SECTION("check --help exist") {
-	  char* args[] = {"cli", "--help"};
-	  CHECK_NOTHROW([&]() { cli.parse_command_line(2, args); });
-   }
+    SECTION("check --help exist") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("--help")};
+        CHECK_NOTHROW([&]() { cli.parse_command_line(2, args); });
+    }
 
-   SECTION("failure on unknown option") {
-	  char* args[] = {"cli", "--unknown-opt"};
-	  CHECK_THROWS_AS([&]() { cli.parse_command_line(2, args); }(), std::invalid_argument);
-   }
+    SECTION("failure on unknown option") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("--unknown-opt")};
+        CHECK_THROWS_AS([&]() { cli.parse_command_line(2, args); }(), std::invalid_argument);
+    }
 
-}// End TestCase : cli_test_case Simple
+} // End TestCase : cli_test_case Simple
 
 TEST_CASE("cli_test_case OneLiner Constructor", "[cli]") {
 
-   bool call_inner_inner {}, call_sub2 {}, call_option_sub {}, call_option_inner_inner {};
+    bool call_inner_inner {}, call_sub2 {}, call_option_sub {}, call_option_inner_inner {};
 
-   // clang-format off
+    // clang-format off
    fil::command_line_interface cli({
 
 	  fil::sub_command("sub_com_1", "The fist subcommand", {
@@ -154,31 +151,31 @@ TEST_CASE("cli_test_case OneLiner Constructor", "[cli]") {
    CHECK_FALSE(call_sub2);
 
    SECTION("sub_com1 only subcommand allowed") {
-	  char* args[] = {"cli", "sub_com_1"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("sub_com_1")};
 	  CHECK_THROWS(cli.parse_command_line(2, args));
    }
 
    SECTION("sub_com1 inner_inner") {
-	  char* args[] = {"cli", "sub_com_1", "inner_inner"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("sub_com_1"), const_cast<char*>("inner_inner")};
 	  CHECK_NOTHROW(cli.parse_command_line(3, args));
 	  CHECK(call_inner_inner);
    }
 
    SECTION("sub_com1 opt-inner-inner") {
-	  char* args[] = {"cli", "sub_com_1", "inner_inner", "--opt-inner-inner"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("sub_com_1"), const_cast<char*>("inner_inner"), const_cast<char*>("--opt-inner-inner")};
 	  CHECK_NOTHROW(cli.parse_command_line(4, args));
 	  CHECK(call_inner_inner);
 	  CHECK(call_option_inner_inner);
    }
 
    SECTION("sub_com2") {
-	  char* args[] = {"cli", "sub_com_2"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("sub_com_2")};
 	  CHECK_NOTHROW(cli.parse_command_line(2, args));
 	  CHECK(call_sub2);
    }
 
    SECTION("sub_com2 option") {
-	  char* args[] = {"cli", "sub_com_2", "--opt-sub"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("sub_com_2"), const_cast<char*>("--opt-sub")};
 	  CHECK_NOTHROW(cli.parse_command_line(3, args));
 	  CHECK(call_option_sub);
    }
@@ -198,46 +195,54 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
 	   "Sub Command Helper doc");
 
    bool opt_no_arg_called_SHOULD_NOT_BE_CALLED = false;
-   cli.add_option(fil::option(
-	   "--opt-no-arg",
-	   [&opt_no_arg_called_SHOULD_NOT_BE_CALLED]() {
-		  opt_no_arg_called_SHOULD_NOT_BE_CALLED = true;
-	   },
-	   "command without arg"));
+    {
+       [[maybe_unused]]const auto _ = cli.add_option(fil::option(
+           "--opt-no-arg",
+           [&opt_no_arg_called_SHOULD_NOT_BE_CALLED]() {
+              opt_no_arg_called_SHOULD_NOT_BE_CALLED = true;
+           },
+           "command without arg"));
+    }
 
    bool opt_no_arg_called = false;
-   sub.add_option(fil::option(
-	   "--opt-no-arg",
-	   [&opt_no_arg_called]() { opt_no_arg_called = true; },
-	   "command without arg"));
+    {
+        [[maybe_unused]]const auto _ = sub.add_option(fil::option(
+           "--opt-no-arg",
+           [&opt_no_arg_called]() { opt_no_arg_called = true; },
+           "command without arg"));
+    }
 
    std::vector<std::string> opt_arg_called;
-   sub.add_option(fil::option(
-	   "--opt-with-arg",
-	   [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); },
-	   "command with arg"));
+    {
+        [[maybe_unused]]const auto _ = sub.add_option(fil::option(
+           "--opt-with-arg",
+           [&opt_arg_called](std::string arg) { opt_arg_called.emplace_back(std::move(arg)); },
+           "command with arg"));
+    }
 
    std::vector<std::int64_t> opt_int_called;
-   sub.add_option(fil::option(
-	   "--opt-with-int",
-	   [&opt_int_called](std::int64_t arg) { opt_int_called.emplace_back(arg); },
-	   "command with integer arg"));
+    {
+        [[maybe_unused]]const auto _ = sub.add_option(fil::option(
+           "--opt-with-int",
+           [&opt_int_called](std::int64_t arg) { opt_int_called.emplace_back(arg); },
+           "command with integer arg"));
+    }
 
    std::vector<std::string> sub_argument;
    sub.on_parameter_handler([&sub_argument](std::string param) { sub_argument.emplace_back(std::move(param)); });
 
-   cli.add_sub_command(sub);
+   [[maybe_unused]]const auto _ = cli.add_sub_command(sub);
 
    std::vector<std::string> cli_argument;
    cli.on_parameter_handler([&cli_argument](std::string param) { cli_argument.emplace_back(std::move(param)); });
 
    SECTION("help cli") {
-	  char* args[] = {"cli", "--help"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("--help")};
 	  CHECK(cli.parse_command_line(2, args));
    }
 
    SECTION("help sub") {
-	  char* args[] = {"cli", "command_of_doom", "--help"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--help")};
 	  CHECK(cli.parse_command_line(3, args));
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -245,7 +250,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("called alone") {
-	  char* args[] = {"cli", "command_of_doom"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom")};
 	  cli.parse_command_line(2, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -253,7 +258,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("one option") {
-	  char* args[] = {"cli", "command_of_doom", "--opt-no-arg"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--opt-no-arg")};
 	  cli.parse_command_line(3, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -263,7 +268,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("with one option with arg") {
-	  char* args[] = {"cli", "command_of_doom", "--opt-with-arg", "this_is_an_argument"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--opt-with-arg"), const_cast<char*>("this_is_an_argument")};
 	  cli.parse_command_line(4, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -273,7 +278,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("with one option with int arg") {
-	  char* args[] = {"cli", "command_of_doom", "--opt-with-int", "42", "--opt-with-int", "1337"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--opt-with-int"), const_cast<char*>("42"), const_cast<char*>("--opt-with-int"), const_cast<char*>("1337")};
 	  cli.parse_command_line(6, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -285,11 +290,11 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
 
    SECTION("with options") {
 	  char* args[] = {
-		  "cli", "command_of_doom",
-		  "--opt-with-arg", "this_is_an_argument",
-		  "--opt-with-arg", "option_arg_2",
-		  "--opt-with-arg", "option_arg_3",
-		  "--opt-no-arg"};
+		  const_cast<char*>("cli"), const_cast<char*>("command_of_doom"),
+		  const_cast<char*>("--opt-with-arg"), const_cast<char*>("this_is_an_argument"),
+		  const_cast<char*>("--opt-with-arg"), const_cast<char*>("option_arg_2"),
+		  const_cast<char*>("--opt-with-arg"), const_cast<char*>("option_arg_3"),
+		  const_cast<char*>("--opt-no-arg")};
 
 	  cli.parse_command_line(9, args);
 
@@ -303,7 +308,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("with one argument") {
-	  char* args[] = {"cli", "command_of_doom", "cli_argument_1"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("cli_argument_1")};
 	  cli.parse_command_line(3, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -313,7 +318,7 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("with arguments") {
-	  char* args[] = {"cli", "command_of_doom", "cli_argument_1", "cli_argument_2", "cli_argument_3"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("cli_argument_1"), const_cast<char*>("cli_argument_2"), const_cast<char*>("cli_argument_3")};
 	  cli.parse_command_line(5, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -325,17 +330,18 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
    }
 
    SECTION("failure on chaining arguments then commands") {
-	  char* args[] = {"cli", "cli_argument_1", "cli_argument_2", "cli_argument_3", "command_of_doom"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("cli_argument_1"), const_cast<char*>("cli_argument_2"),//
+	      const_cast<char*>("cli_argument_3"), const_cast<char*>("command_of_doom")};
 	  CHECK_THROWS_AS([&]() { cli.parse_command_line(5, args); }(), std::invalid_argument);
    }
 
    SECTION("failure on unknown subcommand option") {
-	  char* args[] = {"cli", "command_of_doom", "--unknown-opt"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--unknown-opt")};
 	  CHECK_THROWS_AS([&]() { cli.parse_command_line(3, args); }(), std::invalid_argument);
    }
 
    SECTION("check subcommand --help exist") {
-	  char* args[] = {"cli", "command_of_doom", "--help"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--help")};
 	  CHECK_NOTHROW([&]() { cli.parse_command_line(3, args); });
    }
 
@@ -365,11 +371,11 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    std::vector<std::string> vec_arg;
    fil::cli::add_multi_arg(sub, vec_arg);
 
-   cli.add_sub_command(std::move(sub));
+   [[maybe_unused]]const auto _ = cli.add_sub_command(sub);
    cli.set_sub_command_only(true);
 
    SECTION("add_argument_option") {
-	  char* args[] = {"cli", "command_of_doom", "--oo", "argumentation_of_doom"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--oo"), const_cast<char*>("argumentation_of_doom")};
 	  cli.parse_command_line(4, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -378,7 +384,7 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    }// End section :
 
    SECTION("add_argument_option int") {
-	  char* args[] = {"cli", "command_of_doom", "--ooint", "-42"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--ooint"), const_cast<char*>("-42")};
 	  cli.parse_command_line(4, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -387,7 +393,7 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    }// End section :
 
    SECTION("add_argument_option uint") {
-	  char* args[] = {"cli", "command_of_doom", "--oouint", "42"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--oouint"), const_cast<char*>("42")};
 	  cli.parse_command_line(4, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -396,7 +402,7 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    }// End section :
 
    SECTION("add_multi_arg") {
-	  char* args[] = {"cli", "command_of_doom", "argumentation_of_doom1", "argumentation_of_doom2"};
+	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("argumentation_of_doom1"), const_cast<char*>("argumentation_of_doom2")};
 	  cli.parse_command_line(4, args);
 
 	  CHECK_FALSE(action_base_has_been_called);
@@ -407,7 +413,7 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    }// End section : add_multi_arg
 
    SECTION("error on sub_commmand_only") {
-	  char* args[] = {"cli"};
+	  char* args[] = {const_cast<char*>("cli")};
 
 	  CHECK_THROWS_AS([&]() { cli.parse_command_line(1, args); }(), std::invalid_argument);
    }// End section :

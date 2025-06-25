@@ -24,72 +24,83 @@
 #ifndef FIL_STRING_HH
 #define FIL_STRING_HH
 
+#include <algorithm>
+#include <cstdint>
 #include <numeric>
 #include <string>
+#include <vector>
 
 namespace fil {
 
 template<typename Handler>
 void split_string(const std::string& input, const std::string& separator, Handler&& handler, int limitation = -1) {
 
-   std::size_t pos_start = 0;
-   std::size_t pos_end;
+    std::size_t pos_start = 0;
+    std::size_t pos_end;
 
-   do {
-	  if (limitation != -1 && --limitation <= 0) {
-		 pos_end = std::string::npos;
-	  } else {
-		 pos_end = input.find(separator, pos_start);
-	  }
-	  std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
-	  pos_start = pos_end + separator.size();
-   } while (pos_end != std::string::npos);
+    do {
+        if (limitation != -1 && --limitation <= 0) {
+            pos_end = std::string::npos;
+        } else {
+            pos_end = input.find(separator, pos_start);
+        }
+        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
+        pos_start = pos_end + separator.size();
+    } while (pos_end != std::string::npos);
 }
 
 template<typename Handler>
 void split_string(const std::string& input, const std::vector<std::string>& separators, Handler&& handler, int limitation = -1) {
 
-   std::size_t pos_start = 0;
-   std::size_t pos_end;
-   std::vector<std::size_t> tmp;
+    std::size_t pos_start = 0;
+    std::size_t pos_end;
+    std::vector<std::size_t> tmp;
 
-   tmp.resize(separators.size());
-   do {
-	  for (std::uint32_t i = 0; i < separators.size(); ++i) {
-		 auto v = input.find(separators.at(i), pos_start);
-		 tmp[i] = (v == std::string::npos) ? input.size() : v;
-	  }
-	  std::size_t index = std::distance(tmp.begin(), std::min_element(tmp.begin(), tmp.end()));
-	  if (limitation != -1 && --limitation <= 0) {
-		 pos_end = input.size();
-	  } else {
-		 pos_end = tmp[index];
-	  }
-	  std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
-	  pos_start = pos_end + separators[index].size();
+    tmp.resize(separators.size());
+    do {
+        for (std::uint32_t i = 0; i < separators.size(); ++i) {
+            auto v = input.find(separators.at(i), pos_start);
+            tmp[i] = (v == std::string::npos) ? input.size() : v;
+        }
+        std::size_t index = std::distance(tmp.begin(), std::min_element(tmp.begin(), tmp.end()));
+        if (limitation != -1 && --limitation <= 0) {
+            pos_end = input.size();
+        } else {
+            pos_end = tmp[index];
+        }
+        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
+        pos_start = pos_end + separators[index].size();
 
-   } while (pos_end < input.size());
+    } while (pos_end < input.size());
 }
 
-std::string join(const std::vector<std::string>& to_join, const std::string& separator = "") {
-   auto size = separator.size() * to_join.size()
-	   + std::accumulate(to_join.begin(), to_join.end(), 0, [](auto v, const auto& j) { return v + j.size(); });
+inline std::string join(const std::vector<std::string>& to_join, const std::string& separator = "") {
+    auto size = separator.size() * to_join.size()
+              + std::accumulate(to_join.begin(), to_join.end(), 0, [](auto v, const auto& j) { return v + j.size(); });
 
-   std::string result;
-   result.reserve(size);
+    std::string result;
+    result.reserve(size);
 
-   bool first = true;
-   for (const auto& j : to_join) {
-	  if (first) {
-		 first = false;
-	  } else {
-		 result.append(separator);
-	  }
-	  result.append(j);
-   }
-   return result;
+    bool first = true;
+    for (const auto& j : to_join) {
+        if (first) {
+            first = false;
+        } else {
+            result.append(separator);
+        }
+        result.append(j);
+    }
+    return result;
 }
 
-}// namespace fil
+inline void ltrim(std::string& s) {
+    s.erase(s.begin(), std::ranges::find_if(s, [](auto ch) { return !std::isspace(ch); }));
+}
 
-#endif//FIL_STRING_HH
+inline void rtrim(std::string& s) {
+    s.erase(std::ranges::find_if(s.rbegin(), s.rend(), [](auto ch) { return !std::isspace(ch); }).base(), s.end());
+}
+
+} // namespace fil
+
+#endif // FIL_STRING_HH

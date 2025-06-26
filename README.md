@@ -6,9 +6,11 @@ Free instrument Library is a general purpose C++ library principally header-only
 
 ## CLI
 
-**Header Only**: Command line interface header only library. It is callback based, every command are part of the `fil::sub_command` class.
+**Header Only**: Command line interface header only library. It is callback based, every command are part of the
+`fil::sub_command` class.
 
-In order to use it, a base class for the cli has to be used (internally this class is a sub-class of sub_command) that provide a parser method taking the input parameter of the main as parameters.
+In order to use it, a base class for the cli has to be used (internally this class is a sub-class of sub_command) that
+provide a parser method taking the input parameter of the main as parameters.
 
 ```c++
   fil::command_line_interface cli([]() { /*callback of the command*/ }, "A Simple Command Line tool");
@@ -29,8 +31,8 @@ In order to use it, a base class for the cli has to be used (internally this cla
 
 _Notes:_
 
--   It is possible to compose commands with sub_command thanks to the method `add_sub_command`
--   Utility function to automatically add recurrent type of options exists:
+- It is possible to compose commands with sub_command thanks to the method `add_sub_command`
+- Utility function to automatically add recurrent type of options exists:
 
 ```c++
 /**
@@ -53,11 +55,12 @@ add_argument_option(sub_command& sub_command, std::string opt, T& argument, std:
 add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string);
 ```
 
--   The --help command is added by default.
+- The --help command is added by default.
 
 ## Algorithm & Datastructures
 
-**Header Only** : Some helper algorithm (string algorithm, container and so on) : All algorithm should be properly documented with doxygen documentation.
+**Header Only** : Some helper algorithm (string algorithm, container and so on) : All algorithm should be properly
+documented with doxygen documentation.
 
 ## FSM (Finite State Machine)
 
@@ -65,39 +68,63 @@ add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string);
 
 **This implementation just requires:**
 
--   to define the transition possible from one state to another with a handler defining when a state can pass from one to the other.
--   to define on_entry state for the state you require specific actions to be done when entering the state
--   to use the `advance` method in order to trigger the state machine (go to any other state if possible). 
+- to define the transition possible from one state to another with a handler defining when a state can pass from one to
+  the other.
+- to define on_entry state for the state you require specific actions to be done when entering the state
+- to use the `advance` method in order to trigger the state machine (go to any other state if possible).
+
+## SOA
+
+`fil::soa` is a datastructure inspired by the ECS (Entity Component System) architecture. It is a data structure that
+store data in a way that is cache friendly and allows to iterate over the data in a very efficient way.
+It is compatible with c++ standard iterators and algorithms.
+
+The implementation is strongly inspired by [columnist](https://github.com/rollbear/columnist)
+from [Björn Fahller](https://github.com/rollbear). A presentastion of the datastructure has been done by Björn in
+multiple conferences, the most recent one is [here](https://www.youtube.com/watch?v=QStPbnKgIMU).
+
+> see tests for usage example.
 
 ## Database KV
 
-Key value datastore abstraction, this is not header only and require the library to be compiled with specific options to retrieve the existing policy for the abstraction.
-Currently the supported (or soon to be) policy are : 
+Key value datastore abstraction, this is not header only and require the library to be compiled with specific options to
+retrieve the existing policy for the abstraction.
+Currently the supported (or soon to be) policy are :
 
--   Rocksdb
--   Redis
--   Couchbase
+- Rocksdb
+- Redis
+- Couchbase
 
-Those datastore has been selected as default one as they have the particularity to be usable in-memory. Making them good choice for personal project.
-Cassandra DB, FoundationDB could be interesting choice to have for distributed datastore to be handled by this abstraction.
+Those datastore has been selected as default one as they have the particularity to be usable in-memory. Making them good
+choice for personal project.
+Cassandra DB, FoundationDB could be interesting choice to have for distributed datastore to be handled by this
+abstraction.
 
 ## Dependencies
 
--   [fmt](https://github.com/fmtlib/fmt) : Formatting library (C++20 standard)
+- [fmt](https://github.com/fmtlib/fmt) : Formatting library (C++20 standard)
 
 _If using compiled version of the library with database kv_
 
--   [rocksdb](https://github.com/facebook/rocksdb) : Fast and reliable KV engine developed by facebook, dependency can be disabled with the CMake option : `WITH_FIL_ROCKSDB`
--   [redis](https://github.com/redis/redis) : Persistent KV in-memory database : `WITH_FIL_REDIS`
--   [couchbase](https://github.com/couchbase/libcouchbase) : NoSQL performant database : `WITH_FIL_COUCHBASE`
+- [rocksdb](https://github.com/facebook/rocksdb) : Fast and reliable KV engine developed by facebook, dependency can be
+  disabled with the CMake option : `WITH_FIL_ROCKSDB`
+- [redis](https://github.com/redis/redis) : Persistent KV in-memory database : `WITH_FIL_REDIS`
+- [couchbase](https://github.com/couchbase/libcouchbase) : NoSQL performant database : `WITH_FIL_COUCHBASE`
 
 ## Install
 
-Installation from sources
+### Installation from sources
 
-```cmake
-git clone git@github.com:FreeYourSoul/FiL.git
-cd FiL
-cmake -S . -Bbuild
-sudo cmake --build build --target install
-```
+    ```cmake
+    git
+    clone
+    git@github.com:FreeYourSoul/FiL.git
+    cd FiL
+    cmake -S . -Bbuild
+    sudo cmake --build build --target install
+    ```
+
+### Using nix:
+
+Nix is setup on this repository in the .nix folder.
+To build and install it. Go to the .nix folder and execute a `nix-build` or `nix-env install`

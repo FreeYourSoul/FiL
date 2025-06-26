@@ -396,8 +396,24 @@ namespace cli {
  * @param help helping string displayed when using --help
  */
 template<typename T>
-[[maybe_unused]] const bool& add_argument_option(sub_command& sub_command, std::string opt, T& argument, std::string help = "") {
+[[maybe_unused]] const bool& add_argument_option(sub_command& sub_command, auto opt, T& argument, std::string help = "") {
     return sub_command.add_option(option(std::move(opt), [&argument](T arg) { argument = std::move(arg); }, std::move(help)));
+}
+/**
+ *
+ * Add an option storing the argument into an output parameter (with an alias)
+ *
+ * @param sub_command add the option in this sub_command
+ * @param opt option code of the option
+ * @param alias alias of the option (can be empty)
+ * @param argument output parameter in which storing the argument of the option (can be integral or string)
+ * @param help helping string displayed when using --help
+ */
+template<typename T>
+[[maybe_unused]] const bool& add_aliased_argument_option( //
+    sub_command& sub_command, std::string opt, std::string alias, T& argument, std::string help = "") {
+    return sub_command.add_option(
+        option(std::move(opt), std::move(alias), [&argument](T arg) { argument = std::move(arg); }, std::move(help)));
 }
 
 /**

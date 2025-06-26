@@ -360,10 +360,10 @@ TEST_CASE("cli_test_case utility", "[cli]") {
 	   "Sub Command Helper doc");
 
    std::string arg_opt;
-   fil::cli::add_argument_option(sub, "--oo", arg_opt);
+   fil::cli::add_aliased_argument_option(sub, "--oo", "-x", arg_opt);
 
    int arg_int_opt;
-   fil::cli::add_argument_option(sub, "--ooint", arg_int_opt);
+   fil::cli::add_aliased_argument_option(sub, "--ooint", "-i", arg_int_opt);
 
    std::uint64_t arg_uint_opt;
    fil::cli::add_argument_option(sub, "--oouint", arg_uint_opt);
@@ -374,23 +374,41 @@ TEST_CASE("cli_test_case utility", "[cli]") {
    [[maybe_unused]]const auto _ = cli.add_sub_command(sub);
    cli.set_sub_command_only(true);
 
-   SECTION("add_argument_option") {
-	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--oo"), const_cast<char*>("argumentation_of_doom")};
-	  cli.parse_command_line(4, args);
+    SECTION("add_argument_option") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--oo"), const_cast<char*>("argumentation_of_doom")};
+        cli.parse_command_line(4, args);
 
-	  CHECK_FALSE(action_base_has_been_called);
-	  CHECK(action_sub_has_been_called);
-	  CHECK("argumentation_of_doom" == arg_opt);
-   }// End section :
+        CHECK_FALSE(action_base_has_been_called);
+        CHECK(action_sub_has_been_called);
+        CHECK("argumentation_of_doom" == arg_opt);
+    }// End section :
 
-   SECTION("add_argument_option int") {
-	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--ooint"), const_cast<char*>("-42")};
-	  cli.parse_command_line(4, args);
+    SECTION("add_argument_option_alias") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("-x"), const_cast<char*>("argumentation_of_doom")};
+        cli.parse_command_line(4, args);
 
-	  CHECK_FALSE(action_base_has_been_called);
-	  CHECK(action_sub_has_been_called);
-	  CHECK(-42 == arg_int_opt);
-   }// End section :
+        CHECK_FALSE(action_base_has_been_called);
+        CHECK(action_sub_has_been_called);
+        CHECK("argumentation_of_doom" == arg_opt);
+    }// End section :
+
+    SECTION("add_argument_option int") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--ooint"), const_cast<char*>("-42")};
+        cli.parse_command_line(4, args);
+
+        CHECK_FALSE(action_base_has_been_called);
+        CHECK(action_sub_has_been_called);
+        CHECK(-42 == arg_int_opt);
+    }// End section :
+
+    SECTION("add_argument_option int alias") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("-i"), const_cast<char*>("-42")};
+        cli.parse_command_line(4, args);
+
+        CHECK_FALSE(action_base_has_been_called);
+        CHECK(action_sub_has_been_called);
+        CHECK(-42 == arg_int_opt);
+    }// End section :
 
    SECTION("add_argument_option uint") {
 	  char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("--oouint"), const_cast<char*>("42")};

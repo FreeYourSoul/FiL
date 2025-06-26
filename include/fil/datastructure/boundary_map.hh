@@ -27,39 +27,44 @@
 
 namespace fil {
 
-template<typename T = int>
-class boundary_map {
-public:
-  [[nodiscard]] auto get(int index) const {
-	return _map.lower_bound(index);
-  }
+template<typename T = int> class boundary_map {
 
-  void insert(int index, T&& element) {
-	auto it = get(index);
-	if (it == _map.end()) {
-	  _map[index] = std::forward<T>(element);
-	} else if (element != it->second) {
-	  _map[it->first + 1] = std::forward<T>(element);
-	} else {
-	  _map.erase(it);
-	  _map[it->first] = std::forward<T>(element);
-	}
-  }
+    using iterator       = typename std::map<int, T>::iterator;
+    using const_iterator = typename std::map<int, T>::const_iterator;
 
-  void insert(int index, const T& element) {
-	T elem = element;
-	insert(index, std::move(elem));
-  }
+  public:
+    iterator begin() { return _map.begin(); }
+    const_iterator begin() const { return _map.begin(); }
 
-  [[nodiscard]] auto end() const {
-	return _map.end();
-  }
+    iterator end() { return _map.end(); }
+    const_iterator end() const { return _map.end(); }
 
-private:
-  std::map<int, T> _map;
+    [[nodiscard]] auto size() const { return _map.size(); }
+    [[nodiscard]] bool empty() const { return _map.empty(); }
 
+    [[nodiscard]] auto get(int index) const { return _map.lower_bound(index); }
+
+    void insert(int index, T&& element) {
+        auto it = get(index);
+        if (it == _map.end()) {
+            _map[index] = std::forward<T>(element);
+        } else if (element != it->second) {
+            _map[it->first + 1] = std::forward<T>(element);
+        } else {
+            _map.erase(it);
+            _map[it->first] = std::forward<T>(element);
+        }
+    }
+
+    void insert(int index, const T& element) {
+        T elem = element;
+        insert(index, std::move(elem));
+    }
+
+  private:
+    std::map<int, T> _map;
 };
 
 using boundary_map_int = boundary_map<int>;
 
-}// namespace fil
+} // namespace fil

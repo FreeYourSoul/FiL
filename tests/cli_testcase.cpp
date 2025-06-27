@@ -347,6 +347,65 @@ TEST_CASE("cli_test_case SubCommand One Layer", "[cli]") {
 
 }// End TestCase : cli_test_case SubCommand One Layer
 
+TEST_CASE("cli_test_case PreExecution", "[cli]") {
+    // test that a cli pre-execution handler is called before the command is executed
+
+    bool main_command_has_been_called = false;
+    std::size_t calling_order = 0;
+    fil::command_line_interface cli(
+        [&]{ main_command_has_been_called = true; ++calling_order; },
+        "A Simple Command Line tool");
+
+    bool pre_check_called = false;
+    cli.add_pre_executed_handler([&]{ pre_check_called = true; ++calling_order; });
+
+    bool action_sub_has_been_called = false;
+    auto sub = fil::sub_command(
+        "command_of_doom",
+        [&] { action_sub_has_been_called = true; ++calling_order; },
+        "Sub Command Helper doc");
+
+    bool action_sub_inner_has_been_called = false;
+    auto sub2 = fil::sub_command(
+        "command_of_doom_inner",
+        [&] { action_sub_inner_has_been_called = true; ++calling_order; },
+        "Sub Command Helper doc");
+
+    [[maybe_unused]] const auto x = sub.add_sub_command(sub2);
+    [[maybe_unused]] const auto y = cli.add_sub_command(sub);
+
+    SECTION("normal pre-execution is called on normal execution of the cli") {
+        char* args[] = {const_cast<char*>("cli")};
+        cli.parse_command_line(1, args);
+
+        CHECK(calling_order == 2); // 2 calling order meaning that the pre-execution handler has been called before the main action
+        CHECK(pre_check_called); // confirm
+        CHECK(main_command_has_been_called);
+    }
+
+    SECTION("check that the execution on a sub-command would result in the execution before it") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom")};
+        cli.parse_command_line(2, args);
+
+        CHECK(calling_order == 2); // 2 calling, the sub-command and he pre-execution handler
+        CHECK(pre_check_called); // confirm
+        CHECK(action_sub_has_been_called);
+        CHECK_FALSE(main_command_has_been_called); // main command should not have been called
+    }
+
+    SECTION("check that two layer of sub-command makes the execution of the pre-command only once") {
+        char* args[] = {const_cast<char*>("cli"), const_cast<char*>("command_of_doom"), const_cast<char*>("command_of_doom_inner")};
+        cli.parse_command_line(3, args);
+
+        CHECK(calling_order == 2); // 2 calling, the sub-sub-command and the pre-execution handler
+        CHECK(pre_check_called); // confirm
+        CHECK(action_sub_inner_has_been_called);
+        CHECK_FALSE(action_sub_has_been_called);
+        CHECK_FALSE(main_command_has_been_called); // main command should not have been called
+    }
+
+}
+
 TEST_CASE("cli_test_case utility", "[cli]") {
    bool action_base_has_been_called = false;
    fil::command_line_interface cli(

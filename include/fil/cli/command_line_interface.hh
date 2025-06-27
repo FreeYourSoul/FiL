@@ -25,6 +25,7 @@
 #define FIL_COMMAND_LINE_INTERFACE_HH
 
 #include <fil/algorithm/string.hh>
+#include <functional>
 #include <list>
 #include <regex>
 #include <stdexcept>
@@ -86,14 +87,14 @@ class cli_base_action {
     void exec() const {
         if (handler_) {
             called_ = true;
-            handler_();
+            std::invoke(handler_);
         }
     }
 
     void exec(std::string param) const {
         if (handler_with_param_) {
             called_ = true;
-            handler_with_param_(std::move(param));
+            std::invoke(handler_with_param_, std::move(param));
         }
     }
 
@@ -207,6 +208,14 @@ class sub_command : public internal::cli_base_action {
 
     void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }
 
+    /**
+     * @brief Add a pre-executed handler that will be called before the command is executed.
+     * @note the main usage of such a haandler would be to use aggregated elements out of a succession of options and trigger a
+     * pre-computation before executing a sub-command.
+     * @param pre_executed handler that will be called before the command is executed
+     */
+    void add_pre_executed_handler(std::function<void()> pre_executed) { handler_pre_executed_ = std::move(pre_executed); }
+
     [[nodiscard]] const bool& add_sub_command(const sub_command& command) {
         sub_commands_.emplace_back(command);
         return sub_commands_.back().has_been_called_handler();
@@ -265,6 +274,9 @@ class sub_command : public internal::cli_base_action {
                         throw std::invalid_argument(
                             fmt::format(FMT_STRING("CLI error usage Chaining command is impossible:\n{}"), generate_helper()));
                     }
+                    if (handler_pre_executed_) {
+                        std::invoke(handler_pre_executed_); // exec pre-execution before submodule execution
+                    }
                     return exec_subcommand(args, index);
                 }
             }
@@ -272,6 +284,9 @@ class sub_command : public internal::cli_base_action {
         }
         if (sub_command_only_) {
             throw std::invalid_argument(fmt::format(FMT_STRING("Command {} is subcommand only:\n{}"), name_, generate_helper()));
+        }
+        if (handler_pre_executed_) {
+            std::invoke(handler_pre_executed_);
         }
         exec();
         return true;
@@ -349,6 +364,7 @@ class sub_command : public internal::cli_base_action {
   private:
     bool sub_command_only_ = false;
 
+    std::function<void()> handler_pre_executed_;        //!< handler that will be executed before the command is executed
     std::function<void(std::string)> _handler_on_param; //!< handlers that will be executed with a parameter
 
     // usage of a list instead of vector to not have a re-allocation of the elements when pushed, enforcing that the handlers

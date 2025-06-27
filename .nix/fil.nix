@@ -6,6 +6,7 @@
 , catch2_3
 , fmt
 , rocksdb
+, execute_test ? false
 }:
 let
     version = builtins.readFile ../VERSION;
@@ -28,12 +29,15 @@ stdenv.mkDerivation rec {
     rocksdb
   ];
 
+
   cmakeFlags = [
-    "-DBUILD_TESTING=ON"
+    "-DBUILD_TESTING=${if execute_test then "ON" else "OFF"}"
     "-DCMAKE_INSTALL_PREFIX=${placeholder "out"}"
     "-DCMAKE_INSTALL_INCLUDEDIR=${placeholder "out"}/include"
     "-DCMAKE_INSTALL_LIBDIR=${placeholder "out"}/lib"
   ];
+
+  doCheck = execute_test;
 
   postInstall = ''
     substituteInPlace $out/lib/cmake/fil/filTargets.cmake --replace "/build/FiL/;" ""

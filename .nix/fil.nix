@@ -48,10 +48,18 @@ stdenv.mkDerivation rec {
 
   postCheck = lib.optionalString with_coverage ''
     echo "Generating coverage report... ${src}"
-    ctest -T Coverage
 
     mkdir -p $out/coverage
-    find -name "*.xml" -exec cp -r {} $out/coverage/ \ ;
+
+    # Generate gcovr Cobertura XML report
+    gcovr --root . \
+          --filter=".*\.(cpp|hpp|hh)$" \
+          --exclude="/nix/store/.*" \
+          --gcov-executable=gcov \
+          --exclude-unreachable-branches \
+          --xml \
+          --xml-pretty \
+          --output=$out/coverage/cobertura.xml \
 
   '';
 

@@ -2,6 +2,9 @@
 
 [![CI Linux Build](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f0e4ad29546841038cd558a38d619e21)](https://app.codacy.com/gh/FreeYourSoul/FiL?utm_source=github.com&utm_medium=referral&utm_content=FreeYourSoul/FiL&utm_campaign=Badge_Grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/a35205510e714acb9fb438c6f8d1da4a)](https://app.codacy.com/gh/FreeYourSoul/FiL/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+![](https://tokei.rs/b1/github/FreeYourSoul/FiL?category=lines)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Free instrument Library is a general purpose C++ library principally header-only
 

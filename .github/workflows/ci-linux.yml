@@ -21,7 +21,7 @@ jobs:
 
       - name: Build project
         run: |
-          nix-build .nix/default.nix --no-out-link --arg execute_test true
+          nix-build .nix/default.nix --arg execute_test true --arg with_coverage true
 
       - name: codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
@@ -30,6 +30,4 @@ jobs:
           # or
           # api-token: ${{ secrets.CODACY_API_TOKEN }}
           coverage-reports:
-            result/coverage/Coverage.xml
-          # or a comma-separated list for multiple reports
-          # coverage-reports: <PATH_TO_REPORT>, <PATH_TO_REPORT>
+            result/coverage/cobertura.xml

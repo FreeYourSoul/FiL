@@ -42,16 +42,24 @@ stdenv.mkDerivation rec {
     "-DCMAKE_INSTALL_LIBDIR=${placeholder "out"}/lib"
   ];
 
-  CXXFLAGS = lib.optionalString with_coverage "-coverage -O0 -g";
+  CXXFLAGS = lib.optionalString with_coverage "-coverage -fkeep-inline-functions -fno-inline -fno-inline-small-functions -fno-default-inline -O0 -g";
 
   doCheck = execute_test;
 
   postCheck = lib.optionalString with_coverage ''
     echo "Generating coverage report... ${src}"
-    ctest -T Coverage
 
     mkdir -p $out/coverage
-    find -name "*.xml" -exec cp -r {} $out/coverage/ \ ;
+
+    # Generate gcovr Cobertura XML report
+    gcovr --root . \
+          --filter=".*\.(cpp|hpp|hh)$" \
+          --exclude="/nix/store/.*" \
+          --gcov-executable=gcov \
+          --exclude-unreachable-branches \
+          --xml \
+          --xml-pretty \
+          --output=$out/coverage/cobertura.xml \
 
   '';
 

@@ -1,5 +1,6 @@
 # FiL
 
+[![CI Linux Build](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f0e4ad29546841038cd558a38d619e21)](https://app.codacy.com/gh/FreeYourSoul/FiL?utm_source=github.com&utm_medium=referral&utm_content=FreeYourSoul/FiL&utm_campaign=Badge_Grade)
 
 Free instrument Library is a general purpose C++ library principally header-only
@@ -32,7 +33,7 @@ provide a parser method taking the input parameter of the main as parameters.
 _Notes:_
 
 - It is possible to compose commands with sub_command thanks to the method `add_sub_command`
-- Utility function to automatically add recurrent type of options exists:
+- Utility function to automatically add a recurrent type of options exists:
 
 ```c++
 /**

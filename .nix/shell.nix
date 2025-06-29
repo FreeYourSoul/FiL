@@ -11,6 +11,8 @@ mkShell {
     gcc
     ninja
     gdb
+    lcov
+    gcovr
   ] ++ fil.buildInputs;
 
   shellHook = ''

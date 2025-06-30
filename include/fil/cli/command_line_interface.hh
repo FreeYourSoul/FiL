@@ -216,12 +216,12 @@ class sub_command : public internal::cli_base_action {
      */
     void add_pre_executed_handler(std::function<void()> pre_executed) { handler_pre_executed_ = std::move(pre_executed); }
 
-    [[nodiscard]] const bool& add_sub_command(const sub_command& command) {
+    const bool& add_sub_command(const sub_command& command) {
         sub_commands_.emplace_back(command);
         return sub_commands_.back().has_been_called_handler();
     }
 
-    [[nodiscard]] const bool& add_option(option&& opt) {
+    const bool& add_option(option&& opt) {
         if (opt.name().front() != '-' || (!opt.alias().empty() && opt.alias().front() != '-')) {
             fmt::print("Error Option {} (alias '{}') : An option has to start with '-' character", opt.name(), opt.alias());
             throw std::invalid_argument("CLI error option should start with '-'");

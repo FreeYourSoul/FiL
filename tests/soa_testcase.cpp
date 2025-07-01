@@ -23,6 +23,16 @@ TEST_CASE("soa_vector", "[datastructure]") {
 
     CHECK(s.is_empty());
 
+    SECTION("test_reserve") {
+        s.reserve(10z);
+        CHECK(s.size() == 0);  // size should be 0 after reserve
+
+        const auto id = s.insert(1, 1.1, "one");
+        CHECK(s.size() == 1);  // size should be 1 after insert
+        CHECK(id.offset == 0); // offset should be 0 for the first element even after a reserve
+        CHECK(s.has_id(id));   // should have the id we just inserted
+    }
+
     SECTION("test_insert") {
 
         const auto id1 = s.insert(1, 1.1, "one");

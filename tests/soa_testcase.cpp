@@ -186,4 +186,27 @@ TEST_CASE("soa_vector", "[datastructure]") {
             CHECK(s.is_empty());
         }
     }
+
+    SECTION("modifications") {
+
+        const auto it = std::ranges::find_if( //
+            s, fil::soa_select<2>([](const std::string& str) { return str == "two"; }));
+
+        auto struct_soa                = *it;
+        auto& [int_v, double_v, str_v] = struct_soa;
+
+        CHECK(int_v == 2);
+        CHECK(str_v == "two");
+
+        SECTION("direct retrieve") { get<0>(*it) = 1337; }
+        SECTION("structure binding") { int_v = 1337; }
+
+        const auto check = std::ranges::find_if( //
+            s, fil::soa_select<2>([](const std::string& str) { return str == "two"; }));
+
+        const auto& [int_v_bis, double_v_bis, str_v_bis] = *check;
+
+        CHECK(int_v_bis == 1337);
+        CHECK(str_v_bis == "two");
+    }
 }

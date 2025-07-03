@@ -297,7 +297,7 @@ template<typename... struct_types> void soa<struct_types...>::reserve(std::size_
 
     indexes_.reserve(size);
     reverse_indexes_.reserve(size);
-    next_free_index_ = struct_id {reverse_indexes_.size(), 0};
+    next_free_index_ = struct_id {static_cast<std::uint32_t>(reverse_indexes_.size()), 0};
 }
 template<typename... struct_types> soa_struct_t<soa<struct_types...>> soa<struct_types...>::operator[](struct_id k) {
     return {this, indexes_[k.offset].offset};

@@ -163,7 +163,7 @@ TEST_CASE("soa_vector", "[datastructure]") {
         CHECK_FALSE(s.has_id(id3));
         CHECK(s.has_id(id4));
 
-        SECTION("test_erase_non_existing_id") { // id3 was previously removed, and does not exists anymore
+        SECTION("test_erase_non_existing_id") { // id3 was previously removed and does not exist anymore
             CHECK(s.erase(id3) == false);
         }
 

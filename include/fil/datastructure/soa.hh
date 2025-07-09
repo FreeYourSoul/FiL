@@ -78,6 +78,11 @@ template<typename... struct_types> class soa {
     template<std::size_t index> using struct_type_at = std::tuple_element_t<index, std::tuple<struct_types...>>;
 
     /**
+     * struct entity retrieve through a SOA access
+     */
+    using soa_struct = soa_struct_t<soa>;
+
+    /**
      * @brief id of a structure in the soa. A structure is composed of each element of the soa class.
      * It is possible to retrieve partially a structure by selecting its element through the select utility free function
      *
@@ -101,7 +106,6 @@ template<typename... struct_types> class soa {
   private:
     //! setup soa_struct as a friend class to provide the ability for soa class to instantiate it
     template<typename> friend class soa_struct_t;
-    using soa_struct       = soa_struct_t<soa>;
     using const_soa_struct = soa_struct_t<const soa>;
 
   public:

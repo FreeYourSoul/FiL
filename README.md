@@ -19,8 +19,9 @@ provide a parser method taking the input parameter of the main as parameters.
 ```c++
   fil::command_line_interface cli([]() { /*callback of the command*/ }, "A Simple Command Line tool");
 
+  // with alias -o
   // Add an option ex: ./binary --opt-with-arg "This is an argument"
-  cli.add_option(fil::option("--opt-with-arg", [](std::string arg) { /*handler for the options*/ }, "command with arg"));
+  cli.add_option(fil::option("--opt-with-arg", "-o", [](std::string arg) { /*handler for the options*/ }, "command with arg"));
 
   // Add an option ex: ./binary --opt-without-arg
   cli.add_option(fil::option("--opt-without-arg", []() { /*handler for the options without argument required in the opt*/ }, "command with arg"));

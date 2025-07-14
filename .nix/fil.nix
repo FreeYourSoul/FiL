@@ -12,7 +12,7 @@
 , with_coverage ? false
 }:
 let
-    version = builtins.readFile ../VERSION;
+    version = builtins.readFile ../VERSION; 
 in
 stdenv.mkDerivation rec {
   pname = "fil";

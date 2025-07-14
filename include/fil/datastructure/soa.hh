@@ -109,7 +109,11 @@ template<typename... struct_types> class soa {
     using const_soa_struct = soa_struct_t<const soa>;
 
   public:
-    template<typename... Us> [[nodiscard]] struct_id insert(Us... us);
+    /**
+     * @brief insert an element into the soa class
+     * @param us elements to be inserted into the soa class (follows the order of the template parameters of the soa class)
+     */
+    template<typename... Us> struct_id insert(Us... us);
 
     /**
      * @brief erase an element via a specific structure id

@@ -148,7 +148,7 @@ class option : public internal::cli_base_action {
         const std::string padded_option_name = [&] {
             std::string option_text;
             if (!alias_.empty()) {
-                option_text = fmt::format("{}, {}\n", name_, alias_);
+                option_text = fmt::format("{}, {}", name_, alias_);
             } else {
                 option_text = name_;
             }
@@ -156,11 +156,10 @@ class option : public internal::cli_base_action {
             if (has_param()) {
                 option_text += " <arg>";
             }
-            return fmt::format(FMT_STRING("    {}"), option_text);
+            return fmt::format(FMT_STRING("    {}\n"), option_text);
         }();
 
-        const std::string formatted_helper = internal::polish_string(helper_, padding_helper, 130);
-        return padded_option_name + formatted_helper;
+        return padded_option_name + padding_helper + helper_;
     }
 };
 
@@ -300,14 +299,14 @@ class sub_command : public internal::cli_base_action {
         if (!options_.empty()) {
             help = fmt::format(FMT_STRING("{} * Available Options :"), help);
             for (const auto& opt : options_) {
-                help = fmt::format(FMT_STRING("{}\n{}"), help, opt.generate_helper());
+                help = fmt::format(FMT_STRING("{}\n\n{}"), help, opt.generate_helper());
             }
         }
         if (!sub_commands_.empty()) {
-            help = fmt::format(FMT_STRING("{}\n\n * Available Sub Commands:"), help);
+            help = fmt::format(FMT_STRING("{}\n\n\n * Available Sub Commands:"), help);
             for (const auto& sub : sub_commands_) {
-                help =
-                    fmt::format(FMT_STRING("{}\n    {} :\n{}"), help, sub.name_, internal::polish_string(sub.helper_, padding_helper, 130));
+                help = fmt::format(FMT_STRING("{}\n\n    {} :\n{}"), help, sub.name_,
+                                   internal::polish_string(sub.helper_, padding_helper, 130));
             }
         }
         return help.append("\n");

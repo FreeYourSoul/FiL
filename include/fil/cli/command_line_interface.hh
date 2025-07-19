@@ -112,6 +112,7 @@ class cli_base_action {
     std::string helper_;
     std::string usage_;
 
+    bool stop_           = false; //!< stop the execution of the command line interface, used by helper, but can be set by custom options
     mutable bool called_ = false;
 
   private:
@@ -180,13 +181,13 @@ class sub_command : public internal::cli_base_action {
         , sub_commands_(std::move(sub_commands))
         , options_(std::move(options)) {
         usage_ = default_usage(*this, true);
-        options_.emplace_back(option(
+        options_.emplace_back(
             "--help", "-h",
             [this] {
                 fmt::print("{}", this->generate_helper());
-                std::exit(0);
+                stop_ = true;
             },
-            "Display this helper"));
+            "Display this helper");
     }
 
     explicit sub_command(std::string name, std::string helper, std::list<sub_command> sub_commands = {}, std::list<option> options = {})
@@ -196,13 +197,13 @@ class sub_command : public internal::cli_base_action {
         , sub_commands_(std::move(sub_commands))
         , options_(std::move(options)) {
         usage_ = default_usage(*this, true);
-        options_.emplace_back(option(
+        options_.emplace_back(
             "--help", "-h",
             [this] {
                 fmt::print("{}", this->generate_helper());
-                std::exit(0);
+                stop_ = true;
             },
-            "Display this helper"));
+            "Display this helper");
     }
 
     void on_parameter_handler(std::function<void(std::string)> on_param) { _handler_on_param = std::move(on_param); }
@@ -259,20 +260,16 @@ class sub_command : public internal::cli_base_action {
     }
 
     [[nodiscard]] bool exec_command(std::vector<std::string>& args, std::uint32_t index) {
-        bool command_specific_started = false;
-
         while (index < args.size()) {
+            if (stop_) {
+                return true; // stop the execution of the command line interface, used by helper, but can be set by custom options
+            }
             if (args.at(index).front() == '-') {
                 exec_option(args, index);
             } else {
                 if (is_not_command(args.at(index))) {
-                    command_specific_started = true;
                     exec_parameter(args, index);
                 } else {
-                    if (command_specific_started) {
-                        throw std::invalid_argument(
-                            fmt::format(FMT_STRING("CLI error usage Chaining command is impossible:\n{}"), generate_helper()));
-                    }
                     if (handler_pre_executed_) {
                         std::invoke(handler_pre_executed_); // exec pre-execution before submodule execution
                     }
@@ -329,8 +326,8 @@ class sub_command : public internal::cli_base_action {
         _handler_on_param(std::move(args.at(index)));
     }
 
-    bool exec_subcommand(std::vector<std::string>& args, std::uint32_t index) {
-        auto it = std::ranges::find_if( //
+    [[nodiscard]] bool exec_subcommand(std::vector<std::string>& args, std::uint32_t index) {
+        const auto it = std::ranges::find_if( //
             sub_commands_, [command_to_check = args.at(index)](const auto& value) { return value.name() == command_to_check; });
         if (it == sub_commands_.end()) {
             return false;

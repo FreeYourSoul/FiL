@@ -34,6 +34,8 @@ provide a parser method taking the input parameter of the main as parameters.
   cli.parse_command_line(argc, argv);
 ```
 
+The command line is made in a modern fashion where it is possible to call options of a cli layer and then call sub-command.
+
 _Notes:_
 
 - It is possible to compose commands with sub_command thanks to the method `add_sub_command`

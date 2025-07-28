@@ -23,6 +23,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fil/datastructure/boundary_map.hh>
+#include <fil/file/read_file.hh>
 #include <string>
 
 TEST_CASE("boundary_map_testcase", "[datastructure]") {

@@ -31,13 +31,7 @@ find_package(fmt REQUIRED)
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
 target_include_directories(fil INTERFACE
-        $<BUILD_INTERFACE:
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/datastructure
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/fsm
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/thread
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/cli>
+        $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/include/>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 

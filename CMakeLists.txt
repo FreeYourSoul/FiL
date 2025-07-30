@@ -40,10 +40,8 @@ target_link_libraries(fil INTERFACE fmt::fmt)
 
 add_subdirectory(internal/src/kv_db)
 
-if (IS_BUILT_FROM_SOURCE AND BUILD_TESTING)
-    message(STATUS "Tests will be built")
-    add_subdirectory(tests)
-endif ()
+message(STATUS "Tests will be built")
+add_subdirectory(tests)
 
 
 #

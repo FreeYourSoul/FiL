@@ -69,6 +69,10 @@ add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string);
 **Header Only** : Some helper algorithm (string algorithm, container and so on) : All algorithm should be properly
 documented with doxygen documentation.
 
+## File Reader
+
+a reader handler optimized for fast read access (based on file stream)
+
 ## FSM (Finite State Machine)
 
 **Header Only** : Implementation of a simple Finite State Machine.

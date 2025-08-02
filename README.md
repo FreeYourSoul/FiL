@@ -71,7 +71,13 @@ documented with doxygen documentation.
 
 ## File Reader
 
-a reader handler optimized for fast read access (based on file stream)
+A reader handler optimized for fast read access (based on file stream).
+This handle is read only, it is a good candidate for usage in an application
+reading small or big files, with a requirement on fast access to soecific 
+lines of the file.
+
+It works by reading chunk of the file through a file stream and returns only 
+views over the buffer.
 
 ## FSM (Finite State Machine)
 

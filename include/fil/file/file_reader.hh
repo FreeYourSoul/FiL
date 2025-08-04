@@ -44,8 +44,9 @@ class file_reader {
     }
 
     std::string_view read_line(std::uint32_t line) {
+        buffer_size_ = 0;
         file_stream_.clear();
-        file_stream_.seekg(std::ios::beg);
+        file_stream_.seekg(0, std::ios::beg);
 
         for (std::uint32_t i = 0; i < line - 1; ++i) {
             file_stream_.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -56,20 +57,6 @@ class file_reader {
         load_();
 
         return next_line();
-    }
-
-    [[nodiscard]] char peek() const {
-        if (cursor_ >= current_buffer_.size()) {
-            return '\0'; // No more data to read
-        }
-        return current_buffer_[cursor_];
-    }
-
-    [[nodiscard]] char peek_next() const {
-        if (cursor_ + 1 >= current_buffer_.size()) {
-            return '\0'; // No more data to read
-        }
-        return current_buffer_[cursor_ + 1];
     }
 
     template<std::invocable<std::string_view> Predicate>
@@ -110,7 +97,8 @@ class file_reader {
             return std::string_view {};
         }
 
-        const auto pos       = std::find_if(current_buffer_.begin() + cursor_, current_buffer_.end(), [](auto c) { return c == '\n'; });
+        const auto pos =
+            std::find_if(current_buffer_.begin() + cursor_, current_buffer_.end(), [](auto c) { return c == '\n' || c == '\0'; });
         const auto size_line = std::distance(current_buffer_.begin() + cursor_, pos);
 
         std::string_view line {current_buffer_.data() + cursor_, static_cast<std::size_t>(size_line)};
@@ -124,6 +112,7 @@ class file_reader {
     [[nodiscard]] bool exists() const { return std::filesystem::exists(file_path_); }
     [[nodiscard]] auto get_file_cursor() { return file_stream_.tellg(); }
     [[nodiscard]] auto size() const { return size_; }
+    [[nodiscard]] std::size_t load_counter() const { return load_counter_; }
 
   private:
     void load_() {
@@ -135,6 +124,8 @@ class file_reader {
             if (cursor_ < current_buffer_.size())
                 file_stream_.seekg(-(current_buffer_.size() - cursor_), std::ios::cur);
         }
+        ++load_counter_;
+
         buffer_size_ = 0;
         cursor_      = 0;
 
@@ -157,6 +148,7 @@ class file_reader {
     std::uint32_t cursor_ {0};        //!< cursor in the buffer of the current line
 
     std::uint32_t size_ {0};          //!< file size in bytes
+    std::size_t load_counter_ {0};    //!< counter to inform on how many load occurred
 };
 
 /**

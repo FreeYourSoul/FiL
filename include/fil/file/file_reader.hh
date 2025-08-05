@@ -20,7 +20,7 @@
 
 namespace fil {
 
-static constexpr std::uint32_t BUFFER_SIZE = 1024 * 1024 + 1; //!< max size of the buffer used to read the file (1Mb)
+static constexpr std::uint32_t READER_BUFFER_SIZE = 1024 * 1024 + 1; //!< max size of the buffer used to read the file (1Mb)
 //! end position in the buffer to read from (-1 to have an extra byte for null-termination)
 
 class file_reader {
@@ -39,7 +39,7 @@ class file_reader {
             file_stream_.seekg(0, std::ios::beg);
             return size;
         }()) {
-        const auto size_buffer = std::min(size_, BUFFER_SIZE);
+        const auto size_buffer = std::min(size_, READER_BUFFER_SIZE);
         current_buffer_.resize(size_buffer);
     }
 
@@ -75,8 +75,8 @@ class file_reader {
     }
 
     template<std::invocable<char> Predicate>
-    [[nodiscard]] std::string_view read_until(Predicate&& predicate, std::size_t minimum_size = 100) {
-        if (!current_buffer_.front() != '\0' || ((buffer_size_ - cursor_) <= minimum_size)) {
+    [[nodiscard]] std::string_view read_until(Predicate&& predicate, std::size_t minimum_size_reload = 100) {
+        if (buffer_size_ == 0 || ((buffer_size_ - cursor_) <= minimum_size_reload)) {
             load_();
         }
         const auto start_cursor = cursor_;
@@ -85,7 +85,8 @@ class file_reader {
                 return {current_buffer_.begin() + start_cursor, current_buffer_.begin() + ++cursor_};
             }
         }
-        return {current_buffer_.begin() + start_cursor, current_buffer_.end()};
+        cursor_ = start_cursor;
+        return {};
     }
 
     [[nodiscard]] std::string_view next_line() {
@@ -111,6 +112,7 @@ class file_reader {
     [[nodiscard]] const std::filesystem::path& get_path() const { return file_path_; }
     [[nodiscard]] bool exists() const { return std::filesystem::exists(file_path_); }
     [[nodiscard]] auto get_file_cursor() { return file_stream_.tellg(); }
+    [[nodiscard]] auto get_buffer_cursor() const { return cursor_; }
     [[nodiscard]] auto size() const { return size_; }
     [[nodiscard]] std::size_t load_counter() const { return load_counter_; }
 
@@ -133,7 +135,7 @@ class file_reader {
             return; // No more data to read
         }
 
-        file_stream_.read(current_buffer_.data(), BUFFER_SIZE);
+        file_stream_.read(current_buffer_.data(), READER_BUFFER_SIZE);
         buffer_size_                  = file_stream_.gcount();
         auto d                        = current_buffer_.size();
         current_buffer_[buffer_size_] = '\0';

@@ -48,76 +48,76 @@ TEST_CASE("read_file_testcase", "[file]") {
     SECTION("get_line : success") {
         const auto line = file_reader.next_line();
 
-        CHECK(line == "This is a test file.");
+        CHECK(line.get() == "This is a test file.");
         CHECK(file_reader.load_counter() == 1);
 
         const auto line2 = file_reader.next_line();
-        CHECK(line2 == "It has multiple lines.");
+        CHECK(line2.get() == "It has multiple lines.");
         CHECK(file_reader.load_counter() == 1);
 
         const auto line3 = file_reader.next_line();
-        CHECK(line3 == "And some more text.");
+        CHECK(line3.get() == "And some more text.");
         CHECK(file_reader.load_counter() == 1);
 
         SECTION("get_line : read finished : return empty") {
             const auto line4 = file_reader.next_line();
-            CHECK(line4.empty());
+            CHECK(line4.get().empty());
             CHECK(file_reader.load_counter() == 1);
             const auto line5 = file_reader.next_line();
-            CHECK(line5.empty());
+            CHECK(line5.get().empty());
             CHECK(file_reader.load_counter() == 1);
             const auto line6 = file_reader.next_line();
-            CHECK(line6.empty());
+            CHECK(line6.get().empty());
             CHECK(file_reader.load_counter() == 1);
         }
     }
 
     SECTION("read_until : specific text") {
         const auto found = file_reader.read_until([](std::string_view sv) { return sv.ends_with("It has multiple lines."); });
-        CHECK(found == "This is a test file.\nIt has multiple lines.");
+        CHECK(found.get() == "This is a test file.\nIt has multiple lines.");
         CHECK(file_reader.load_counter() == 1);
     }
 
     SECTION("read_until : token reader") {
         const auto found_token_1 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_1 == "This ");
+        CHECK(found_token_1.get() == "This ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_2 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_2 == "is ");
+        CHECK(found_token_2.get() == "is ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_3 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_3 == "a ");
+        CHECK(found_token_3.get() == "a ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_4 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_4 == "test ");
+        CHECK(found_token_4.get() == "test ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_6 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_6 == "file.\n");
+        CHECK(found_token_6.get() == "file.\n");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_7 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_7 == "It ");
+        CHECK(found_token_7.get() == "It ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_8 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_8 == "has ");
+        CHECK(found_token_8.get() == "has ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_9 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_9 == "multiple ");
+        CHECK(found_token_9.get() == "multiple ");
         CHECK(file_reader.load_counter() == 1);
 
         const auto found_token_10 = file_reader.read_until([](char c) { return c == ' ' || c == '\n'; });
-        CHECK(found_token_10 == "lines.\n");
+        CHECK(found_token_10.get() == "lines.\n");
         CHECK(file_reader.load_counter() == 1);
 
         SECTION("read_until : minimum changed, buffer already loaded") {
             const auto token_found_mini = file_reader.read_until([](char c) { return c == '.'; }, 3);
-            CHECK(token_found_mini == "And some more text."); // no reload occurred
+            CHECK(token_found_mini.get() == "And some more text."); // no reload occurred
             CHECK(file_reader.load_counter() == 1);
         }
     }
@@ -134,34 +134,37 @@ TEST_CASE("read_file_testcase", "[file]") {
 
         SECTION("check minimum modified") {
             const auto found_1 = file_reader_big.read_until([i = 1](char) mutable { return ++i == 1000; });
-            CHECK(found_1.size() == 1000);
+            CHECK(found_1.get().size() == 1000);
             CHECK(file_reader_big.get_file_cursor() == fil::READER_BUFFER_SIZE);
             CHECK(file_reader_big.get_buffer_cursor() == 1000);
             CHECK(file_reader_big.load_counter() == 1);
+            CHECK(found_1.is_valid());
 
             const auto found_changed_mini =
                 file_reader_big.read_until([i = 1](char) mutable { return ++i == 1000; }, fil::READER_BUFFER_SIZE + 1001);
-            CHECK(found_changed_mini.size() == 1000);
+            CHECK(found_changed_mini.get().size() == 1000);
             CHECK(file_reader_big.get_buffer_cursor() == 1000); // reload happened - and thus the cursor in the buffer is the same
             CHECK(file_reader_big.get_file_cursor() == fil::READER_BUFFER_SIZE + 1000 /*read 1000 after the cursor*/);
             CHECK(file_reader_big.load_counter() == 2);
+            CHECK(!found_1.is_valid());
+            CHECK(found_changed_mini.is_valid());
         }
 
         SECTION("check loading (with too much reading)") {
             const auto found_1 = file_reader_big.read_until([i = 1](char) mutable { return ++i == 1000; });
-            CHECK(found_1.size() == 1000);
+            CHECK(found_1.get().size() == 1000);
             CHECK(file_reader_big.get_file_cursor() == fil::READER_BUFFER_SIZE);
             CHECK(file_reader_big.get_buffer_cursor() == 1000);
             CHECK(file_reader_big.load_counter() == 1);
 
             const auto found_2 = file_reader_big.read_until([i = 1](char) mutable { return ++i == 1000; });
-            CHECK(found_2.size() == 1000);
+            CHECK(found_2.get().size() == 1000);
             CHECK(file_reader_big.get_file_cursor() == fil::READER_BUFFER_SIZE);
             CHECK(file_reader_big.get_buffer_cursor() == 2000);
             CHECK(file_reader_big.load_counter() == 1);
 
             const auto found_3 = file_reader_big.read_until([i = 1](char) mutable { return ++i == fil::READER_BUFFER_SIZE + 1; });
-            CHECK(found_3.empty());                             // read failed to find the read
+            CHECK(found_3.get().empty());                       // read failed to find the read
             CHECK(file_reader_big.get_buffer_cursor() == 2000); // didn't move as the read failed
             CHECK(file_reader_big.load_counter() == 1);         // no additional load
         }
@@ -171,25 +174,47 @@ TEST_CASE("read_file_testcase", "[file]") {
 
         SECTION("line 0 is invalid") {
             const auto line0 = file_reader.read_line(0);
-            CHECK(line0.empty());
+            CHECK(line0.get().empty());
         }
 
         const auto last_line = file_reader.read_line(3);
-        CHECK(last_line == "And some more text.");
+        CHECK(last_line.get() == "And some more text.");
         CHECK(file_reader.load_counter() == 1);
+        CHECK(last_line.is_valid()); // line is valid
 
         const auto middle_line = file_reader.read_line(2);
-        CHECK(middle_line == "It has multiple lines.");
+        CHECK(middle_line.get() == "It has multiple lines.");
         CHECK(file_reader.load_counter() == 2);
+        CHECK(!last_line.is_valid());   // the last line becomes invalid
+        CHECK(last_line.get().empty()); // the last line becomes empty on get as it is invalid
+        CHECK(middle_line.is_valid());
 
         const auto first_line = file_reader.read_line(1);
-        CHECK(first_line == "This is a test file.");
+        CHECK(first_line.get() == "This is a test file.");
         CHECK(file_reader.load_counter() == 3);
+        CHECK(!last_line.is_valid());
+        CHECK(!middle_line.is_valid());   // the middle line becomes invalid
+        CHECK(middle_line.get().empty()); // the middle line becomes empty on get as it is invalid
+        CHECK(first_line.is_valid());
 
         SECTION("non-existing line") {
             const auto line = file_reader.read_line(4);
-            CHECK(line.empty());
+            CHECK(line.get().empty());
             CHECK(file_reader.load_counter() == 3);
+            CHECK(!last_line.is_valid());
+            CHECK(!middle_line.is_valid());
+            CHECK(!line.is_valid());
+            CHECK(first_line.is_valid());
         }
+    }
+
+    SECTION("line_iterator") {
+        std::vector<std::string> lines;
+        auto it3 = file_reader.make_line_iterator();
+
+        for (auto it = file_reader.make_line_iterator(); it != file_reader.end(); ++it) {
+            lines.emplace_back(it->get());
+        }
+        CHECK(lines.size() == 3);
     }
 }

@@ -79,6 +79,9 @@ lines of the file.
 It works by reading chunk of the file through a file stream and returns only 
 views over the buffer.
 
+An iterator interface is provided to go through the filles line per lines (or 
+chunk per chunk defined by a custom callback)
+
 ## FSM (Finite State Machine)
 
 **Header Only** : Implementation of a simple Finite State Machine.

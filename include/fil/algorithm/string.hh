@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 
+#include "fil/type_traits/type_traits.hpp"
+
 namespace fil {
 
 template<typename Handler>
@@ -89,6 +91,22 @@ inline std::string join(const std::vector<std::string>& to_join, const std::stri
             result.append(separator);
         }
         result.append(j);
+    }
+    return result;
+}
+
+template<fil::to_string_able Element> std::string join(const std::vector<Element>& to_join, const std::string& separator = "") {
+    using namespace std;
+    std::string result;
+
+    bool first = true;
+    for (const auto& j : to_join) {
+        if (first) {
+            first = false;
+        } else {
+            result.append(separator);
+        }
+        result.append(to_string(j));
     }
     return result;
 }

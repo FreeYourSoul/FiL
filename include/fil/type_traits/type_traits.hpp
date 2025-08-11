@@ -28,18 +28,23 @@
 
 namespace fil {
 
-  namespace details {
-template<typename>
-struct is_std_vector : std::false_type {};
+namespace details {
+template<typename> struct is_std_vector : std::false_type {};
 
-template<typename T, typename A>
-struct is_std_vector<std::vector<T,A>> : std::true_type {};
-    
-  }
+template<typename T, typename A> struct is_std_vector<std::vector<T, A>> : std::true_type {};
 
-  template<typename T>
-  concept is_std_vector = details::is_std_vector<T>::value;
-  
-}
+} // namespace details
 
-#endif //FIL_TYPE_TRAITS_HH
+template<typename T>
+concept is_std_vector = details::is_std_vector<T>::value;
+
+template<typename T>
+concept to_string_able = requires(const T& elem) {
+    { std::to_string(elem) } -> std::convertible_to<std::string>;
+} || requires(T elem) {
+    { to_string(elem) } -> std::convertible_to<std::string>;
+};
+
+} // namespace fil
+
+#endif // FIL_TYPE_TRAITS_HH

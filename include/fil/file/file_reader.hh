@@ -134,12 +134,13 @@ class file_reader {
         }
 
         if (buffer_size_ == 0 || cursor_ >= buffer_size_) {
+            cursor_ = std::numeric_limits<decltype(cursor_)>::max(); // force cursor at "end" for iterator
             return {};
         }
 
         const auto pos =
-            std::find_if(current_buffer_.begin() + cursor_, current_buffer_.end(), [](auto c) { return c == '\n' || c == '\0'; });
-        const auto size_line = std::distance(current_buffer_.begin() + cursor_, pos);
+            std::find_if(std::next(current_buffer_.begin(), cursor_), current_buffer_.end(), [](auto c) { return c == '\n' || c == '\0'; });
+        const auto size_line = std::distance(std::next(current_buffer_.begin(), cursor_), pos);
 
         std::string_view line {current_buffer_.data() + cursor_, static_cast<std::size_t>(size_line)};
 
@@ -179,7 +180,6 @@ class file_reader {
 
         file_stream_.read(current_buffer_.data(), READER_BUFFER_SIZE);
         buffer_size_                  = file_stream_.gcount();
-        auto d                        = current_buffer_.size();
         current_buffer_[buffer_size_] = '\0';
     }
 
@@ -205,11 +205,13 @@ class file_reader::line_iterator {
         , line_(file_handler->read_line(start_line_))
         , line_number_(start_line_) {}
 
+    [[nodiscard]] std::size_t line() const { return line_number_; }
+
     const block_view& operator*() const { return line_; }
     const block_view* operator->() const { return &line_; }
 
     line_iterator& operator++() {
-        if (*this != file_reader::sentinel {}) {
+        if (*this == file_reader::sentinel {}) {
             return *this;
         }
         line_ = file_handler_->next_line();
@@ -220,7 +222,12 @@ class file_reader::line_iterator {
     auto operator!=(const line_iterator& other) const {
         return (!line_.is_valid() || other.line_.is_valid()) && line_number_ != other.line_number_;
     }
-    bool operator!=(file_reader::sentinel) const { return file_handler_ == nullptr || (file_handler_->cursor_ >= file_handler_->size_); }
+    auto operator==(const line_iterator& other) const { return !(operator!=(other)); }
+    bool operator!=(file_reader::sentinel) const {
+        return file_handler_ == nullptr
+            || (file_handler_->cursor_ < std::numeric_limits<decltype(file_handler_->get_buffer_cursor())>::max());
+    }
+    bool operator==(file_reader::sentinel s) const { return !(operator!=(s)); }
 
   private:
     file_reader* file_handler_;
@@ -231,6 +238,23 @@ class file_reader::line_iterator {
 [[nodiscard]] inline file_reader::line_iterator file_reader::make_line_iterator(std::size_t start) {
     return file_reader::line_iterator(this, start);
 }
+
+/**
+ * @brief wrapper around file_handler to manipulate lines per lines through a ranges interface
+ */
+class file_reader_line {
+  public:
+    explicit file_reader_line(file_reader& file_handler, std::size_t start_line_ = 1)
+        : file_handler_(&file_handler)
+        , start_line_(start_line_) {}
+
+    file_reader::line_iterator begin() { return file_handler_->make_line_iterator(start_line_); }
+    file_reader::sentinel end() { return file_handler_->end(); }
+
+  private:
+    file_reader* file_handler_;
+    std::size_t start_line_;
+};
 
 } // namespace fil
 

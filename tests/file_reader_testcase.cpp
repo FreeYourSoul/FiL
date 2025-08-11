@@ -209,12 +209,45 @@ TEST_CASE("read_file_testcase", "[file]") {
     }
 
     SECTION("line_iterator") {
-        std::vector<std::string> lines;
-        auto it3 = file_reader.make_line_iterator();
+        auto it1 = file_reader.make_line_iterator();
+        CHECK(it1->get() == "This is a test file.");
+        CHECK(it1 != file_reader.end());
+        CHECK(it1.line() == 1);
 
-        for (auto it = file_reader.make_line_iterator(); it != file_reader.end(); ++it) {
-            lines.emplace_back(it->get());
+        auto it2 = ++it1;
+        CHECK(it2->get() == "It has multiple lines.");
+        CHECK(it2 != file_reader.end());
+        CHECK(it2.line() == 2);
+
+        auto it3 = ++it2;
+        CHECK(it3->get() == "And some more text.");
+        CHECK(it3 != file_reader.end());
+        CHECK(it3.line() == 3);
+
+        auto it4 = ++it3;
+        CHECK(it4 == file_reader.end());
+        CHECK(it4.line() == 4);
+
+        SECTION("line iterator :: for_loop") {
+            std::vector<std::string> lines;
+            for (auto it = file_reader.make_line_iterator(); it != file_reader.end(); ++it) {
+                lines.emplace_back(it->get());
+            }
+            CHECK(lines.size() == 3);
+            CHECK(lines[0] == "This is a test file.");
+            CHECK(lines[1] == "It has multiple lines.");
+            CHECK(lines[2] == "And some more text.");
         }
-        CHECK(lines.size() == 3);
+
+        SECTION("line iterator :: algo") {
+            std::vector<std::string> lines;
+            for (const auto& line : fil::file_reader_line {file_reader}) {
+                lines.emplace_back(line.get());
+            }
+            CHECK(lines.size() == 3);
+            CHECK(lines[0] == "This is a test file.");
+            CHECK(lines[1] == "It has multiple lines.");
+            CHECK(lines[2] == "And some more text.");
+        }
     }
 }

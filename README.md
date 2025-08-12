@@ -67,7 +67,7 @@ add_multi_arg(sub_command& sub_command, std::vector<std::string>& args_string);
 ## Algorithm & Datastructures
 
 **Header Only** : Some helper algorithm (string algorithm, container and so on) : All algorithm should be properly
-documented with doxygen documentation.
+documented with doxygen documentation. Those are primarily string based algorithms.
 
 ## File Reader
 

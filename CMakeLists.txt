@@ -16,6 +16,7 @@ include(misc/cmake/utility/BuiltFromSource.cmake)
 include(CTest)
 
 option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
+option(WITH_FIL_KADEMLIA "Compile with kademlia p2p library" OFF)
 
 if (IS_BUILT_FROM_SOURCE)
     include(misc/cmake/utility/DoxygenSupport.cmake)
@@ -38,7 +39,12 @@ target_include_directories(fil INTERFACE
 target_compile_features(fil INTERFACE cxx_std_23)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
-add_subdirectory(internal/src/kv_db)
+if (WITH_FIL_ROCKSDB)
+    add_subdirectory(internal/src/kv_db)
+endif ()
+if (WITH_FIL_KADEMLIA)
+    add_subdirectory(internal/src/kademlia)
+endif ()
 
 message(STATUS "Tests will be built")
 add_subdirectory(tests)

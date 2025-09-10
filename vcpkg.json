@@ -1,0 +1,16 @@
+{
+  "name": "fil",
+  "version": "1.0.0",
+  "dependencies": [
+    "fmt",
+    "rocksdb",
+    "spdlog",
+    "catch2",
+    {
+      "name": "poco",
+      "features": [
+        "net"
+      ]
+    }
+  ]
+}

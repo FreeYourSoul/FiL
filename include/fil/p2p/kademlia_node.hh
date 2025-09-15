@@ -21,8 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_NODE_HH
-#define FIL_NODE_HH
+#ifndef FIL_KADEMLIA_NODE_HH
+#define FIL_KADEMLIA_NODE_HH
 
 #include <bitset>
 #include <chrono>
@@ -225,9 +225,7 @@ class kademlia_protocol {
     void start() { reactor_.run(); }
 
   private:
-    void on_readable(const Poco::AutoPtr<Poco::Net::ReadableNotification>&) {
-        
-    }
+    void on_readable(const Poco::AutoPtr<Poco::Net::ReadableNotification>&) {}
 
   private:
     std::atomic_uint64_t current_message_id_ {0};                         //!< current message id to use for the next message
@@ -245,9 +243,9 @@ class kademlia_protocol {
  * @brief Kademlia node implementation
  * @tparam ValuePolicy Policy to detect a key and retrieve the proper result
  */
-template<details::value_policy ValuePolicy> class node {
+template<details::value_policy ValuePolicy> class kademlia_node {
   public:
-    explicit node(configuration config, ValuePolicy&& policy = {});
+    explicit kademlia_node(configuration config, ValuePolicy&& policy = {});
 
     /**
      * @brief start the run loop of the node
@@ -275,16 +273,16 @@ template<details::value_policy ValuePolicy> class node {
 };
 
 template<details::value_policy KeyPolicy>
-node<KeyPolicy>::node(configuration config, KeyPolicy&& policy)
+kademlia_node<KeyPolicy>::kademlia_node(configuration config, KeyPolicy&& policy)
     : config_(std::move(config))
     , policy_retriever_(std::forward<KeyPolicy>(policy))
     , rt_(details::generate_random_node_id(), config_.bucket_size)
     , protocol_(config_) {}
 
-template<details::value_policy KeyPolicy> void node<KeyPolicy>::start_run_loop() {}
+template<details::value_policy KeyPolicy> void kademlia_node<KeyPolicy>::start_run_loop() {}
 
-template<details::value_policy KeyPolicy> void node<KeyPolicy>::stop_run_loop() {}
+template<details::value_policy KeyPolicy> void kademlia_node<KeyPolicy>::stop_run_loop() {}
 
 } // namespace fil::p2p::kademlia
 
-#endif // FIL_NODE_HH
+#endif // FIL_KADEMLIA_NODE_HH

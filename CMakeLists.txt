@@ -16,7 +16,7 @@ include(misc/cmake/utility/BuiltFromSource.cmake)
 include(CTest)
 
 option(WITH_FIL_ROCKSDB "Compile with rocksdb" OFF)
-option(WITH_FIL_KADEMLIA "Compile with kademlia p2p library" OFF)
+option(WITH_FIL_P2P "Compile with libp2p library implementation" OFF)
 
 if (IS_BUILT_FROM_SOURCE)
     include(misc/cmake/utility/DoxygenSupport.cmake)
@@ -31,6 +31,7 @@ find_package(fmt REQUIRED)
 
 add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
+
 target_include_directories(fil INTERFACE
         $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/include/>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -42,8 +43,9 @@ target_link_libraries(fil INTERFACE fmt::fmt)
 if (WITH_FIL_ROCKSDB)
     add_subdirectory(internal/src/kv_db)
 endif ()
-if (WITH_FIL_KADEMLIA)
-    add_subdirectory(internal/src/kademlia)
+if (WITH_FIL_P2P)
+    add_subdirectory(internal/p2p)
+    target_link_libraries(fil INTERFACE fys::fil::p2p)
 endif ()
 
 message(STATUS "Tests will be built")

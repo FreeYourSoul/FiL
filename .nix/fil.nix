@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
   ];
 
   cmakeFlags = [
-    "-DBUILD_TESTING=${if with_coverage then "ON" else "OFF"}"
+    "-DBUILD_TESTING=${if execute_test || with_coverage then "ON" else "OFF"}"
     "-DCMAKE_INSTALL_PREFIX=${placeholder "out"}"
     "-DCMAKE_INSTALL_INCLUDEDIR=${placeholder "out"}/include"
     "-DCMAKE_INSTALL_LIBDIR=${placeholder "out"}/lib"
@@ -63,9 +63,7 @@ stdenv.mkDerivation rec {
 
   '';
 
-  postInstall = ''
-    substituteInPlace $out/lib/cmake/fil/filTargets.cmake --replace-warn "/build/FiL/;" ""
-  '';
+  postInstall = "";
 
   meta = with lib; {
     description = "Header-only C++ Utility library";

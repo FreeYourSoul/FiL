@@ -146,5 +146,16 @@ _If using compiled version of the library with database kv_
 
 ### Using nix:
 
-Nix is setup on this repository in the .nix folder.
-To build and install it. Go to the .nix folder and execute a `nix-build` or `nix-env install`
+Nix Flakes is supported on this repository.
+
+To build and install it using Nix Flakes:
+```bash
+nix build
+# To install the package in your profile:
+nix profile install
+```
+
+For development, you can use:
+```bash
+nix develop
+```

@@ -33,11 +33,11 @@ add_library(fil INTERFACE)
 add_library(fys::fil ALIAS fil)
 
 target_include_directories(fil INTERFACE
-        $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/include/>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+        $<INSTALL_INTERFACE:include>
 )
 
-target_compile_features(fil INTERFACE cxx_std_23)
+target_compile_features(fil INTERFACE cxx_std_26)
 target_link_libraries(fil INTERFACE fmt::fmt)
 
 if (WITH_FIL_ROCKSDB)
@@ -69,9 +69,9 @@ configure_package_config_file(
         INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/fil"
         PATH_VARS CMAKE_INSTALL_INCLUDEDIR
 )
-message("CMAKE_INSTALL_LIBDIR ----" ${CMAKE_INSTALL_LIBDIR})
-message("CMAKE_INSTALL_BINDIR ----" ${CMAKE_INSTALL_BINDIR})
-message("CMAKE_INSTALL_INCLUDEDIR ----" ${CMAKE_INSTALL_INCLUDEDIR})
+message("fil : CMAKE_INSTALL_LIBDIR ----" ${CMAKE_INSTALL_LIBDIR})
+message("fil : CMAKE_INSTALL_BINDIR ----" ${CMAKE_INSTALL_BINDIR})
+message("fil : CMAKE_INSTALL_INCLUDEDIR ----" ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(TARGETS fil
         EXPORT filTargets

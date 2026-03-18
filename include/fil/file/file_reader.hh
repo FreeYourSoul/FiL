@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <string_view>
 #include <utility>
 
 namespace fil {

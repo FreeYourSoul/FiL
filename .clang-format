@@ -1,89 +1,73 @@
-# Generated from CLion C/C++ Code Style settings
-BasedOnStyle: LLVM
-AccessModifierOffset: -2
+AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: true
-AlignOperands: AlignAfterOperator
-AllowAllArgumentsOnNextLine: true
-BreakFunctionDefinitionParameters: false
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Never
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLambdasOnASingleLine: All
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlinesLeft: Right
+AlignOperands: true
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AllowShortEnumsOnASingleLine: false
-BreakAfterReturnType: None
-BreakTemplateDeclarations: MultiLine
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: true
+BinPackArguments: true
+BinPackParameters: true
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterCaseLabel: false
-  AfterClass: false
-  AfterControlStatement: Never
-  AfterEnum: false
-  AfterFunction: false
-  AfterNamespace: false
-  AfterUnion: false
-  BeforeCatch: false
-  BeforeElse: false
-  IndentBraces: false
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
   SplitEmptyFunction: false
-  SplitEmptyRecord: true
-BinPackArguments: true
-BinPackParameters: BinPack
-BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeTernaryOperators: false
-BreakConstructorInitializers: BeforeComma
-BreakInheritanceList: BeforeComma
-ColumnLimit: 140
-CompactNamespaces: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBinaryOperators: All
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakStringLiterals: false
+ColumnLimit: 100
+CompactNamespaces: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 4
-IndentCaseLabels: true
-IndentPPDirectives: None
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+FixNamespaceComments: true
+IncludeBlocks: Preserve
+IndentCaseLabels: false
+IndentPPDirectives: AfterHash
 IndentWidth: 4
-KeepEmptyLines:
-  AtEndOfFile: false
-  AtStartOfBlock: true
-  AtStartOfFile: true
+IndentWrappedFunctionNames: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+Language: Cpp
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
-ObjCSpaceAfterProperty: false
-ObjCSpaceBeforeProtocolList: true
+NamespaceIndentation: Inner
+PenaltyBreakBeforeFirstCallParameter: 19937
+PenaltyReturnTypeOnItsOwnLine: 19937
 PointerAlignment: Left
-AlignArrayOfStructures: Left
-AlignEscapedNewlines: LeftWithLastLine
-AlignTrailingComments:
-  Kind: Always
-  OverEmptyLines: 2
-SpaceAfterCStyleCast: true
-SpaceAfterLogicalNot: false
-SpaceAfterTemplateKeyword: false
+ReflowComments: true
+SortIncludes: true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: true
 SpaceBeforeAssignmentOperators: true
-SpaceBeforeCpp11BracedList: true
-SpaceBeforeCtorInitializerColon: true
-SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
-SpaceBeforeSquareBrackets: false
-SpaceBeforeRangeBasedForLoopColon: true
-SpacesInParens: Custom
+SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
-SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-LambdaBodyIndentation: Signature
+Standard: Cpp11
 TabWidth: 4
 UseTab: Never
-AlignConsecutiveBitFields:
-  Enabled: true
-  AcrossEmptyLines: true
-RequiresClausePosition: OwnLine
-RequiresExpressionIndentation: OuterScope
-IndentRequiresClause: false
-ReferenceAlignment: Pointer
-SortIncludes: CaseInsensitive
-IncludeBlocks: Preserve
-Language: Cpp
-Standard: Latest

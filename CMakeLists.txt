@@ -5,6 +5,11 @@ else ()
     cmake_policy(VERSION 3.15)
 endif ()
 
+if (DEFINED ENV{NIXPKGS_CMAKE_PREFIX_PATH})
+    string(REPLACE ":" ";" _nix_prefix_path "$ENV{NIXPKGS_CMAKE_PREFIX_PATH}")
+    list(APPEND CMAKE_PREFIX_PATH ${_nix_prefix_path})
+endif ()
+
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version_str)
 message(STATUS "version = ${version_str}")
 
@@ -37,8 +42,10 @@ target_include_directories(fil INTERFACE
         $<INSTALL_INTERFACE:include>
 )
 
-target_compile_features(fil INTERFACE cxx_std_26)
-target_link_libraries(fil INTERFACE fmt::fmt)
+target_compile_features(fil INTERFACE cxx_std_23)
+
+add_subdirectory(include/fil/descpa)
+target_link_libraries(fil INTERFACE fmt::fmt fys::fil::descpa)
 
 if (WITH_FIL_ROCKSDB)
     add_subdirectory(internal/src/kv_db)
@@ -73,7 +80,7 @@ message("fil : CMAKE_INSTALL_LIBDIR ----" ${CMAKE_INSTALL_LIBDIR})
 message("fil : CMAKE_INSTALL_BINDIR ----" ${CMAKE_INSTALL_BINDIR})
 message("fil : CMAKE_INSTALL_INCLUDEDIR ----" ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS fil
+install(TARGETS fil descpa
         EXPORT filTargets
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"

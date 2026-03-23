@@ -1,22 +1,9 @@
-// Dual Licensing Either :
-// - AGPL
-// or
-// - Subscription license for commercial usage (without requirement of licensing propagation).
-//   please contact ballandfys@protonmail.com for additional information about this subscription commercial licensing.
-//
-// Created by FyS on 29.07.25. License 2022-2025
-//
-// In the case no license has been purchased for the use (modification or distribution in any way) of the software stack
-// the APGL license is applying.
-//
-
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fmt/format.h>
+#include <ranges>
 
 #include "fil/file/file_reader.hh"
-
-#include <ranges>
 
 namespace {
 
@@ -123,7 +110,6 @@ TEST_CASE("read_file_testcase", "[file]") {
     }
 
     SECTION("read_unit : big file") {
-
         const std::string contentbig = std::ranges::views::iota(0u, fil::READER_BUFFER_SIZE + 3000)    //
                                      | std::ranges::views::transform([](auto) -> char { return 'x'; }) //
                                      | std::ranges::to<std::string>();
@@ -171,7 +157,6 @@ TEST_CASE("read_file_testcase", "[file]") {
     }
 
     SECTION("read_line : specific line") {
-
         SECTION("line 0 is invalid") {
             const auto line0 = file_reader.read_line(0);
             CHECK(line0.get().empty());

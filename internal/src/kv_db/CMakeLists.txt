@@ -5,7 +5,7 @@ add_library(kv_db STATIC
         ${PROJECT_SOURCE_DIR}/include/fil/kv_db/kv_rocksdb.hh
         ${PROJECT_SOURCE_DIR}/internal/src/kv_db/kv_rocksdb.cpp
 )
-target_compile_features(kv_db INTERFACE cxx_std_23)
+target_compile_features(kv_db INTERFACE cxx_std_26)
 target_link_libraries(kv_db PUBLIC fys::fil rocksdb)
 target_include_directories(kv_db PRIVATE ${RocksDB_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/kv_db/include/)
 add_library(fys::fil::kv_db ALIAS kv_db)

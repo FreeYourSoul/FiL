@@ -42,7 +42,7 @@ target_include_directories(fil INTERFACE
         $<INSTALL_INTERFACE:include>
 )
 
-target_compile_features(fil INTERFACE cxx_std_23)
+target_compile_features(fil INTERFACE cxx_std_26)
 
 add_subdirectory(include/fil/descpa)
 target_link_libraries(fil INTERFACE fmt::fmt fys::fil::descpa)

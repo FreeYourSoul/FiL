@@ -24,57 +24,159 @@
 #ifndef FIL_DESCPA_H
 #define FIL_DESCPA_H
 
+#include <array>
+#include <cstdint>
+#include <stack>
+#include <string_view>
+
 #include "fil/file/file_reader.hh"
 
-namespace fil::descpa
-{
+namespace fil::descpa {
+namespace details_ {
 
-namespace details_
-{
+struct context {
+    std::uint32_t line     = 0;
+    std::uint32_t position = 0;
+    std::string_view source_name;
+};
 
-    class context
-    {
-        std::uint32_t    curr_rule_idx_ = 0;
-        std::uint32_t    position_      = 0;
-        std::uint32_t    line_          = 0;
-        std::string_view source_name_;
-    };
+struct matcher_ctx {
+    std::uint32_t idx = 0;
+};
 
-    class lexer
-    {
-    public:
-        explicit lexer(file_reader input) : input_(std::move(input)) {}
+class lexer {
+  public:
+    explicit lexer(file_reader input)
+        : input_(std::move(input)) {}
 
-        std::string_view next_lexeme(const auto& formula) {}
+    std::string_view next_lexeme(const auto& formula) {}
 
-    private:
-        file_reader input_;
-    };
+  private:
+    file_reader input_;
+};
 
 } // namespace details_
 
-template <char C>
-struct match_char
-{
-    constexpr bool match(details_::context& ctx, std::uint8_t c)
-    {
-        return c == C;
-    }
+enum class match_result {
+    SUCCESS,
+    FAILURE,
+    CONTINUE
 };
 
-template <typename T>
+template<typename T>
+concept rule = requires(const T& elem) {
+    { T::match(std::declval<details_::matcher_ctx&>(), std::uint8_t {}) } -> std::convertible_to<match_result>;
+};
+
+template<typename T>
 concept production = requires(const T& elem) {
-    { elem->rule() };
+    { elem->rules() } -> rule;
     { elem->produce() };
 };
 
-auto parse(production auto& prod, details_::lexer& lexer)
-{
-    lexer.next_lexeme(prod.rule());
-}
+template<rule... Ts>
+struct tuple_rule {
+    static constexpr auto size = sizeof...(Ts);
 
-auto parse(production auto&& prod, file_reader input)
-{
+    static_assert(size >= 2, "Match concat must have at least 2 elements");
+
+    template<rule O>
+    friend constexpr rule auto operator+(const O&) {
+        return tuple_rule<Ts..., O> {};
+    }
+
+    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) { //
+        match_result current = match_result::SUCCESS;
+
+        auto process = [&current, &ctx, c]<typename T0>() -> bool {
+            current = T0::match(ctx, c);
+            if (current == match_result::SUCCESS) {
+                ++ctx.idx;
+                return true;
+            }
+            if (current == match_result::FAILURE) {
+            }
+            return false;
+        };
+
+        ((process.template operator()<Ts>()) && ...);
+
+        return current;
+    }
+
+  private:
+    std::size_t idx_ = 0;
+};
+
+template<rule Rhs, rule Lhs>
+using pair_rule = tuple_rule<Rhs, Lhs>;
+
+struct composable_rule {
+    template<rule Self, rule O>
+    friend constexpr rule auto operator+(this Self&&, const O&) {
+        return pair_rule<Self, O> {};
+    }
+};
+
+template<std::size_t N>
+struct fixed_string {
+    std::array<char, N> data_;
+
+    explicit constexpr fixed_string(const char str[N]) {
+        for (std::size_t i = 0; i < N; ++i)
+            data_[i] = str[i];
+    }
+
+    constexpr char operator[](std::size_t i) const { return data_[i]; }
+    [[nodiscard]] constexpr std::size_t size() const { return data_.size(); }
+    [[nodiscard]] constexpr bool empty() const { return data_.empty(); }
+};
+
+template<std::size_t N>
+fixed_string(const char (&)[N]) -> fixed_string<N - 1>;
+
+template<fixed_string Str>
+struct match_string : composable_rule {
+    static_assert(!Str.empty(), "String of match char must be non empty");
+
+    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) {
+        if (Str[ctx.idx++] == c)
+            return ctx.idx >= Str.size() ? match_result::SUCCESS : match_result::CONTINUE;
+        ctx.idx = 0;
+        return match_result::FAILURE;
+    }
+};
+
+template<char C>
+struct match_char : composable_rule {
+    static constexpr match_result match(details_::matcher_ctx&, std::uint8_t c) {
+        return c == C ? match_result::SUCCESS : match_result::FAILURE;
+    }
+};
+
+template<fixed_string RightWrap, rule Content, fixed_string LeftWrap>
+using wrapped = tuple_rule<match_string<RightWrap>, Content, match_string<LeftWrap>>;
+
+template<rule Content>
+using parenthesis_wrapped = wrapped<fixed_string {"("}, Content, fixed_string {")"}>;
+
+template<rule Content>
+using bracket_wrapped = wrapped<fixed_string {"{"}, Content, fixed_string {"}"}>;
+
+template<rule Content>
+using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
+
+template<rule Content>
+using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
+
+using match_if      = match_string<fixed_string {"if"}>;
+using match_while   = match_string<fixed_string {"while"}>;
+using match_comma   = match_char<','>;
+using match_semicol = match_char<';'>;
+
+auto parse(production auto& prod, details_::lexer& lexer) { lexer.next_lexeme(prod.rule()); }
+
+auto parse(production auto&& prod, file_reader input) {
     details_::lexer lexer(std::move(input));
 
     return parse(prod, lexer);

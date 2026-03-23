@@ -26,8 +26,8 @@
 
 #include <array>
 #include <cstdint>
-#include <stack>
 #include <string_view>
+#include <vector>
 
 #include "fil/file/file_reader.hh"
 
@@ -41,7 +41,18 @@ struct context {
 };
 
 struct matcher_ctx {
-    std::uint32_t idx = 0;
+    std::uint16_t current_depth = 0;
+    std::vector<uint16_t> idx {};
+
+    void increase_depth() {
+        ++current_depth;
+        idx.push_back(0);
+    }
+
+    void decrease_depth() {
+        --current_depth;
+        idx.pop_back();
+    }
 };
 
 class lexer {
@@ -59,8 +70,8 @@ class lexer {
 
 enum class match_result {
     SUCCESS,
-    FAILURE,
-    CONTINUE
+    CONTINUE,
+    FAILURE
 };
 
 template<typename T>
@@ -81,25 +92,35 @@ struct tuple_rule {
     static_assert(size >= 2, "Match concat must have at least 2 elements");
 
     template<rule O>
-    friend constexpr rule auto operator+(const O&) {
+    constexpr rule auto operator+(const O&) {
         return tuple_rule<Ts..., O> {};
     }
 
-    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) { //
+    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) {
         match_result current = match_result::SUCCESS;
 
-        auto process = [&current, &ctx, c]<typename T0>() -> bool {
-            current = T0::match(ctx, c);
-            if (current == match_result::SUCCESS) {
-                ++ctx.idx;
+        auto process = [&current, &ctx, c, i = 0]<typename T0>() mutable -> bool {
+            if (i++ == ctx.idx.back()) {
+                // if (ctx.idx.size() == ctx.current_depth) {
+                //     ctx.increase_depth();
+                // }
+
+                current = T0::match(ctx, c);
+
+                if (current == match_result::SUCCESS) {
+                    ++ctx.idx.back();
+                    // ctx.decrease_depth();
+                }
                 return true;
-            }
-            if (current == match_result::FAILURE) {
             }
             return false;
         };
 
-        ((process.template operator()<Ts>()) && ...);
+        ((process.template operator()<Ts>()) || ...);
+
+        if (current == match_result::SUCCESS) {
+            return ctx.idx.back() == size ? match_result::SUCCESS : match_result::CONTINUE;
+        }
 
         return current;
     }
@@ -113,7 +134,7 @@ using pair_rule = tuple_rule<Rhs, Lhs>;
 
 struct composable_rule {
     template<rule Self, rule O>
-    friend constexpr rule auto operator+(this Self&&, const O&) {
+    constexpr rule auto operator+(this Self&&, const O&) {
         return pair_rule<Self, O> {};
     }
 };
@@ -140,9 +161,13 @@ struct match_string : composable_rule {
     static_assert(!Str.empty(), "String of match char must be non empty");
 
     static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) {
-        if (Str[ctx.idx++] == c)
-            return ctx.idx >= Str.size() ? match_result::SUCCESS : match_result::CONTINUE;
-        ctx.idx = 0;
+        if (Str[ctx.idx.back()++] == c) {
+            if (ctx.idx.back() >= Str.size()) {
+                return match_result::SUCCESS;
+            }
+            return match_result::CONTINUE;
+        }
+        ctx.idx.back() = 0;
         return match_result::FAILURE;
     }
 };

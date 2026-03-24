@@ -26,6 +26,7 @@
 
 #include <array>
 #include <cstdint>
+#include <iostream>
 #include <string_view>
 #include <vector>
 
@@ -41,18 +42,11 @@ struct context {
 };
 
 struct matcher_ctx {
-    std::uint16_t current_depth = 0;
     std::vector<uint16_t> idx {};
 
-    void increase_depth() {
-        ++current_depth;
-        idx.push_back(0);
-    }
+    void increase_depth() { idx.push_back(0); }
 
-    void decrease_depth() {
-        --current_depth;
-        idx.pop_back();
-    }
+    void decrease_depth() { idx.pop_back(); }
 };
 
 class lexer {
@@ -76,7 +70,7 @@ enum class match_result {
 
 template<typename T>
 concept rule = requires(const T& elem) {
-    { T::match(std::declval<details_::matcher_ctx&>(), std::uint8_t {}) } -> std::convertible_to<match_result>;
+    { T::match(std::declval<details_::matcher_ctx&>(), std::uint8_t {}, std::uint32_t {}) } -> std::convertible_to<match_result>;
 };
 
 template<typename T>
@@ -96,20 +90,22 @@ struct tuple_rule {
         return tuple_rule<Ts..., O> {};
     }
 
-    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) {
-        match_result current = match_result::SUCCESS;
+    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+        match_result current = match_result::FAILURE;
 
-        auto process = [&current, &ctx, c, i = 0]<typename T0>() mutable -> bool {
-            if (i++ == ctx.idx.back()) {
-                // if (ctx.idx.size() == ctx.current_depth) {
-                //     ctx.increase_depth();
-                // }
+        auto process = [&current, &ctx, c, depth, i = 0]<typename T0>() mutable -> bool {
+            if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
+                if ((ctx.idx.size() - 1) == depth) {
+                    ctx.increase_depth();
+                }
 
-                current = T0::match(ctx, c);
+                current = T0::match(ctx, c, depth + 1);
 
                 if (current == match_result::SUCCESS) {
-                    ++ctx.idx.back();
-                    // ctx.decrease_depth();
+                    ++ctx.idx[depth];
+                }
+                if (current != match_result::CONTINUE) {
+                    ctx.decrease_depth();
                 }
                 return true;
             }
@@ -119,7 +115,7 @@ struct tuple_rule {
         ((process.template operator()<Ts>()) || ...);
 
         if (current == match_result::SUCCESS) {
-            return ctx.idx.back() == size ? match_result::SUCCESS : match_result::CONTINUE;
+            return ctx.idx[depth] == size ? match_result::SUCCESS : match_result::CONTINUE;
         }
 
         return current;
@@ -160,7 +156,7 @@ template<fixed_string Str>
 struct match_string : composable_rule {
     static_assert(!Str.empty(), "String of match char must be non empty");
 
-    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c) {
+    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
         if (Str[ctx.idx.back()++] == c) {
             if (ctx.idx.back() >= Str.size()) {
                 return match_result::SUCCESS;
@@ -174,7 +170,7 @@ struct match_string : composable_rule {
 
 template<char C>
 struct match_char : composable_rule {
-    static constexpr match_result match(details_::matcher_ctx&, std::uint8_t c) {
+    static constexpr match_result match(details_::matcher_ctx&, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
         return c == C ? match_result::SUCCESS : match_result::FAILURE;
     }
 };

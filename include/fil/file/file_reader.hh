@@ -59,7 +59,8 @@ class file_reader {
         file_reader* reader_ {};        //!< pointer to the file reader that contains the line
     };
 
-    template<std::invocable<std::string_view>> class iterator_file_ {};
+    template<std::invocable<std::string_view>>
+    class iterator_file_ {};
 
     class sentinel {};   //!< sentinel for end iteration
     class line_iterator; //!< iterator that iterate through lines in the file
@@ -75,8 +76,8 @@ class file_reader {
             file_stream_.seekg(0, std::ios::beg);
             return size;
         }()) {
-        const auto size_buffer = std::min(size_, READER_BUFFER_SIZE);
-        current_buffer_.resize(size_buffer);
+        // const auto size_buffer = std::min(size_, READER_BUFFER_SIZE);
+        current_buffer_.resize(READER_BUFFER_SIZE);
     }
 
     block_view read_line(std::size_t line) {
@@ -150,6 +151,16 @@ class file_reader {
         return {line, load_counter_, this};
     }
 
+    [[nodiscard]] std::optional<std::uint8_t> next_byte() {
+        if (cursor_ >= buffer_size_) {
+            load_();
+        }
+        if (buffer_size_ == 0 || cursor_ >= buffer_size_) {
+            return std::nullopt;
+        }
+        return std::make_optional(current_buffer_[cursor_++]);
+    }
+
     [[nodiscard]] const std::filesystem::path& get_path() const { return file_path_; }
     [[nodiscard]] bool exists() const { return std::filesystem::exists(file_path_); }
     [[nodiscard]] auto get_file_cursor() { return file_stream_.tellg(); }
@@ -161,14 +172,40 @@ class file_reader {
     [[nodiscard]] file_reader::sentinel end() { return {}; }
 
   private:
+    /**
+     * @brief Loads a block of data from the file into the buffer.
+     *
+     * @details This method reads a block of data from the file stream into the buffer and updates
+     * internal state variables accordingly. If the buffer already contains unread data, the
+     * cursor in the file stream is moved backward to account for the leftover data before loading.
+     * It increments the load counter to track the number of load operations performed.
+     *
+     * Behavior:
+     * - If the end of the file is reached, no actions are performed, and the method returns early.
+     * - If the last read operation left unread data in the buffer, the file stream's cursor is
+     *   adjusted to include that data in the next read operation.
+     * - Resets the internal buffer state before attempting further reads.
+     * - Reads up to `READER_BUFFER_SIZE` bytes from the file stream into the buffer. If no data can
+     *   be read (e.g., due to an error or end-of-file), the buffer size remains at zero.
+     * - Adds a null-terminator at the end of the loaded buffer for safe string operations.
+     *
+     * Preconditions:
+     * - The file stream must be open and ready for reading.
+     *
+     * Postconditions:
+     * - The buffer contains data read from the file, up to `READER_BUFFER_SIZE` bytes, or remains
+     *   empty if no data could be read.
+     * - The cursor is reset, and the buffer size is updated to reflect the amount of data read.
+     */
     void load_() {
         if (file_stream_.eof())
             return;
 
         if (buffer_size_ != 0) {
             // move cursor backward to the last read position to retrieve the same leftover of buffer that was not read
-            if (cursor_ < current_buffer_.size())
+            if (cursor_ < current_buffer_.size()) {
                 file_stream_.seekg(-(current_buffer_.size() - cursor_), std::ios::cur);
+            }
         }
         ++load_counter_;
 
@@ -179,7 +216,7 @@ class file_reader {
             return; // No more data to read
         }
 
-        file_stream_.read(current_buffer_.data(), READER_BUFFER_SIZE);
+        file_stream_.read(&current_buffer_[0], READER_BUFFER_SIZE);
         buffer_size_                  = file_stream_.gcount();
         current_buffer_[buffer_size_] = '\0';
     }

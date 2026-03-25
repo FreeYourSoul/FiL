@@ -1,13 +1,40 @@
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 #include <fmt/format.h>
+#include <fstream>
 #include <iostream>
+#include <random>
+#include <stdexcept>
+#include <string>
 
 #include "fil/descpa/descpa.hh"
+
+std::filesystem::path create_temp_file(const std::string& content, const std::string& prefix = "temp_file",
+                                       const std::string& extension = ".txt") {
+    // Generate a unique filename
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1000, 9999);
+
+    const auto filename  = fmt::format("{}_{}{}", prefix, dis(gen), extension);
+    const auto temp_path = std::filesystem::temp_directory_path() / filename;
+    std::ofstream file(temp_path);
+    if (!file) {
+        throw std::runtime_error(fmt::format("Could not open file for writing: {}", temp_path.string()));
+    }
+
+    file << content;
+    if (!file) {
+        throw std::runtime_error(fmt::format("Error writing to file: {}", temp_path.string()));
+    }
+
+    return temp_path;
+}
 
 TEST_CASE("descpa basic tests", "[descpa]") {
 
     fil::descpa::details_::matcher_ctx ctx;
-    ctx.idx.push_back(0);
+
     SECTION("test char") {
 
         fil::descpa::match_char<'X'> char_x_check;
@@ -292,5 +319,40 @@ TEST_CASE("descpa basic tests", "[descpa]") {
             CHECK(composed.match(ctx, 'o') == fil::descpa::match_result::CONTINUE);
             CHECK(composed.match(ctx, ')') == fil::descpa::match_result::SUCCESS);
         }
+    }
+}
+
+TEST_CASE("descpa file tests", "[descpa]") {
+
+    fil::descpa::details_::matcher_ctx ctx;
+
+    SECTION("test parse file single char") {
+        // const auto f1 = create_temp_file("I");
+        const std::filesystem::path f1 {"/home/fys/I.txt"};
+        fil::file_reader file_reader {f1};
+
+        struct grammar {
+            static constexpr fil::descpa::rule auto rules() { return fil::descpa::match_char<'I'> {}; }
+            static constexpr void produce() {}
+        };
+
+        auto g = grammar {};
+        CHECK(fil::descpa::parse(g, std::move(file_reader)) == fil::descpa::match_result::SUCCESS);
+    }
+
+    SECTION("test parse file string") {
+        // const auto f1 = create_temp_file("ILoveChocobo");
+        const std::filesystem::path f1 {"/home/fys/ILoveChocobo.txt"};
+        fil::file_reader file_reader {f1};
+
+        struct grammar {
+            static constexpr fil::descpa::rule auto rules() {
+                return fil::descpa::match_string<fil::descpa::fixed_string {"ILoveChocobo"}> {};
+            }
+            static constexpr void produce() {}
+        };
+
+        auto g = grammar {};
+        CHECK(fil::descpa::parse(g, std::move(file_reader)) == fil::descpa::match_result::SUCCESS);
     }
 }

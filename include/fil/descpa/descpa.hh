@@ -26,41 +26,16 @@
 
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <string_view>
 #include <vector>
 
 #include "fil/file/file_reader.hh"
 
 namespace fil::descpa {
+
 namespace details_ {
-
-struct context {
-    std::uint32_t line     = 0;
-    std::uint32_t position = 0;
-    std::string_view source_name;
-};
-
-struct matcher_ctx {
-    std::vector<uint16_t> idx {};
-
-    void increase_depth() { idx.push_back(0); }
-
-    void decrease_depth() { idx.pop_back(); }
-};
-
-class lexer {
-  public:
-    explicit lexer(file_reader input)
-        : input_(std::move(input)) {}
-
-    std::string_view next_lexeme(const auto& formula) {}
-
-  private:
-    file_reader input_;
-};
-
-} // namespace details_
+struct matcher_ctx;
+}
 
 enum class match_result {
     SUCCESS,
@@ -74,10 +49,52 @@ concept rule = requires(const T& elem) {
 };
 
 template<typename T>
-concept production = requires(const T& elem) {
-    { elem->rules() } -> rule;
-    { elem->produce() };
+concept production = requires(T elem) {
+    { elem.rules() } -> rule;
+    { elem.produce() };
 };
+
+namespace details_ {
+
+struct context {
+    std::uint32_t line     = 0;
+    std::uint32_t position = 0;
+    std::string_view source_name;
+};
+
+struct matcher_ctx {
+    std::vector<uint16_t> idx {0};
+
+    void increase_depth() { idx.push_back(0); }
+
+    void decrease_depth() { idx.pop_back(); }
+};
+
+class parser {
+  public:
+    explicit parser(file_reader input)
+        : input_(std::move(input)) {}
+
+    match_result parse(const production auto& prod) {
+        const rule auto formula = prod.rules();
+
+        matcher_ctx ctx {};
+        match_result result = match_result::CONTINUE;
+        while (result == match_result::CONTINUE) {
+            const auto c = input_.next_byte();
+            if (!c.has_value()) {
+                return match_result::FAILURE;
+            }
+            result = formula.match(ctx, c.value());
+        }
+        return result;
+    }
+
+  private:
+    file_reader input_;
+};
+
+} // namespace details_
 
 template<rule... Ts>
 struct tuple_rule {
@@ -132,7 +149,7 @@ struct composable_rule {
     template<rule Self, rule O>
     constexpr rule auto operator+(this Self&&, const O&) {
         return pair_rule<Self, O> {};
-    }
+    } // namespace fil::descpa
 };
 
 template<std::size_t N>
@@ -195,12 +212,9 @@ using match_while   = match_string<fixed_string {"while"}>;
 using match_comma   = match_char<','>;
 using match_semicol = match_char<';'>;
 
-auto parse(production auto& prod, details_::lexer& lexer) { lexer.next_lexeme(prod.rule()); }
-
-auto parse(production auto&& prod, file_reader input) {
-    details_::lexer lexer(std::move(input));
-
-    return parse(prod, lexer);
+match_result parse(production auto& prod, file_reader&& input) {
+    details_::parser p(std::move(input));
+    return p.parse(prod);
 }
 
 } // namespace fil::descpa

@@ -8,28 +8,7 @@
 #include <string>
 
 #include "fil/descpa/descpa.hh"
-
-std::filesystem::path create_temp_file(const std::string& content, const std::string& prefix = "temp_file",
-                                       const std::string& extension = ".txt") {
-    // Generate a unique filename
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(1000, 9999);
-
-    const auto filename  = fmt::format("{}_{}{}", prefix, dis(gen), extension);
-    const auto temp_path = std::filesystem::temp_directory_path() / filename;
-    std::ofstream file(temp_path);
-    if (!file) {
-        throw std::runtime_error(fmt::format("Could not open file for writing: {}", temp_path.string()));
-    }
-
-    file << content;
-    if (!file) {
-        throw std::runtime_error(fmt::format("Error writing to file: {}", temp_path.string()));
-    }
-
-    return temp_path;
-}
+#include "fil/file/temporary.hh"
 
 TEST_CASE("descpa basic tests", "[descpa]") {
 
@@ -327,8 +306,7 @@ TEST_CASE("descpa file tests", "[descpa]") {
     fil::descpa::details_::matcher_ctx ctx;
 
     SECTION("test parse file single char") {
-        // const auto f1 = create_temp_file("I");
-        const std::filesystem::path f1 {"/home/fys/I.txt"};
+        const auto f1 = fil::temporary_file("I");
         fil::file_reader file_reader {f1};
 
         struct grammar {
@@ -341,8 +319,7 @@ TEST_CASE("descpa file tests", "[descpa]") {
     }
 
     SECTION("test parse file string") {
-        // const auto f1 = create_temp_file("ILoveChocobo");
-        const std::filesystem::path f1 {"/home/fys/ILoveChocobo.txt"};
+        const auto f1 = fil::temporary_file("ILoveChocobo");
         fil::file_reader file_reader {f1};
 
         struct grammar {

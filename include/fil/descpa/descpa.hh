@@ -26,14 +26,22 @@
 
 #include <array>
 #include <cstdint>
+#include <expected>
 #include <string_view>
 #include <vector>
 
+#include "fil/descpa/ast.hh"
+#include "fil/descpa/member.hh"
 #include "fil/file/file_reader.hh"
+
+struct ast_object {
+    std::string value;
+};
 
 namespace fil::descpa {
 
 namespace details_ {
+template<typename Convertor>
 struct matcher_ctx;
 }
 
@@ -44,14 +52,23 @@ enum class match_result {
 };
 
 template<typename T>
-concept rule = requires(const T& elem) {
-    { T::match(std::declval<details_::matcher_ctx&>(), std::uint8_t {}, std::uint32_t {}) } -> std::convertible_to<match_result>;
+concept rule = requires {
+    typename T::return_type;
+    requires std::default_initializable<typename T::return_type>;
+
+    { //
+        T::match(std::declval<details_::matcher_ctx<ast::convertor_noop>&>(), std::uint8_t {}, std::uint32_t {})
+    } -> std::convertible_to<match_result>;
+
+    { //
+        T::match(std::declval<details_::matcher_ctx<ast::convertor_noop>&>(), std::uint8_t {})
+    } -> std::convertible_to<match_result>;
 };
 
 template<typename T>
-concept production = requires(T elem) {
-    { elem.rules() } -> rule;
-    { elem.produce() };
+concept production = requires {
+    { T::rules() } -> rule;
+    { T::convertor() };
 };
 
 namespace details_ {
@@ -62,8 +79,11 @@ struct context {
     std::string_view source_name;
 };
 
+template<typename Convertor>
 struct matcher_ctx {
+    Convertor convertor;
     std::vector<uint16_t> idx {0};
+    std::string current_token; //!< @todo transform into a view
 
     void increase_depth() { idx.push_back(0); }
 
@@ -75,19 +95,22 @@ class parser {
     explicit parser(file_reader input)
         : input_(std::move(input)) {}
 
-    match_result parse(const production auto& prod) {
+    auto parse(const production auto& prod) {
         const rule auto formula = prod.rules();
 
-        matcher_ctx ctx {};
+        matcher_ctx ctx {prod.convertor()};
         match_result result = match_result::CONTINUE;
         while (result == match_result::CONTINUE) {
             const auto c = input_.next_byte();
             if (!c.has_value()) {
-                return match_result::FAILURE;
+                return ctx.convertor.value();
             }
+
+            ctx.current_token += static_cast<char>(c.value());
+
             result = formula.match(ctx, c.value());
         }
-        return result;
+        return ctx.convertor.value();
     }
 
   private:
@@ -102,12 +125,14 @@ struct tuple_rule {
 
     static_assert(size >= 2, "Match concat must have at least 2 elements");
 
+    using return_type = std::tuple<typename Ts::return_type...>;
+
     template<rule O>
     constexpr rule auto operator+(const O&) {
         return tuple_rule<Ts..., O> {};
     }
 
-    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
         match_result current = match_result::FAILURE;
 
         auto process = [&current, &ctx, c, depth, i = 0]<typename T0>() mutable -> bool {
@@ -169,13 +194,16 @@ struct fixed_string {
 template<std::size_t N>
 fixed_string(const char (&)[N]) -> fixed_string<N - 1>;
 
-template<fixed_string Str>
+template<fixed_string Str, member_type Mem = member_noop>
 struct match_string : composable_rule {
     static_assert(!Str.empty(), "String of match char must be non empty");
 
-    static constexpr match_result match(details_::matcher_ctx& ctx, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
+    using return_type = std::string;
+
+    static constexpr match_result match(auto& ctx, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
         if (Str[ctx.idx.back()++] == c) {
             if (ctx.idx.back() >= Str.size()) {
+                ctx.convertor(Mem {}, ctx.current_token);
                 return match_result::SUCCESS;
             }
             return match_result::CONTINUE;
@@ -183,12 +211,24 @@ struct match_string : composable_rule {
         ctx.idx.back() = 0;
         return match_result::FAILURE;
     }
+
+    template<typename Type>
+    static constexpr void value(Mem::member_type& obj, Type&& value) {
+        member(obj, std::forward<Type>(value));
+    }
 };
 
 template<char C>
 struct match_char : composable_rule {
-    static constexpr match_result match(details_::matcher_ctx&, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
+    using return_type = char;
+
+    static constexpr match_result match(auto&, std::uint8_t c, [[maybe_unused]] std::uint32_t depth = 0) {
         return c == C ? match_result::SUCCESS : match_result::FAILURE;
+    }
+
+    template<typename Type, member_type Mem>
+    static constexpr void value(Type&& value, Mem member) {
+        value.*member = C;
     }
 };
 
@@ -212,7 +252,7 @@ using match_while   = match_string<fixed_string {"while"}>;
 using match_comma   = match_char<','>;
 using match_semicol = match_char<';'>;
 
-match_result parse(production auto& prod, file_reader&& input) {
+auto parse(production auto& prod, file_reader&& input) {
     details_::parser p(std::move(input));
     return p.parse(prod);
 }

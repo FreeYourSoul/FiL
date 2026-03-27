@@ -1,10 +1,11 @@
+#include "ast.hh"
+
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
 #include <iostream>
+#include <print>
 #include <random>
-#include <stdexcept>
 #include <string>
 
 #include "fil/descpa/descpa.hh"
@@ -12,7 +13,7 @@
 
 TEST_CASE("descpa basic tests", "[descpa]") {
 
-    fil::descpa::details_::matcher_ctx ctx;
+    fil::descpa::details_::matcher_ctx<fil::descpa::ast::convertor_noop> ctx;
 
     SECTION("test char") {
 
@@ -303,33 +304,40 @@ TEST_CASE("descpa basic tests", "[descpa]") {
 
 TEST_CASE("descpa file tests", "[descpa]") {
 
-    fil::descpa::details_::matcher_ctx ctx;
+    fil::descpa::details_::matcher_ctx<fil::descpa::ast::aggregator<ast_object>> ctx;
 
     SECTION("test parse file single char") {
         const auto f1 = fil::temporary_file("I");
         fil::file_reader file_reader {f1};
 
         struct grammar {
+            struct ast_object {
+                char value;
+            };
+
             static constexpr fil::descpa::rule auto rules() { return fil::descpa::match_char<'I'> {}; }
-            static constexpr void produce() {}
+            static constexpr auto convertor() { return fil::descpa::ast::aggregator<ast_object> {}; }
         };
 
-        auto g = grammar {};
-        CHECK(fil::descpa::parse(g, std::move(file_reader)) == fil::descpa::match_result::SUCCESS);
+        auto g       = grammar {};
+        const auto v = fil::descpa::parse(g, std::move(file_reader));
     }
 
     SECTION("test parse file string") {
+
         const auto f1 = fil::temporary_file("ILoveChocobo");
         fil::file_reader file_reader {f1};
 
         struct grammar {
             static constexpr fil::descpa::rule auto rules() {
-                return fil::descpa::match_string<fil::descpa::fixed_string {"ILoveChocobo"}> {};
+                return fil::descpa::match_string<fil::descpa::fixed_string {"ILoveChocobo"}, fil::descpa::member<&ast_object::value>> {};
             }
-            static constexpr void produce() {}
+            static constexpr auto convertor() { return fil::descpa::ast::aggregator<ast_object> {}; }
         };
 
-        auto g = grammar {};
-        CHECK(fil::descpa::parse(g, std::move(file_reader)) == fil::descpa::match_result::SUCCESS);
+        auto g       = grammar {};
+        const auto v = fil::descpa::parse(g, std::move(file_reader));
+
+        CHECK(v.value == "ILoveChocobo");
     }
 }

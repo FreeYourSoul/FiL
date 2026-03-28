@@ -70,6 +70,12 @@ concept production = requires {
     { T::convertor() };
 };
 
+template<typename T>
+concept reader = requires(T reader_) {
+    std::is_move_assignable_v<T>;
+    { reader_.next_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
+};
+
 namespace details_ {
 
 struct context {
@@ -89,12 +95,13 @@ struct matcher_ctx {
     void decrease_depth() { idx.pop_back(); }
 };
 
+template<reader Reader>
 class parser {
   public:
-    explicit parser(file_reader input)
+    explicit constexpr parser(Reader input)
         : input_(std::move(input)) {}
 
-    auto parse(const production auto& prod) {
+    constexpr auto parse(const production auto& prod) {
         const rule auto formula = prod.rules();
 
         matcher_ctx ctx {prod.convertor()};
@@ -113,7 +120,7 @@ class parser {
     }
 
   private:
-    file_reader input_;
+    Reader input_;
 };
 
 } // namespace details_
@@ -231,8 +238,59 @@ struct match_char : composable_rule {
     }
 };
 
-auto parse(production auto& prod, file_reader&& input) {
-    details_::parser p(std::move(input));
+/**
+ * @brief Parses input data according to a grammar production.
+ * *  @details This function serves as the main entry point for parsing operations. It creates an internal
+ *  parser instance and delegates the actual parsing work to it. The function processes input byte-by-byte,
+ *  matching against the rules defined in the production's grammar until completion.
+ *
+ *  **Important Note on `constexpr` Annotation:**
+ *  While this function is marked `constexpr`, it can only be evaluated at runtime in practical use cases when using
+ *  a reader that can be instantiated at compile time.
+ *  For instance, the `file_reader` parameter relies on file I/O operations (streams, filesystem access) which
+ *  are inherently non-constexpr.
+ *
+ *  @tparam Production A type satisfying the `production` concept.
+ *  @param prod The grammar production that defines parsing rules and result construction.
+ *              Passed as a non-const reference to allow the parser to access the production's convertor.
+ *
+ *  @tparam Reader A type satisfying the `reader` concept.
+ *  @param input An rvalue reference to a `reader` object. The reader is moved into an internal
+ *               parser instance. This parameter enables efficient resource management and ensures
+ *               the reader cannot be reused after the parse operation.
+ *
+ *  @return The result of parsing, obtained from `convertor().value()`. The return type depends on
+ *          the convertor associated with the production. Typical returns include:
+ *          - The constructed AST object (if using an aggregator convertor)
+ *          - An integer status code (if using `convertor_noop`)
+ *
+ *  @example
+ *  @code
+ *  struct MyGrammar {
+ *      struct Result {
+ *          std::string parsed_value;
+ *      };
+ *
+ *      static constexpr auto rules() {
+ *          return match_string<fixed_string{"keyword"}> {};
+ *      }
+ *
+ *      static constexpr auto convertor() {
+ *          return sink::aggregator<Result> {};
+ *      }
+ *  };
+ *
+ *  fil::file_reader reader{std::filesystem::path("input.txt")};
+ *  MyGrammar grammar;
+ *  auto result = parse(grammar, std::move(reader));
+ *  @endcode
+ *
+ *  @see fil::descpa::details_::parser for internal parsing implementation
+ *  @see fil::descpa::rule for grammar rule concept requirements
+ *  @see fil::descpa::production for production concept requirements
+ */
+constexpr auto parse(production auto& prod, reader auto&& input) {
+    details_::parser p(std::forward<decltype(input)>(input));
     return p.parse(prod);
 }
 

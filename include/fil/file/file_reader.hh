@@ -22,9 +22,19 @@
 
 namespace fil {
 
-static constexpr std::size_t READER_BUFFER_SIZE = 1024 * 1024 + 1; //!< max size of the buffer used to read the file (1Mb)
-//! end position in the buffer to read from (-1 to have an extra byte for null-termination)
+/**
+ * max size of the buffer used to read the file (1Mb)
+ * end position in the buffer to read from (-1 to have an extra byte for null-termination)
+ */
+static constexpr std::size_t READER_BUFFER_SIZE = 1024 * 1024 + 1;
 
+/**
+ * @brief Class responsible for reading and processing file data.
+ *
+ * The `file_reader` class provides functionality to read a file in blocks or lines, offering a buffered
+ * view of its content for efficient processing. Additionally, it supports iterating through lines,
+ * reading specific lines, or reading until a condition is met through predicates.
+ */
 class file_reader {
   public:
     /**

@@ -34,11 +34,10 @@
 #include "fil/descpa/member.hh"
 #include "fil/file/file_reader.hh"
 
-struct ast_object {
-    std::string value;
-};
-
 namespace fil::descpa {
+namespace sink {
+struct convertor_noop;
+}
 
 namespace details_ {
 template<typename Convertor>
@@ -57,11 +56,11 @@ concept rule = requires {
     requires std::default_initializable<typename T::return_type>;
 
     { //
-        T::match(std::declval<details_::matcher_ctx<ast::convertor_noop>&>(), std::uint8_t {}, std::uint32_t {})
+        T::match(std::declval<details_::matcher_ctx<sink::convertor_noop>&>(), std::uint8_t {}, std::uint32_t {})
     } -> std::convertible_to<match_result>;
 
     { //
-        T::match(std::declval<details_::matcher_ctx<ast::convertor_noop>&>(), std::uint8_t {})
+        T::match(std::declval<details_::matcher_ctx<sink::convertor_noop>&>(), std::uint8_t {})
     } -> std::convertible_to<match_result>;
 };
 
@@ -231,26 +230,6 @@ struct match_char : composable_rule {
         value.*member = C;
     }
 };
-
-template<fixed_string RightWrap, rule Content, fixed_string LeftWrap>
-using wrapped = tuple_rule<match_string<RightWrap>, Content, match_string<LeftWrap>>;
-
-template<rule Content>
-using parenthesis_wrapped = wrapped<fixed_string {"("}, Content, fixed_string {")"}>;
-
-template<rule Content>
-using bracket_wrapped = wrapped<fixed_string {"{"}, Content, fixed_string {"}"}>;
-
-template<rule Content>
-using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
-
-template<rule Content>
-using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
-
-using match_if      = match_string<fixed_string {"if"}>;
-using match_while   = match_string<fixed_string {"while"}>;
-using match_comma   = match_char<','>;
-using match_semicol = match_char<';'>;
 
 auto parse(production auto& prod, file_reader&& input) {
     details_::parser p(std::move(input));

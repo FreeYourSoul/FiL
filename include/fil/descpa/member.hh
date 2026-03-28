@@ -27,6 +27,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "fil/type_traits/extract_member_type.hh"
+
 namespace fil::descpa {
 
 template<typename Ptr, bool IsSetter>
@@ -48,44 +50,10 @@ class member_fn {
     Ptr ptr_;
 };
 
-// Helper trait to extract class type from pointer-to-member
-template<typename PointerToMember>
-struct extract_class;
-
-// Specialization for data members
-template<typename T, typename MemberType>
-struct extract_class<MemberType T::*> {
-    using type = T;
-};
-
-// Specialization for member functions
-template<typename T, typename ReturnType, typename... Args>
-struct extract_class<ReturnType (T::*)(Args...)> {
-    using type = T;
-};
-
-// Const member functions
-template<typename T, typename ReturnType, typename... Args>
-struct extract_class<ReturnType (T::*)(Args...) const> {
-    using type = T;
-};
-
-// Volatile member functions
-template<typename T, typename ReturnType, typename... Args>
-struct extract_class<ReturnType (T::*)(Args...) volatile> {
-    using type = T;
-};
-
-// Const volatile member functions
-template<typename T, typename ReturnType, typename... Args>
-struct extract_class<ReturnType (T::*)(Args...) const volatile> {
-    using type = T;
-};
-
 template<auto MemberPtr>
 struct member {
     using pointer_member = decltype(MemberPtr);
-    using member_type    = typename extract_class<pointer_member>::type;
+    using member_type    = extract_class_t<pointer_member>;
     using is_member_ptr  = void;
 
     static constexpr bool is_function_member = std::is_member_function_pointer_v<pointer_member>;

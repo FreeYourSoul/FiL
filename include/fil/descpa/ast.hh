@@ -24,37 +24,30 @@
 #ifndef FIL_AST_BASE_HH
 #define FIL_AST_BASE_HH
 
-#include "fil/descpa/member.hh"
+#include "fil/descpa/descpa.hh"
 
-namespace fil::descpa::ast {
+namespace fil::descpa {
 
-template<typename Class, typename MemberType>
-constexpr auto map_to(MemberType Class::* ptr) {
-    return member {ptr};
-}
+template<fixed_string RightWrap, rule Content, fixed_string LeftWrap>
+using wrapped = tuple_rule<match_string<RightWrap>, Content, match_string<LeftWrap>>;
 
-template<typename T>
-class aggregator {
-  public:
-    using value_type = T;
+template<rule Content>
+using parenthesis_wrapped = wrapped<fixed_string {"("}, Content, fixed_string {")"}>;
 
-    constexpr aggregator() = default;
+template<rule Content>
+using bracket_wrapped = wrapped<fixed_string {"{"}, Content, fixed_string {"}"}>;
 
-    template<member_type Mem, typename Value>
-    constexpr void operator()(Mem mem, Value&& value) {
-        mem(value_, std::forward<Value>(value));
-    }
+template<rule Content>
+using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
 
-    constexpr const value_type& value() const { return value_; }
+template<rule Content>
+using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
 
-  private:
-    value_type value_ {};
-};
+using match_if      = match_string<fixed_string {"if"}>;
+using match_while   = match_string<fixed_string {"while"}>;
+using match_comma   = match_char<','>;
+using match_semicol = match_char<';'>;
 
-struct convertor_noop {
-    constexpr void operator()(const auto&, auto&&) {}
-};
-
-} // namespace fil::descpa::ast
+} // namespace fil::descpa
 
 #endif // FIL_AST_BASE_HH

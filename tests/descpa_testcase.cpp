@@ -8,12 +8,14 @@
 #include <random>
 #include <string>
 
+#include "fil/descpa/sink.hh"
+
 #include "fil/descpa/descpa.hh"
 #include "fil/file/temporary.hh"
 
 TEST_CASE("descpa basic tests", "[descpa]") {
 
-    fil::descpa::details_::matcher_ctx<fil::descpa::ast::convertor_noop> ctx;
+    fil::descpa::details_::matcher_ctx<fil::descpa::sink::convertor_noop> ctx;
 
     SECTION("test char") {
 
@@ -304,7 +306,11 @@ TEST_CASE("descpa basic tests", "[descpa]") {
 
 TEST_CASE("descpa file tests", "[descpa]") {
 
-    fil::descpa::details_::matcher_ctx<fil::descpa::ast::aggregator<ast_object>> ctx;
+    struct ast_object {
+        std::string value;
+    };
+
+    fil::descpa::details_::matcher_ctx<fil::descpa::sink::aggregator<ast_object>> ctx;
 
     SECTION("test parse file single char") {
         const auto f1 = fil::temporary_file("I");
@@ -316,7 +322,7 @@ TEST_CASE("descpa file tests", "[descpa]") {
             };
 
             static constexpr fil::descpa::rule auto rules() { return fil::descpa::match_char<'I'> {}; }
-            static constexpr auto convertor() { return fil::descpa::ast::aggregator<ast_object> {}; }
+            static constexpr auto convertor() { return fil::descpa::sink::convertor_noop {}; }
         };
 
         auto g       = grammar {};
@@ -332,7 +338,7 @@ TEST_CASE("descpa file tests", "[descpa]") {
             static constexpr fil::descpa::rule auto rules() {
                 return fil::descpa::match_string<fil::descpa::fixed_string {"ILoveChocobo"}, fil::descpa::member<&ast_object::value>> {};
             }
-            static constexpr auto convertor() { return fil::descpa::ast::aggregator<ast_object> {}; }
+            static constexpr auto convertor() { return fil::descpa::sink::aggregator<ast_object> {}; }
         };
 
         auto g       = grammar {};

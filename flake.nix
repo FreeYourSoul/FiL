@@ -12,7 +12,10 @@
         pkgs = import nixpkgs { inherit system; };
         
         fil = pkgs.callPackage ./.nix/fil.nix { };
-        fil-test = pkgs.callPackage ./.nix/fil.nix { execute_test = true; };
+        fil-test = pkgs.callPackage ./.nix/fil.nix {
+            execute_test = true;
+            with_coverage = true;
+        };
       in
       {
         packages.default = fil;

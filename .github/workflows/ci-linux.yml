@@ -14,20 +14,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Nix
+      - name: Install Nix with Flakes
         uses: cachix/install-nix-action@v31
         with:
-          nix_path: nixpkgs=channel:nixos-25.05
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+          nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Build project
+      - name: Build and test project
         run: |
-          nix-build .nix/default.nix --arg execute_test true --arg with_coverage true
+          nix build .#fil-test -L
 
+      - name: Check coverage file exists
+        run: |
+          ls -la result/ || echo "result directory not found"
+          ls -la result/coverage/ || echo "coverage directory not found"
+          
       - name: codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          # or
-          # api-token: ${{ secrets.CODACY_API_TOKEN }}
-          coverage-reports:
-            result/coverage/cobertura.xml
+          coverage-reports: result/coverage/cobertura.xml

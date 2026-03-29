@@ -102,16 +102,17 @@ struct match_parser : composable_rule {
     using return_type = Prod::ast_object;
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
-        std::println(" BEFORE {} : {}", ctx.reader->get_buffer_cursor(), ctx.current_token);
 
         details_::matcher_ctx ctx_m_parser {ctx.reader, Prod::convertor()};
         ctx_m_parser.current_token = ctx.current_token;
 
-        return_type res = do_parse(ctx_m_parser, Prod {});
-        ctx.convertor(Mem {}, std::move(res));
+        auto res = do_parse(ctx_m_parser, Prod {});
+        if (!res) {
+            return match_result::FAILURE;
+        }
 
-        ctx.current_token = ctx_m_parser.current_token;
-        std::println(" AFTER {} : {}", ctx.reader->get_buffer_cursor(), ctx.current_token);
+        ctx.convertor(Mem {}, std::move(res).value());
+        ctx.current_token = {};
 
         return match_result::SUCCESS;
     }

@@ -18,9 +18,8 @@
 
 TEST_CASE("copa basic tests", "[copa]") {
 
-    fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop> ctx;
-
     SECTION("test char") {
+        fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
 
         fil::copa::match_char<'X'> char_x_check;
 
@@ -29,6 +28,7 @@ TEST_CASE("copa basic tests", "[copa]") {
         CHECK(char_x_check.match(ctx, 'x') == fil::copa::match_result::FAILURE);
     }
     SECTION("test string match") {
+        fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
 
         fil::copa::match_string<fil::fixed_string {"CHOCOBO"}> string_check;
 
@@ -102,6 +102,7 @@ TEST_CASE("copa basic tests", "[copa]") {
 
     SECTION("test composition") {
         SECTION("compose 3 char") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
 
             SECTION("direct instantiation") {
                 fil::copa::tuple_rule<fil::copa::match_char<'L'>, fil::copa::match_char<'O'>, fil::copa::match_char<'L'>> composed;
@@ -127,6 +128,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             }
         }
         SECTION("space_like match : all check") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
             fil::copa::tuple_rule<           //
                 fil::copa::match_char<'L'>,  //
                 fil::copa::match_space_like, //
@@ -162,6 +164,7 @@ TEST_CASE("copa basic tests", "[copa]") {
         }
 
         SECTION("compose 3 string") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::match_string<fil::fixed_string {"WE"}> {}
                                     + fil::copa::match_string<fil::fixed_string {"Love"}> {}
                                     + fil::copa::match_string<fil::fixed_string {"Chocobo"}> {};
@@ -220,7 +223,8 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, 'C') == fil::copa::match_result::FAILURE); // an error occurs now, the composed is finished
         }
         SECTION("utility wrapped {}") {
-            constexpr auto composed = fil::copa::bracket_wrapped<                //
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
+            constexpr auto composed = fil::copa::bracket_wrapped< //
                 fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
 
             CHECK(composed.match(ctx, '{') == fil::copa::match_result::CONTINUE);
@@ -235,6 +239,7 @@ TEST_CASE("copa basic tests", "[copa]") {
         }
 
         SECTION("utility wrapped []") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::square_wrapped< //
                 fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
 
@@ -250,6 +255,7 @@ TEST_CASE("copa basic tests", "[copa]") {
         }
 
         SECTION("utility wrapped <>") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::angle_wrapped< //
                 fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
 
@@ -264,6 +270,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, '>') == fil::copa::match_result::SUCCESS);
         }
         SECTION("utility wrapped ()") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::parenthesis_wrapped< //
                 fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
 
@@ -278,6 +285,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, ')') == fil::copa::match_result::SUCCESS);
         }
         SECTION("utility ;") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::match_string<fil::fixed_string {"Chocobo"}> {} + fil::copa::match_semicol {};
 
             CHECK(composed.match(ctx, 'C') == fil::copa::match_result::CONTINUE);
@@ -290,6 +298,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, ';') == fil::copa::match_result::SUCCESS);
         }
         SECTION("utility ,") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::match_string<fil::fixed_string {"Chocobo"}> {} + fil::copa::match_comma {};
 
             CHECK(composed.match(ctx, 'C') == fil::copa::match_result::CONTINUE);
@@ -302,6 +311,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, ',') == fil::copa::match_result::SUCCESS);
         }
         SECTION("utility if") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::match_if {}          //
                                     + fil::copa::parenthesis_wrapped< //
                                           fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
@@ -319,6 +329,7 @@ TEST_CASE("copa basic tests", "[copa]") {
             CHECK(composed.match(ctx, ')') == fil::copa::match_result::SUCCESS);
         }
         SECTION("utility while") {
+            fil::copa::details_::matcher_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<std::string>> ctx;
             constexpr auto composed = fil::copa::match_while {}       //
                                     + fil::copa::parenthesis_wrapped< //
                                           fil::copa::match_string<fil::fixed_string {"Chocobo"}>> {};
@@ -360,7 +371,7 @@ TEST_CASE("reader tests", "[copa]") {
             };
 
             static constexpr fil::copa::rule auto rules() { return fil::copa::match_char<'I'> {}; }
-            static constexpr auto convertor() { return fil::copa::sink::convertor_noop {}; }
+            static constexpr auto convertor() { return fil::copa::sink::convertor_noop<ast_object> {}; }
         };
 
         auto g       = grammar {};
@@ -382,7 +393,8 @@ TEST_CASE("reader tests", "[copa]") {
 
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(file_reader));
-        CHECK(v.value == "chocobo");
+        CHECK(v.has_value());
+        CHECK(v.value().value == "chocobo");
     }
 
     SECTION("test parse file string") {
@@ -403,7 +415,8 @@ TEST_CASE("reader tests", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(file_reader));
 
-        CHECK(v.value == "ILoveChocobo");
+        CHECK(v.has_value());
+        CHECK(v.value().value == "ILoveChocobo");
     }
 }
 
@@ -441,13 +454,14 @@ TEST_CASE("ast test", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(reader));
 
-        CHECK(v.word1 == "chocobo");
-        CHECK(v.word2 == "is");
-        CHECK(v.word3 == "the");
-        CHECK(v.word4 == "best");
-        CHECK(v.word5 == "of");
-        CHECK(v.word6 == "the");
-        CHECK(v.word7 == "world");
+        CHECK(v.has_value());
+        CHECK(v.value().word1 == "chocobo");
+        CHECK(v.value().word2 == "is");
+        CHECK(v.value().word3 == "the");
+        CHECK(v.value().word4 == "best");
+        CHECK(v.value().word5 == "of");
+        CHECK(v.value().word6 == "the");
+        CHECK(v.value().word7 == "world");
     }
 
     SECTION("structure in structure") {
@@ -490,8 +504,9 @@ TEST_CASE("ast test", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(reader));
 
-        CHECK(v.value1 == "chocobo");
-        CHECK(v.value2.inner1 == "is");
-        CHECK(v.value2.inner2 == "best");
+        CHECK(v.has_value());
+        CHECK(v.value().value1 == "chocobo");
+        CHECK(v.value().value2.inner1 == "is");
+        CHECK(v.value().value2.inner2 == "best");
     }
 }

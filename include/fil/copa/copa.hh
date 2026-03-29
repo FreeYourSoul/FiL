@@ -24,8 +24,7 @@
 #ifndef FIL_DESCPA_H
 #define FIL_DESCPA_H
 
-#include <cstdint>
-#include <string_view>
+#include <expected>
 
 #include "fil/copa/ast.hh"
 #include "fil/copa/member.hh"
@@ -38,10 +37,8 @@ namespace fil::copa {
 
 namespace details_ {
 
-struct context {
-    std::uint32_t line     = 0;
-    std::uint32_t position = 0;
-    std::string_view source_name;
+struct error_parsing {
+    std::string current_token; //!< token on which the error occured
 };
 
 /**
@@ -62,8 +59,8 @@ rule auto retrieve_ignore_rules(const Prod&) {
  */
 rule auto retrieve_ignore_rules(const auto&) { return match_space_like {}; }
 
-template<reader Reader, typename Convertor>
-auto do_parse(matcher_ctx<Reader, Convertor>& ctx, const production auto& prod) {
+template<reader Reader, typename Convertor, production Prod>
+std::expected<typename Prod::ast_object, error_parsing> do_parse(matcher_ctx<Reader, Convertor>& ctx, const Prod& prod) {
     const rule auto formula = prod.rules();
     const rule auto ignore  = details_::retrieve_ignore_rules(prod);
 
@@ -123,9 +120,7 @@ class parser {
  *               parser instance. This parameter enables efficient resource management and ensures
  *               the reader cannot be reused after the parse operation.
  *
- *  @return The result of parsing, obtained from `convertor().value()`. The return type depends on
- *          the convertor associated with the production. Typical returns include:
- *          - The constructed AST object (if using an aggregator convertor)
+ *  @return The result of parsing, obtained from `convertor().value()`. The return type is the ast object of the production
  *
  *  @example
  *  @code

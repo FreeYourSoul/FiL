@@ -73,12 +73,14 @@ concept rule = requires {
     typename T::return_type;
     requires std::default_initializable<typename T::return_type>;
 
-    { //
-        T::match(std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop>&>(), std::uint8_t {}, std::uint32_t {})
+    {             //
+        T::match( //
+            std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {}, std::uint32_t {})
     } -> std::convertible_to<match_result>;
 
-    { //
-        T::match(std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop>&>(), std::uint8_t {})
+    {             //
+        T::match( //
+            std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {})
     } -> std::convertible_to<match_result>;
 };
 

@@ -23,11 +23,12 @@ class aggregator {
     value_type value_ {};
 };
 
+template<typename T = int>
 struct convertor_noop {
-    using value_type = int;
+    using value_type = T;
 
     constexpr void operator()(const auto&, auto&&) {}
-    constexpr int value() const { return 0; }
+    constexpr value_type value() const { return {}; }
 };
 
 } // namespace fil::copa::sink

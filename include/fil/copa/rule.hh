@@ -59,7 +59,8 @@ static_assert(reader<reader_noop>, "reader_noop must follow the reader concept")
 template<reader Reader, typename Convertor>
 struct rule_ctx {
     Reader* reader;
-    Convertor convertor;
+    Convertor* convertor;
+
     std::vector<uint16_t> idx {0};
     std::string current_token; //!< @todo transform into a view
 
@@ -143,28 +144,10 @@ struct composable_rule {
     } // namespace fil::descpa
 };
 
-template<rule Rule>
-struct list_rule : composable_rule {
-    using value_type  = Rule::result_type;
-    using result_type = std::vector<value_type>;
-
-    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
-
-        // details_::rule_ctx ctx_m_parser {
-        //     .reader        = shallow_copy<decltype(ctx.reader)>::operator()(ctx.reader),
-        //     .convertor     = shallow_copy<decltype(ctx.reader)>::operator()(ctx.convertor),
-        //     .current_token = ctx.current_token,
-        // };
-        //
-        // auto res = do_parse(ctx_m_parser, Prod {});
-        // if (!res) {
-        //     return match_result::FAILURE;
-        // }
-        //
-        // ctx.convertor(Mem {}, std::move(res).value());
-        // ctx.current_token = {};
-
-        return match_result::SUCCESS;
+struct match_space_like : composable_rule {
+    using result_type = char;
+    static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
+        return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
     }
 };
 

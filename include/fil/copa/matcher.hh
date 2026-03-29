@@ -26,9 +26,8 @@
 
 #include <string>
 
+#include "fil/copa/copa.hh"
 #include "fil/copa/member.hh"
-#include "fil/copa/production.hh"
-#include "fil/copa/rule.hh"
 #include "fil/meta/static_string.hh"
 
 namespace fil::copa {
@@ -42,7 +41,7 @@ struct match_string : composable_rule {
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (Str[ctx.idx.back()++] == c) {
             if (ctx.idx.back() >= Str.size()) {
-                ctx.convertor(Mem {}, ctx.current_token);
+                ctx.convertor->operator()(Mem {}, ctx.current_token);
                 return match_result::SUCCESS;
             }
             return match_result::CONTINUE;
@@ -71,13 +70,6 @@ struct match_char : composable_rule {
     }
 };
 
-struct match_space_like : composable_rule {
-    using result_type = char;
-    static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
-        return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
-    }
-};
-
 template<member_type Mem = member_noop, rule auto Separator = match_space_like {}>
 struct match_identifier : composable_rule {
     using result_type = std::string;
@@ -85,7 +77,7 @@ struct match_identifier : composable_rule {
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || Separator.match(ctx, peek.value(), depth) == match_result::SUCCESS) {
-                ctx.convertor(Mem {}, ctx.current_token);
+                ctx.convertor->operator()(Mem {}, ctx.current_token);
                 ctx.current_token = {};
                 return match_result::SUCCESS;
             }
@@ -100,10 +92,10 @@ struct match_parser : composable_rule {
     using result_type = Prod::ast_object;
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
-
+        auto convertor = Prod::convertor();
         details_::rule_ctx ctx_m_parser {
-            .reader        = shallow_copy<decltype(ctx.reader)>::operator()(ctx.reader),
-            .convertor     = Prod::convertor(),
+            .reader        = ctx.reader,
+            .convertor     = &convertor,
             .current_token = ctx.current_token,
         };
 
@@ -112,8 +104,42 @@ struct match_parser : composable_rule {
             return match_result::FAILURE;
         }
 
-        ctx.convertor(Mem {}, std::move(res).value());
+        ctx.convertor->operator()(Mem {}, std::move(res).value());
         ctx.current_token = {};
+
+        return match_result::SUCCESS;
+    }
+};
+
+template<rule Rule>
+struct list_rule : composable_rule {
+    using value_type  = Rule::result_type;
+    using result_type = std::vector<value_type>;
+
+    template<reader Reader, typename Convertor>
+    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+
+        // auto copy_reader = *ctx.reader;
+        details_::rule_ctx ctx_multi {
+            .reader        = ctx.reader,
+            .convertor     = ctx.convertor,
+            .current_token = ctx.current_token,
+        };
+
+        if ((ctx.idx.size() - 1) == depth) {
+            ctx.increase_depth();
+        }
+
+        const auto current = details_::do_parse_rule<typename Convertor::value_type>(ctx_multi, Rule {}, match_space_like {});
+
+        ctx.current_token = {};
+
+        if (current) {
+            ++ctx.idx.back();
+            return match_result::CONTINUE;
+        }
+
+        ctx.decrease_depth();
 
         return match_result::SUCCESS;
     }

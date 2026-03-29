@@ -39,6 +39,18 @@ concept production = requires {
     { T::convertor() };
 };
 
+/**
+ * @tparam Prod production with extra requirements to provide ignore() returning a rule of character to ignore
+ * @return rule defined by the production Prod::ignore static member function
+ */
+template<production Prod>
+requires requires {
+    { Prod::ignore() } -> rule;
+}
+rule auto retrieve_ignore_rules(const Prod&) {
+    return Prod::ignore();
+}
+
 } // namespace fil::copa
 
 #endif // FIL_PRODUCTION_HH

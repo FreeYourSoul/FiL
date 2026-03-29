@@ -55,16 +55,14 @@ rule auto retrieve_ignore_rules(const Prod&) {
  */
 rule auto retrieve_ignore_rules(const auto&) { return match_space_like {}; }
 
-template<reader Reader, typename Convertor, production Prod>
-std::expected<typename Prod::ast_object, error_parsing> do_parse(rule_ctx<Reader, Convertor>& ctx, const Prod& prod) {
-    const rule auto formula = prod.rules();
-    const rule auto ignore  = details_::retrieve_ignore_rules(prod);
+template<typename Result>
+std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore) {
 
     auto result = match_result::CONTINUE;
     while (result == match_result::CONTINUE) {
         const auto c = ctx.reader->next_byte();
         if (!c.has_value()) {
-            return ctx.convertor.value();
+            return ctx.convertor->value();
         }
 
         if (ignore.match(ctx, c.value()) == match_result::SUCCESS) {
@@ -75,7 +73,15 @@ std::expected<typename Prod::ast_object, error_parsing> do_parse(rule_ctx<Reader
 
         result = formula.match(ctx, c.value());
     }
-    return ctx.convertor.value();
+    return ctx.convertor->value();
+}
+
+template<reader Reader, typename Convertor, production Prod>
+std::expected<typename Prod::ast_object, error_parsing> do_parse(rule_ctx<Reader, Convertor>& ctx, const Prod& prod) {
+    const rule auto formula = prod.rules();
+    const rule auto ignore  = details_::retrieve_ignore_rules(prod);
+
+    return do_parse_rule<typename Prod::ast_object>(ctx, formula, ignore);
 }
 
 template<reader Reader>
@@ -85,7 +91,11 @@ class parser {
         : input_(std::move(input)) {}
 
     constexpr auto parse(const production auto& prod) {
-        rule_ctx ctx {&input_, prod.convertor()};
+        auto convertor = prod.convertor();
+        rule_ctx ctx {
+            .reader    = &input_,
+            .convertor = &convertor,
+        };
         return details_::do_parse(ctx, prod);
     }
 

@@ -30,6 +30,11 @@ namespace fil::copa {
 
 template<typename T>
 concept production = requires {
+    typename T::ast_object;
+    std::is_default_constructible_v<typename T::ast_object>;
+    std::is_move_assignable_v<typename T::ast_object>;
+    std::is_copy_assignable_v<typename T::ast_object>;
+
     { T::rules() } -> rule;
     { T::convertor() };
 };

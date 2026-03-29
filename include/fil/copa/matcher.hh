@@ -31,6 +31,8 @@
 #include "fil/copa/rule.hh"
 #include "fil/meta/static_string.hh"
 
+#include <print>
+
 namespace fil::copa {
 
 template<fixed_string Str, member_type Mem = member_noop>
@@ -97,11 +99,19 @@ struct match_identifier : composable_rule {
 
 template<production Prod, member_type Mem = member_noop>
 struct match_parser : composable_rule {
-    using return_type = std::string;
-    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+    using return_type = Prod::ast_object;
 
-        auto res = do_parse(ctx, Prod {});
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+        std::println(" BEFORE {} : {}", ctx.reader->get_buffer_cursor(), ctx.current_token);
+
+        details_::matcher_ctx ctx_m_parser {ctx.reader, Prod::convertor()};
+        ctx_m_parser.current_token = ctx.current_token;
+
+        return_type res = do_parse(ctx_m_parser, Prod {});
         ctx.convertor(Mem {}, std::move(res));
+
+        ctx.current_token = ctx_m_parser.current_token;
+        std::println(" AFTER {} : {}", ctx.reader->get_buffer_cursor(), ctx.current_token);
 
         return match_result::SUCCESS;
     }

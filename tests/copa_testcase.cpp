@@ -411,19 +411,19 @@ TEST_CASE("ast test", "[copa]") {
 
     SECTION("multiple identifier") {
 
-        struct ast_object {
-            std::string word1;
-            std::string word2;
-            std::string word3;
-            std::string word4;
-            std::string word5;
-            std::string word6;
-            std::string word7;
-        };
-
         fil::copa::buffer_reader reader("chocobo is the best of the world ");
 
         struct grammar {
+            struct ast_object {
+                std::string word1;
+                std::string word2;
+                std::string word3;
+                std::string word4;
+                std::string word5;
+                std::string word6;
+                std::string word7;
+            };
+
             static constexpr fil::copa::rule auto rules() {
                 return                                                                      //
                     fil::copa::match_identifier<fil::copa::member<&ast_object::word1>> {} + //
@@ -452,19 +452,16 @@ TEST_CASE("ast test", "[copa]") {
 
     SECTION("structure in structure") {
 
-        fil::copa::buffer_reader reader("{word1 word2}[word2,word3]");
+        fil::copa::buffer_reader reader("chocobo is best ");
 
         struct inner_ast_object {
             std::string inner1;
             std::string inner2;
         };
 
-        struct ast_object {
-            std::string value1;
-            inner_ast_object value2;
-        };
-
         struct parser_custom : fil::copa::composable_rule {
+
+            using ast_object = inner_ast_object;
 
             static constexpr fil::copa::rule auto rules() {
                 return                                                                             //
@@ -476,6 +473,11 @@ TEST_CASE("ast test", "[copa]") {
         };
 
         struct grammar {
+
+            struct ast_object {
+                std::string value1;
+                inner_ast_object value2;
+            };
 
             static constexpr fil::copa::rule auto rules() {
                 return                                                                       //
@@ -489,5 +491,7 @@ TEST_CASE("ast test", "[copa]") {
         const auto v = fil::copa::parse(g, std::move(reader));
 
         CHECK(v.value1 == "chocobo");
+        CHECK(v.value2.inner1 == "is");
+        CHECK(v.value2.inner2 == "best");
     }
 }

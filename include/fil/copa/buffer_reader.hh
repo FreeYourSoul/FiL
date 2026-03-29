@@ -42,14 +42,16 @@ class buffer_reader {
     explicit constexpr buffer_reader(std::span<char> buffer)
         : buffer_(buffer.begin(), buffer.end()) {}
 
-    constexpr std::optional<std::uint8_t> next_byte() {
+    [[nodiscard]] std::size_t get_buffer_cursor() const { return cursor_; }
+
+    [[nodiscard]] constexpr std::optional<std::uint8_t> next_byte() {
         if (cursor_ >= buffer_.size()) {
             return std::nullopt;
         }
         return buffer_[cursor_++];
     }
 
-    constexpr std::optional<std::uint8_t> peek() const {
+    [[nodiscard]] constexpr std::optional<std::uint8_t> peek() const {
         if (buffer_.empty()) {
             return std::nullopt;
         }

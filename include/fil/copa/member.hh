@@ -27,9 +27,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "fil/type_traits/extract_member_type.hh"
+#include "fil/meta/extract_member_type.hh"
 
-namespace fil::descpa {
+namespace fil::copa {
 
 template<typename Ptr, bool IsSetter>
 class member_fn {
@@ -80,6 +80,6 @@ concept member_type = requires {
     typename T::is_member_ptr;
     typename T::member_type;
 };
-} // namespace fil::descpa
+} // namespace fil::copa
 
 #endif // FIL_MEMBER_HH

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6...3.15)
 
 add_library(descpa INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/descpa.hh)
+        ${CMAKE_CURRENT_SOURCE_DIR}/copa.hh)
 
 add_library(fys::fil::descpa ALIAS descpa)
 

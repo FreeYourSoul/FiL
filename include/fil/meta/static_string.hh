@@ -1,4 +1,4 @@
-/// MIT License
+// MIT License
 //
 // Copyright (c) 2025 Quentin Balland
 // Repository : https://github.com/FreeYourSoul/FiL
@@ -21,33 +21,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_AST_BASE_HH
-#define FIL_AST_BASE_HH
+#ifndef FIL_STATIC_STRING_HH
+#define FIL_STATIC_STRING_HH
 
-#include "fil/descpa/descpa.hh"
+#include <array>
+#include <cstddef>
 
-namespace fil::descpa {
+namespace fil {
 
-template<fixed_string RightWrap, rule Content, fixed_string LeftWrap>
-using wrapped = tuple_rule<match_string<RightWrap>, Content, match_string<LeftWrap>>;
+template<std::size_t N>
+struct fixed_string {
+    std::array<char, N> data_;
 
-template<rule Content>
-using parenthesis_wrapped = wrapped<fixed_string {"("}, Content, fixed_string {")"}>;
+    explicit constexpr fixed_string(const char str[N]) {
+        for (std::size_t i = 0; i < N; ++i)
+            data_[i] = str[i];
+    }
 
-template<rule Content>
-using bracket_wrapped = wrapped<fixed_string {"{"}, Content, fixed_string {"}"}>;
+    constexpr char operator[](std::size_t i) const { return data_[i]; }
+    [[nodiscard]] constexpr std::size_t size() const { return data_.size(); }
+    [[nodiscard]] constexpr bool empty() const { return data_.empty(); }
+};
 
-template<rule Content>
-using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
+template<std::size_t N>
+fixed_string(const char (&)[N]) -> fixed_string<N - 1>;
 
-template<rule Content>
-using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
+} // namespace fil
 
-using match_if      = match_string<fixed_string {"if"}>;
-using match_while   = match_string<fixed_string {"while"}>;
-using match_comma   = match_char<','>;
-using match_semicol = match_char<';'>;
-
-} // namespace fil::descpa
-
-#endif // FIL_AST_BASE_HH
+#endif // FIL_STATIC_STRING_HH

@@ -21,13 +21,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef FIL_INCLUDE_FIL_BOUNDARY_MAP_HH
+#define FIL_INCLUDE_FIL_BOUNDARY_MAP_HH
 
 #include <map>
 
 namespace fil {
 
-template<typename T = int> class boundary_map {
+template<typename T = int>
+class boundary_map {
 
     using iterator       = typename std::map<int, T>::iterator;
     using const_iterator = typename std::map<int, T>::const_iterator;
@@ -68,3 +70,5 @@ template<typename T = int> class boundary_map {
 using boundary_map_int = boundary_map<int>;
 
 } // namespace fil
+
+#endif // FIL_INCLUDE_FIL_BOUNDARY_MAP_HH

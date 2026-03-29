@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-#include "fil/type_traits/type_traits.hpp"
+#include "fil/meta/type_traits.hpp"
 
 namespace fil {
 

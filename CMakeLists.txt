@@ -44,7 +44,7 @@ target_include_directories(fil INTERFACE
 
 target_compile_features(fil INTERFACE cxx_std_26)
 
-add_subdirectory(include/fil/descpa)
+add_subdirectory(include/fil/copa)
 target_link_libraries(fil INTERFACE fmt::fmt fys::fil::descpa)
 
 if (WITH_FIL_ROCKSDB)

@@ -6,7 +6,7 @@
 ![](https://tokei.rs/b1/github/FreeYourSoul/FiL?category=lines)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-Free instrument Library is a general purpose C++ library principally header-only.
+Free instrument Library is a general-purpose C++ library principally header-only.
 
 ## Features Summary
 
@@ -18,8 +18,8 @@ FiL provides various modern C++ features:
 - **[File Reader](doc/file_reader.md)**: High-performance, memory-efficient file reading.
 - **[FSM](doc/fsm.md)**: Simple Finite State Machine implementation.
 - **[SOA](doc/soa.md)**: Cache-friendly Structure of Arrays data structure.
-- **[Database KV](doc/database_kv.md)**: Abstraction for Key-Value datastores (RocksDB, Redis, etc.).
-- **[Descpa](doc/descpa.md)**: Declarative Simple Combinator Parser.
+- **[Database KV](doc/database_kv.md)**: Abstraction for Key-Value data stores (RocksDB, Redis, etc.).
+- **[Cop](doc/copa.md)**: DEclarative COmbinatory PArser (generic descent parser).
 
 ## Dependencies
 
@@ -36,7 +36,9 @@ _If using compiled version of the library with database kv_
 ### Installation from sources
 
 ```cmake
-git clone git@github.com:FreeYourSoul/FiL.git
+git
+clone
+git@github.com:FreeYourSoul/FiL.git
 cd FiL
 cmake -S . -Bbuild
 sudo cmake --build build --target install

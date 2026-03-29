@@ -171,6 +171,12 @@ class file_reader {
         return std::make_optional(current_buffer_[cursor_++]);
     }
 
+    [[nodiscard]] std::optional<std::uint8_t> peek() {
+        if (cursor_ >= buffer_size_)
+            return std::nullopt;
+        return std::make_optional(current_buffer_[cursor_]);
+    }
+
     [[nodiscard]] const std::filesystem::path& get_path() const { return file_path_; }
     [[nodiscard]] bool exists() const { return std::filesystem::exists(file_path_); }
     [[nodiscard]] auto get_file_cursor() { return file_stream_.tellg(); }

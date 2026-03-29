@@ -1,4 +1,4 @@
-// MIT License
+/// MIT License
 //
 // Copyright (c) 2025 Quentin Balland
 // Repository : https://github.com/FreeYourSoul/FiL
@@ -21,36 +21,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
-#define FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+#ifndef FIL_BUFFER_READER_HH
+#define FIL_BUFFER_READER_HH
 
-#include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
+#include <string>
 
-namespace fil {
+#include "fil/copa/copa.hh"
 
-template<typename T, unsigned SIZE>
-class fixed_circular_buffer {
+namespace fil::copa {
+
+class buffer_reader {
 
   public:
-    explicit fixed_circular_buffer(std::optional<T> fill_with) {
-        if (fill_with.has_value()) {
-            std::fill(_buffer.begin(), _buffer.end(), fill_with.value());
+    explicit constexpr buffer_reader(std::string&& buffer)
+        : buffer_(std::move(buffer)) {}
+
+    explicit constexpr buffer_reader(std::span<char> buffer)
+        : buffer_(buffer.begin(), buffer.end()) {}
+
+    constexpr std::optional<std::uint8_t> next_byte() {
+        if (cursor_ >= buffer_.size()) {
+            return std::nullopt;
         }
+        return buffer_[cursor_++];
     }
 
-    void push(T&& to_push) {
-        _buffer[_index] = std::forward<T>(to_push);
-        _index          = (_index + 1) % SIZE;
+    constexpr std::optional<std::uint8_t> peek() const {
+        if (buffer_.empty()) {
+            return std::nullopt;
+        }
+        return buffer_[cursor_];
     }
 
   private:
-    std::array<T, SIZE> _buffer {};
-
-    std::uint32_t _index = 0;
+    std::string buffer_;
+    std::size_t cursor_ = 0;
 };
 
-} // namespace fil
+static_assert(reader<buffer_reader>, "buffer_reader must be a reader compatible with descpa");
 
-#endif // FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+} // namespace fil::copa
+
+#endif // FIL_BUFFER_READER_HH

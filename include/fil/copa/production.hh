@@ -1,4 +1,4 @@
-// MIT License
+/// MIT License
 //
 // Copyright (c) 2025 Quentin Balland
 // Repository : https://github.com/FreeYourSoul/FiL
@@ -21,30 +21,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_TYPE_TRAITS_HH
-#define FIL_TYPE_TRAITS_HH
+#ifndef FIL_PRODUCTION_HH
+#define FIL_PRODUCTION_HH
 
-#include <type_traits>
+#include "rule.hh"
 
-namespace fil {
-
-namespace details {
-template<typename> struct is_std_vector : std::false_type {};
-
-template<typename T, typename A> struct is_std_vector<std::vector<T, A>> : std::true_type {};
-
-} // namespace details
+namespace fil::copa {
 
 template<typename T>
-concept is_std_vector = details::is_std_vector<T>::value;
-
-template<typename T>
-concept to_string_able = requires(const T& elem) {
-    { std::to_string(elem) } -> std::convertible_to<std::string>;
-} || requires(T elem) {
-    { to_string(elem) } -> std::convertible_to<std::string>;
+concept production = requires {
+    { T::rules() } -> rule;
+    { T::convertor() };
 };
 
-} // namespace fil
+} // namespace fil::copa
 
-#endif // FIL_TYPE_TRAITS_HH
+#endif // FIL_PRODUCTION_HH

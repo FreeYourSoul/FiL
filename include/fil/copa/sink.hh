@@ -1,9 +1,9 @@
 #ifndef FIL_SINK_HH
 #define FIL_SINK_HH
 
-#include "fil/descpa/descpa.hh"
+#include "fil/copa/member.hh"
 
-namespace fil::descpa::sink {
+namespace fil::copa::sink {
 
 template<typename T>
 class aggregator {
@@ -24,10 +24,12 @@ class aggregator {
 };
 
 struct convertor_noop {
+    using value_type = int;
+
     constexpr void operator()(const auto&, auto&&) {}
     constexpr int value() const { return 0; }
 };
 
-} // namespace fil::descpa::sink
+} // namespace fil::copa::sink
 
 #endif // FIL_SINK_HH

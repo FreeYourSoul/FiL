@@ -1,4 +1,4 @@
-// MIT License
+/// MIT License
 //
 // Copyright (c) 2025 Quentin Balland
 // Repository : https://github.com/FreeYourSoul/FiL
@@ -21,36 +21,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
-#define FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+#ifndef FIL_AST_BASE_HH
+#define FIL_AST_BASE_HH
 
-#include <array>
-#include <cstdint>
-#include <optional>
+#include "fil/copa/matcher.hh"
+#include "fil/meta/static_string.hh"
 
-namespace fil {
+namespace fil::copa {
 
-template<typename T, unsigned SIZE>
-class fixed_circular_buffer {
+template<fixed_string RightWrap, rule Content, fixed_string LeftWrap>
+using wrapped = tuple_rule<match_string<RightWrap>, Content, match_string<LeftWrap>>;
 
-  public:
-    explicit fixed_circular_buffer(std::optional<T> fill_with) {
-        if (fill_with.has_value()) {
-            std::fill(_buffer.begin(), _buffer.end(), fill_with.value());
-        }
-    }
+template<rule Content>
+using parenthesis_wrapped = wrapped<fixed_string {"("}, Content, fixed_string {")"}>;
 
-    void push(T&& to_push) {
-        _buffer[_index] = std::forward<T>(to_push);
-        _index          = (_index + 1) % SIZE;
-    }
+template<rule Content>
+using bracket_wrapped = wrapped<fixed_string {"{"}, Content, fixed_string {"}"}>;
 
-  private:
-    std::array<T, SIZE> _buffer {};
+template<rule Content>
+using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
 
-    std::uint32_t _index = 0;
-};
+template<rule Content>
+using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
 
-} // namespace fil
+using match_if      = match_string<fixed_string {"if"}>;
+using match_while   = match_string<fixed_string {"while"}>;
+using match_comma   = match_char<','>;
+using match_semicol = match_char<';'>;
 
-#endif // FIL_INCLUDE_FIL_DATASTRUCTURE_FIXED_CIRCULAR_BUFFER_HH
+} // namespace fil::copa
+
+#endif // FIL_AST_BASE_HH

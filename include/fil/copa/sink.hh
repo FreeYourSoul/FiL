@@ -2,11 +2,16 @@
 #define FIL_SINK_HH
 
 #include "fil/copa/member.hh"
+#include "fil/meta/shallow_copy.hh"
 
 namespace fil::copa::sink {
 
 template<typename T>
 class aggregator {
+    
+    template<typename>
+    friend struct fil::shallow_copy;
+
   public:
     using value_type = T;
 
@@ -32,5 +37,18 @@ struct convertor_noop {
 };
 
 } // namespace fil::copa::sink
+
+namespace fil {
+
+namespace fil {}
+template<typename T>
+struct shallow_copy<copa::sink::aggregator<T>> {
+    static constexpr auto operator()(copa::sink::aggregator<T>& object) {
+        copa::sink::aggregator<T&> shallow {object.value_};
+        return shallow;
+    }
+};
+
+} // namespace fil
 
 #endif // FIL_SINK_HH

@@ -28,6 +28,7 @@
 #include <utility>
 
 #include "fil/meta/extract_member_type.hh"
+#include "fil/meta/type_traits.hpp"
 
 namespace fil::copa {
 
@@ -50,7 +51,7 @@ class member_fn {
     Ptr ptr_;
 };
 
-template<auto MemberPtr>
+template<auto MemberPtr = nullptr>
 struct member {
     using pointer_member    = decltype(MemberPtr);
     using member_type       = extract_class_t<pointer_member>;
@@ -58,11 +59,14 @@ struct member {
     using is_member_ptr     = void;
 
     static constexpr bool is_function_member = std::is_member_function_pointer_v<pointer_member>;
+    static constexpr bool is_vector          = is_std_vector<member_value_type>;
 
     template<typename Value>
     constexpr void operator()(member_type& obj, Value&& value) {
         if constexpr (is_function_member) {
             (obj.*MemberPtr)(std::forward<Value>(value));
+        } else if constexpr (is_vector) {
+            (obj.*MemberPtr).push_back(std::forward<Value>(value));
         } else {
             obj.*MemberPtr = std::forward<Value>(value);
         }

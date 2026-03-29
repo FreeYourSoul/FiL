@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "fil/copa/sink.hh"
+#include "fil/meta/shallow_copy.hh"
 
 namespace fil::copa {
 
@@ -141,56 +142,31 @@ struct composable_rule {
         return pair_rule<Self, O> {};
     } // namespace fil::descpa
 };
-//
-// template<rule Rule, member_type Mem = member_noop, bool AtLeastOne = true>
-// struct list_rule : composable_rule {
-//     using value_type  = typename Mem::member_value_type;
-//     using result_type = std::vector<typename Mem::value_type>;
-//
-//     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
-//
-//         bool first           = true;
-//         match_result current = match_result::CONTINUE;
-//
-//         details_::rule_ctx ctx_many {
-//             .reader    = ctx.reader,
-//             .convertor = descpa::sink::aggregator<value_type> {},
-//         };
-//
-//         auto process = [&current, &ctx, c, depth, i = 0]() mutable -> bool {
-//             if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
-//                 if ((ctx.idx.size() - 1) == depth) {
-//                     ctx.increase_depth();
-//                 }
-//
-//                 current = Rule::match(ctx, c, depth + 1);
-//
-//                 if (current == match_result::SUCCESS) {
-//                     ++ctx.idx[depth];
-//                 }
-//                 if (current != match_result::CONTINUE) {
-//                     ctx.decrease_depth();
-//                 }
-//                 return true;
-//             }
-//             return false;
-//         };
-//
-//         while (current == match_result::CONTINUE) {
-//
-//             if (first && current == match_result::FAILURE) {
-//                 if constexpr (AtLeastOne) {
-//                     return match_result::FAILURE;
-//                 } else {
-//                     return match_result::SUCCESS;
-//                 }
-//             }
-//             first = false;
-//         }
-//
-//         return current;
-//     }
-// };
+
+template<rule Rule>
+struct list_rule : composable_rule {
+    using value_type  = Rule::result_type;
+    using result_type = std::vector<value_type>;
+
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+
+        // details_::rule_ctx ctx_m_parser {
+        //     .reader        = shallow_copy<decltype(ctx.reader)>::operator()(ctx.reader),
+        //     .convertor     = shallow_copy<decltype(ctx.reader)>::operator()(ctx.convertor),
+        //     .current_token = ctx.current_token,
+        // };
+        //
+        // auto res = do_parse(ctx_m_parser, Prod {});
+        // if (!res) {
+        //     return match_result::FAILURE;
+        // }
+        //
+        // ctx.convertor(Mem {}, std::move(res).value());
+        // ctx.current_token = {};
+
+        return match_result::SUCCESS;
+    }
+};
 
 } // namespace fil::copa
 

@@ -1,5 +1,5 @@
+#include "../include/fil/meta/buffer_reader.hh"
 #include "ast.hh"
-#include "buffer_reader.hh"
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
@@ -383,7 +383,7 @@ TEST_CASE("copa basic tests", "[copa]") {
 TEST_CASE("reader tests", "[copa]") {
 
     SECTION("string buffer :: empty string") {
-        fil::copa::buffer_reader reader("");
+        fil::buffer_reader reader("");
 
         CHECK(reader.next_byte() == std::nullopt);
         CHECK(reader.peek() == std::nullopt);
@@ -421,7 +421,7 @@ TEST_CASE("reader tests", "[copa]") {
 
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(file_reader));
-        CHECK(v.has_value());
+        REQUIRE(v.has_value());
         CHECK(v.value().value == "chocobo");
     }
 
@@ -443,7 +443,7 @@ TEST_CASE("reader tests", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(file_reader));
 
-        CHECK(v.has_value());
+        REQUIRE(v.has_value());
         CHECK(v.value().value == "ILoveChocobo");
     }
 }
@@ -452,7 +452,7 @@ TEST_CASE("ast test", "[copa]") {
 
     SECTION("multiple identifier") {
 
-        fil::copa::buffer_reader reader("chocobo is the best of the world ");
+        fil::buffer_reader reader("chocobo is the best of the world ");
 
         struct grammar {
             struct ast_object {
@@ -482,7 +482,7 @@ TEST_CASE("ast test", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(reader));
 
-        CHECK(v.has_value());
+        REQUIRE(v.has_value());
         CHECK(v.value().word1 == "chocobo");
         CHECK(v.value().word2 == "is");
         CHECK(v.value().word3 == "the");
@@ -494,7 +494,7 @@ TEST_CASE("ast test", "[copa]") {
 
     SECTION("structure in structure") {
 
-        fil::copa::buffer_reader reader("chocobo is best ");
+        fil::buffer_reader reader("chocobo is best ");
 
         struct inner_ast_object {
             std::string inner1;
@@ -532,9 +532,37 @@ TEST_CASE("ast test", "[copa]") {
         auto g       = grammar {};
         const auto v = fil::copa::parse(g, std::move(reader));
 
-        CHECK(v.has_value());
+        REQUIRE(v.has_value());
         CHECK(v.value().value1 == "chocobo");
         CHECK(v.value().value2.inner1 == "is");
         CHECK(v.value().value2.inner2 == "best");
+    }
+
+    SECTION("list simple") {
+        fil::buffer_reader reader("chocobo is best ");
+
+        struct grammar {
+
+            struct ast_object {
+                std::vector<std::string> vec_value {};
+            };
+
+            static constexpr fil::copa::rule auto rules() {
+                return                                                                         //
+                    fil::copa::list_rule<                                                      //
+                        fil::copa::match_identifier<fil::copa::member<&ast_object::vec_value>> //
+                        > {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        auto g       = grammar {};
+        const auto v = fil::copa::parse(g, std::move(reader));
+
+        REQUIRE(v.has_value());
+        REQUIRE(v.value().vec_value.size() == 3);
+        CHECK(v.value().vec_value[0] == "chocobo");
+        CHECK(v.value().vec_value[1] == "is");
+        CHECK(v.value().vec_value[2] == "best");
     }
 }

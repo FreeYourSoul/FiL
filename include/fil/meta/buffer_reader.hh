@@ -29,42 +29,64 @@
 #include <span>
 #include <string>
 
-#include "fil/copa/copa.hh"
+#include "fil/copa/rule.hh"
+#include "fil/meta/shallow_copy.hh"
 
-namespace fil::copa {
+namespace fil {
 
 class buffer_reader {
 
+    template<typename>
+    friend struct shallow_copy;
+
   public:
     explicit constexpr buffer_reader(std::string&& buffer)
-        : buffer_(std::move(buffer)) {}
+        : buffer_(std::move(buffer))
+        , buffer_access_(buffer_) {}
 
     explicit constexpr buffer_reader(std::span<char> buffer)
-        : buffer_(buffer.begin(), buffer.end()) {}
+        : buffer_(buffer.begin(), buffer.end())
+        , buffer_access_(buffer_) {}
 
     [[nodiscard]] std::size_t get_buffer_cursor() const { return cursor_; }
 
     [[nodiscard]] constexpr std::optional<std::uint8_t> next_byte() {
-        if (cursor_ >= buffer_.size()) {
+        if (cursor_ >= buffer_access_.size()) {
             return std::nullopt;
         }
-        return buffer_[cursor_++];
+        return buffer_access_[cursor_++];
     }
 
     [[nodiscard]] constexpr std::optional<std::uint8_t> peek() const {
-        if (buffer_.empty()) {
+        if (buffer_access_.empty()) {
             return std::nullopt;
         }
-        return buffer_[cursor_];
+        return buffer_access_[cursor_];
     }
 
   private:
+    explicit constexpr buffer_reader() = default;
+
+  private:
     std::string buffer_;
+    std::string_view buffer_access_;
     std::size_t cursor_ = 0;
 };
 
-static_assert(reader<buffer_reader>, "buffer_reader must be a reader compatible with descpa");
+static_assert(copa::reader<buffer_reader>, "buffer_reader must be a reader compatible with descpa");
 
-} // namespace fil::copa
+} // namespace fil
+
+namespace fil {
+template<>
+struct shallow_copy<buffer_reader> {
+    static constexpr auto operator()(const buffer_reader& object) {
+        buffer_reader shallow;
+        shallow.buffer_access_ = object.buffer_;
+        shallow.cursor_        = object.cursor_;
+        return shallow;
+    }
+};
+} // namespace fil
 
 #endif // FIL_BUFFER_READER_HH

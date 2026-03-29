@@ -56,7 +56,7 @@ struct reader_noop {
 static_assert(reader<reader_noop>, "reader_noop must follow the reader concept");
 
 template<reader Reader, typename Convertor>
-struct matcher_ctx {
+struct rule_ctx {
     Reader* reader;
     Convertor convertor;
     std::vector<uint16_t> idx {0};
@@ -70,17 +70,17 @@ struct matcher_ctx {
 
 template<typename T>
 concept rule = requires {
-    typename T::return_type;
-    requires std::default_initializable<typename T::return_type>;
+    typename T::result_type;
+    requires std::default_initializable<typename T::result_type>;
 
     {             //
         T::match( //
-            std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {}, std::uint32_t {})
+            std::declval<details_::rule_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {}, std::uint32_t {})
     } -> std::convertible_to<match_result>;
 
     {             //
         T::match( //
-            std::declval<details_::matcher_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {})
+            std::declval<details_::rule_ctx<details_::reader_noop, sink::convertor_noop<int>>&>(), std::uint8_t {})
     } -> std::convertible_to<match_result>;
 };
 
@@ -90,7 +90,7 @@ struct tuple_rule {
 
     static_assert(size >= 2, "Match concat must have at least 2 elements");
 
-    using return_type = std::tuple<typename Ts::return_type...>;
+    using result_type = std::tuple<typename Ts::result_type...>;
 
     template<rule O>
     constexpr rule auto operator+(const O&) {
@@ -141,10 +141,55 @@ struct composable_rule {
         return pair_rule<Self, O> {};
     } // namespace fil::descpa
 };
-
-// template<rule R>
+//
+// template<rule Rule, member_type Mem = member_noop, bool AtLeastOne = true>
 // struct list_rule : composable_rule {
-//     using return_type = std::vector<typename R::return_type>;
+//     using value_type  = typename Mem::member_value_type;
+//     using result_type = std::vector<typename Mem::value_type>;
+//
+//     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+//
+//         bool first           = true;
+//         match_result current = match_result::CONTINUE;
+//
+//         details_::rule_ctx ctx_many {
+//             .reader    = ctx.reader,
+//             .convertor = descpa::sink::aggregator<value_type> {},
+//         };
+//
+//         auto process = [&current, &ctx, c, depth, i = 0]() mutable -> bool {
+//             if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
+//                 if ((ctx.idx.size() - 1) == depth) {
+//                     ctx.increase_depth();
+//                 }
+//
+//                 current = Rule::match(ctx, c, depth + 1);
+//
+//                 if (current == match_result::SUCCESS) {
+//                     ++ctx.idx[depth];
+//                 }
+//                 if (current != match_result::CONTINUE) {
+//                     ctx.decrease_depth();
+//                 }
+//                 return true;
+//             }
+//             return false;
+//         };
+//
+//         while (current == match_result::CONTINUE) {
+//
+//             if (first && current == match_result::FAILURE) {
+//                 if constexpr (AtLeastOne) {
+//                     return match_result::FAILURE;
+//                 } else {
+//                     return match_result::SUCCESS;
+//                 }
+//             }
+//             first = false;
+//         }
+//
+//         return current;
+//     }
 // };
 
 } // namespace fil::copa

@@ -33,155 +33,183 @@ struct extract_class;
 // Specialization for data members
 template<typename T, typename MemberType>
 struct extract_class<MemberType T::*> {
-    using type = T;
+    using type       = T;
+    using value_type = MemberType;
 };
 
 //! Specialization for member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...)> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Specialization for member & functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) &> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Specialization for member && functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) &&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Specialization for member noexcept functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Specialization for member & noexcept functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) & noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Specialization for member && noexcept functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) && noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const & member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const && member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const&&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const & noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const & noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const && noexcept  member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const && noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Volatile member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Volatile & member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Volatile && member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile&&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile & member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile && member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile&&> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 //! Volatile noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Volatile & noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile & noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Volatile && noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) volatile && noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile & noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile & noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Const volatile && noexcept member functions
 template<typename T, typename ReturnType, typename... Args>
 struct extract_class<ReturnType (T::*)(Args...) const volatile && noexcept> {
-    using type = T;
+    using type       = T;
+    using value_type = Args...[0];
 };
 
 //! Convenient alias template to get the type directly
 template<typename PointerToMember>
 using extract_class_t = extract_class<PointerToMember>::type;
+
+template<typename PointerToMember>
+using extract_value_type_t = extract_class<PointerToMember>::value_type;
 
 } // namespace fil
 

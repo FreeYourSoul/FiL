@@ -26,19 +26,15 @@
 
 #include <expected>
 
-#include "fil/copa/ast.hh"
-#include "fil/copa/member.hh"
 #include "fil/copa/production.hh"
 #include "fil/copa/rule.hh"
-#include "fil/copa/sink.hh"
-#include "fil/file/file_reader.hh"
 
 namespace fil::copa {
 
 namespace details_ {
 
 struct error_parsing {
-    std::string current_token; //!< token on which the error occured
+    std::string current_token; //!< token on which the error occurred
 };
 
 /**
@@ -60,7 +56,7 @@ rule auto retrieve_ignore_rules(const Prod&) {
 rule auto retrieve_ignore_rules(const auto&) { return match_space_like {}; }
 
 template<reader Reader, typename Convertor, production Prod>
-std::expected<typename Prod::ast_object, error_parsing> do_parse(matcher_ctx<Reader, Convertor>& ctx, const Prod& prod) {
+std::expected<typename Prod::ast_object, error_parsing> do_parse(rule_ctx<Reader, Convertor>& ctx, const Prod& prod) {
     const rule auto formula = prod.rules();
     const rule auto ignore  = details_::retrieve_ignore_rules(prod);
 
@@ -89,7 +85,7 @@ class parser {
         : input_(std::move(input)) {}
 
     constexpr auto parse(const production auto& prod) {
-        matcher_ctx ctx {&input_, prod.convertor()};
+        rule_ctx ctx {&input_, prod.convertor()};
         return details_::do_parse(ctx, prod);
     }
 

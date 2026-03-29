@@ -13,6 +13,8 @@
 #ifndef FIL_TEMPORARY_HH
 #define FIL_TEMPORARY_HH
 
+#include <filesystem>
+
 namespace fil {
 
 /**

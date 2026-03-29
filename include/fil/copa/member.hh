@@ -52,9 +52,10 @@ class member_fn {
 
 template<auto MemberPtr>
 struct member {
-    using pointer_member = decltype(MemberPtr);
-    using member_type    = extract_class_t<pointer_member>;
-    using is_member_ptr  = void;
+    using pointer_member    = decltype(MemberPtr);
+    using member_type       = extract_class_t<pointer_member>;
+    using member_value_type = extract_value_type_t<pointer_member>;
+    using is_member_ptr     = void;
 
     static constexpr bool is_function_member = std::is_member_function_pointer_v<pointer_member>;
 
@@ -69,8 +70,9 @@ struct member {
 };
 
 struct member_noop {
-    using is_member_ptr = void;
-    using member_type   = int;
+    using is_member_ptr     = void;
+    using member_type       = int;
+    using member_value_type = int;
 
     constexpr void operator()(auto&, auto&&) const {}
 };
@@ -79,6 +81,7 @@ template<typename T>
 concept member_type = requires {
     typename T::is_member_ptr;
     typename T::member_type;
+    typename T::member_value_type;
 };
 } // namespace fil::copa
 

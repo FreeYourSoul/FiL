@@ -39,7 +39,7 @@ template<fixed_string Str, member_type Mem = member_noop>
 struct match_string : composable_rule {
     static_assert(!Str.empty(), "String of match char must be non empty");
 
-    using return_type = std::string;
+    using result_type = std::string;
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (Str[ctx.idx.back()++] == c) {
@@ -61,7 +61,7 @@ struct match_string : composable_rule {
 
 template<char C>
 struct match_char : composable_rule {
-    using return_type = char;
+    using result_type = char;
 
     static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
         return c == C ? match_result::SUCCESS : match_result::FAILURE;
@@ -74,7 +74,7 @@ struct match_char : composable_rule {
 };
 
 struct match_space_like : composable_rule {
-    using return_type = char;
+    using result_type = char;
     static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
         return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
     }
@@ -82,7 +82,7 @@ struct match_space_like : composable_rule {
 
 template<member_type Mem = member_noop, rule auto Separator = match_space_like {}>
 struct match_identifier : composable_rule {
-    using return_type = std::string;
+    using result_type = std::string;
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
@@ -99,11 +99,11 @@ struct match_identifier : composable_rule {
 
 template<production Prod, member_type Mem = member_noop>
 struct match_parser : composable_rule {
-    using return_type = Prod::ast_object;
+    using result_type = Prod::ast_object;
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
 
-        details_::matcher_ctx ctx_m_parser {ctx.reader, Prod::convertor()};
+        details_::rule_ctx ctx_m_parser {ctx.reader, Prod::convertor()};
         ctx_m_parser.current_token = ctx.current_token;
 
         auto res = do_parse(ctx_m_parser, Prod {});

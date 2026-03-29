@@ -23,7 +23,7 @@ class aggregator {
     value_type value_ {};
 };
 
-template<typename T = int>
+template<typename T = char>
 struct convertor_noop {
     using value_type = T;
 

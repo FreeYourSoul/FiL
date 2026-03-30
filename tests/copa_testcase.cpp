@@ -382,13 +382,6 @@ TEST_CASE("copa basic tests", "[copa]") {
 
 TEST_CASE("reader tests", "[copa]") {
 
-    SECTION("string buffer :: empty string") {
-        fil::buffer_reader reader("");
-
-        CHECK(reader.next_byte() == std::nullopt);
-        CHECK(reader.peek() == std::nullopt);
-    }
-
     SECTION("test parse file single char") {
         const auto f1 = fil::temporary_file("I");
         fil::file_reader file_reader {f1};

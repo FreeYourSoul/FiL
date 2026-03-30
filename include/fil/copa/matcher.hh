@@ -119,18 +119,17 @@ struct list_rule : composable_rule {
     template<reader Reader, typename Convertor>
     static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t c, std::uint32_t depth = 0) {
 
-        // auto copy_reader = *ctx.reader;
-        details_::rule_ctx ctx_multi {
-            .reader        = ctx.reader,
-            .convertor     = ctx.convertor,
-            .current_token = ctx.current_token,
+        auto copy_reader = shallow_copy<Reader>::operator()(*ctx.reader);
+        details_::rule_ctx reset_ctx {
+            .reader    = &copy_reader,
+            .convertor = ctx.convertor,
         };
 
         if ((ctx.idx.size() - 1) == depth) {
             ctx.increase_depth();
         }
 
-        const auto current = details_::do_parse_rule<typename Convertor::value_type>(ctx_multi, Rule {}, match_space_like {});
+        const auto current = details_::do_parse_rule<typename Convertor::value_type>(ctx, Rule {}, match_space_like {});
 
         ctx.current_token = {};
 
@@ -140,6 +139,7 @@ struct list_rule : composable_rule {
         }
 
         ctx.decrease_depth();
+        ctx = reset_ctx;
 
         return match_result::SUCCESS;
     }

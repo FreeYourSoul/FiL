@@ -4,6 +4,7 @@
 #include <ranges>
 
 #include "fil/file/file_reader.hh"
+#include "fil/meta/buffer_reader.hh"
 
 namespace {
 
@@ -20,7 +21,36 @@ void write_file(const std::filesystem::path& file_path, const std::string& conte
 
 } // namespace
 
-TEST_CASE("read_file_testcase", "[file]") {
+TEST_CASE("buffer reader", "[reader]") {
+
+    SECTION("string buffer :: empty string") {
+        fil::buffer_reader reader("");
+
+        CHECK(reader.next_byte() == std::nullopt);
+        CHECK(reader.peek() == std::nullopt);
+    }
+
+    SECTION("string buffer :: shallow copy") {
+        fil::buffer_reader reader("abcdef");
+        CHECK(reader.next_byte() == 'a');
+        CHECK(reader.next_byte() == 'b');
+        CHECK(reader.next_byte() == 'c');
+        CHECK(!reader.is_shallow_copy());
+
+        fil::buffer_reader reader2 = fil::shallow_copy<fil::buffer_reader>::operator()(reader);
+        CHECK(reader2.next_byte() == 'd');
+        CHECK(reader2.next_byte() == 'e');
+        CHECK(reader2.next_byte() == 'f');
+        CHECK(reader2.is_shallow_copy());
+
+        // initial reader isn't impacted by reading the shallow copy
+        CHECK(reader.next_byte() == 'd');
+        CHECK(reader.next_byte() == 'e');
+        CHECK(reader.next_byte() == 'f');
+    }
+}
+
+TEST_CASE("read_file_testcase", "[reader]") {
     const auto tmp_file       = std::filesystem::temp_directory_path() / "test_file.txt";
     const std::string content = "This is a test file.\nIt has multiple lines.\nAnd some more text.";
     write_file(tmp_file, content);

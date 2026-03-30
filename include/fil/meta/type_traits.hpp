@@ -29,17 +29,12 @@
 
 namespace fil {
 
-namespace details {
-template<typename>
-struct is_std_vector : std::false_type {};
-
-template<typename T, typename A>
-struct is_std_vector<std::vector<T, A>> : std::true_type {};
-
-} // namespace details
-
 template<typename T>
-concept is_std_vector = details::is_std_vector<T>::value;
+concept is_std_vector = requires(T t) {
+    typename T::value_type;
+    typename T::allocator_type;
+    requires std::same_as<T, std::vector<typename T::value_type, typename T::allocator_type>>;
+};
 
 template<typename T>
 concept to_string_able = requires(const T& elem) {

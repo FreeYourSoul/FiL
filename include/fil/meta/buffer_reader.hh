@@ -64,6 +64,8 @@ class buffer_reader {
         return buffer_access_[cursor_];
     }
 
+    [[nodiscard]] constexpr bool is_shallow_copy() const { return buffer_.empty() && !buffer_access_.empty(); }
+
   private:
     explicit constexpr buffer_reader() = default;
 

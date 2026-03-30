@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fmt/format.h>
+#include <print>
 #include <ranges>
 
 #include "fil/file/file_reader.hh"
@@ -31,22 +32,31 @@ TEST_CASE("buffer reader", "[reader]") {
     }
 
     SECTION("string buffer :: shallow copy") {
-        fil::buffer_reader reader("abcdef");
+        fil::buffer_reader reader("abcdefghi");
         CHECK(reader.next_byte() == 'a');
         CHECK(reader.next_byte() == 'b');
         CHECK(reader.next_byte() == 'c');
         CHECK(!reader.is_shallow_copy());
 
-        fil::buffer_reader reader2 = fil::shallow_copy<fil::buffer_reader>::operator()(reader);
+        fil::buffer_reader reader2 = fil::shallow_copy<fil::buffer_reader>::copy(reader);
         CHECK(reader2.next_byte() == 'd');
         CHECK(reader2.next_byte() == 'e');
         CHECK(reader2.next_byte() == 'f');
         CHECK(reader2.is_shallow_copy());
 
-        // initial reader isn't impacted by reading the shallow copy
-        CHECK(reader.next_byte() == 'd');
-        CHECK(reader.next_byte() == 'e');
-        CHECK(reader.next_byte() == 'f');
+        SECTION("initial reader isn't impacted by reading the shallow copy") {
+            CHECK(reader.next_byte() == 'd');
+            CHECK(reader.next_byte() == 'e');
+            CHECK(reader.next_byte() == 'f');
+        }
+        SECTION("shallow assign") {
+            fil::shallow_copy<fil::buffer_reader>::assign(reader, std::move(reader2));
+
+            CHECK(reader.next_byte() == 'g');
+            CHECK(reader.next_byte() == 'h');
+            CHECK(reader.next_byte() == 'i');
+            CHECK(!reader.next_byte().has_value());
+        }
     }
 }
 
@@ -61,6 +71,53 @@ TEST_CASE("read_file_testcase", "[reader]") {
 
     CHECK(file_reader.exists());
     CHECK(file_reader.size() == content.size());
+
+    SECTION("read_file :: shallow copy") {
+        CHECK(file_reader.next_byte() == 'T');
+        CHECK(file_reader.next_byte() == 'h');
+        CHECK(file_reader.next_byte() == 'i');
+
+        fil::file_reader reader2 = fil::shallow_copy<fil::file_reader>::copy(file_reader);
+        CHECK(reader2.next_byte() == 's');
+        CHECK(reader2.next_byte() == ' ');
+        CHECK(reader2.next_byte() == 'i');
+        CHECK(reader2.next_byte() == 's');
+        CHECK(reader2.next_byte() == ' ');
+        CHECK(reader2.next_byte() == 'a');
+        CHECK(reader2.next_byte() == ' ');
+        CHECK(reader2.next_byte() == 't');
+        CHECK(reader2.next_byte() == 'e');
+        CHECK(reader2.next_byte() == 's');
+        CHECK(reader2.next_byte() == 't');
+
+        SECTION("initial reader isn't impacted") {
+
+            // initial reader isn't impacted by reading the shallow copy
+            CHECK(file_reader.next_byte() == 's');
+            CHECK(file_reader.next_byte() == ' ');
+            CHECK(file_reader.next_byte() == 'i');
+            CHECK(file_reader.next_byte() == 's');
+            CHECK(file_reader.next_byte() == ' ');
+            CHECK(file_reader.next_byte() == 'a');
+            CHECK(file_reader.next_byte() == ' ');
+            CHECK(file_reader.next_byte() == 't');
+            CHECK(file_reader.next_byte() == 'e');
+            CHECK(file_reader.next_byte() == 's');
+            CHECK(file_reader.next_byte() == 't');
+        }
+
+        SECTION("shallow assign") {
+            fil::shallow_copy<fil::file_reader>::assign(file_reader, std::move(reader2));
+
+            CHECK(file_reader.next_byte() == ' ');
+            CHECK(file_reader.next_byte() == 'f');
+            CHECK(file_reader.next_byte() == 'i');
+            CHECK(file_reader.next_byte() == 'l');
+            CHECK(file_reader.next_byte() == 'e');
+            CHECK(file_reader.next_byte() == '.');
+            CHECK(file_reader.next_byte() == '\n');
+        }
+    }
 
     SECTION("get_line : success") {
         const auto line = file_reader.next_line();

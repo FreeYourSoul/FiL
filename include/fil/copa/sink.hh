@@ -43,7 +43,7 @@ namespace fil {
 namespace fil {}
 template<typename T>
 struct shallow_copy<copa::sink::aggregator<T>> {
-    static constexpr auto operator()(copa::sink::aggregator<T>& object) {
+    static constexpr auto copy(copa::sink::aggregator<T>& object) {
         copa::sink::aggregator<T&> shallow {object.value_};
         return shallow;
     }

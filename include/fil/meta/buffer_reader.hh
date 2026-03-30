@@ -34,6 +34,15 @@
 
 namespace fil {
 
+/**
+ * @class buffer_reader
+ * @brief A class for sequentially reading and accessing data from an in-memory buffer.
+ *
+ * The `buffer_reader` class provides functionality for reading data, one byte at a time,
+ * from a string buffer. It supports reading, peeking, and checking whether its instance is a shallow copy of another `buffer_reader`.
+ * @note implement fil::shallow_buffer specialization which ensure that the copy doesn't copy the buffer content
+ * @see fill::shallow_buffer
+ */
 class buffer_reader {
 
     template<typename>
@@ -48,8 +57,15 @@ class buffer_reader {
         : buffer_(buffer.begin(), buffer.end())
         , buffer_access_(buffer_) {}
 
-    [[nodiscard]] std::size_t get_buffer_cursor() const { return cursor_; }
+    /**
+     * @return buffer cursor
+     */
+    [[nodiscard]] std::size_t reader_cursor() const { return cursor_; }
 
+    /**
+     * @note the buffer cursor progress forward
+     * @return the next character of the buffer if any
+     */
     [[nodiscard]] constexpr std::optional<std::uint8_t> next_byte() {
         if (cursor_ >= buffer_access_.size()) {
             return std::nullopt;
@@ -57,6 +73,21 @@ class buffer_reader {
         return buffer_access_[cursor_++];
     }
 
+    /**
+     * @note the buffer cursor progress backward
+     * @return the previous character of the buffer if any
+     */
+    [[nodiscard]] constexpr std::optional<std::uint8_t> previous_byte() {
+        if (cursor_ <= 1) {
+            return std::nullopt;
+        }
+        return buffer_access_[--cursor_];
+    }
+
+    /**
+     * @note the buffer cursor doesn't progress forward
+     * @return the next character if any
+     */
     [[nodiscard]] constexpr std::optional<std::uint8_t> peek() const {
         if (buffer_access_.empty()) {
             return std::nullopt;
@@ -64,6 +95,9 @@ class buffer_reader {
         return buffer_access_[cursor_];
     }
 
+    /**
+     * @return true if the buffer is the result of shallow_copy
+     */
     [[nodiscard]] constexpr bool is_shallow_copy() const { return buffer_.empty() && !buffer_access_.empty(); }
 
   private:
@@ -80,14 +114,19 @@ static_assert(copa::reader<buffer_reader>, "buffer_reader must be a reader compa
 } // namespace fil
 
 namespace fil {
+/**
+ * @brief specialization of the shallow_copy making it possible to copy the buffer without copying the buffer.
+ */
 template<>
 struct shallow_copy<buffer_reader> {
-    static constexpr auto operator()(const buffer_reader& object) {
+    static constexpr auto copy(const buffer_reader& object) {
         buffer_reader shallow;
         shallow.buffer_access_ = object.buffer_;
         shallow.cursor_        = object.cursor_;
         return shallow;
     }
+
+    static constexpr auto assign(buffer_reader& object, buffer_reader&& other) { object.cursor_ = other.cursor_; }
 };
 } // namespace fil
 

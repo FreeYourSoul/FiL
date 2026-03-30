@@ -20,6 +20,8 @@
 #include <string_view>
 #include <utility>
 
+#include "fil/meta/shallow_copy.hh"
+
 namespace fil {
 
 /**
@@ -36,6 +38,9 @@ static constexpr std::size_t READER_BUFFER_SIZE = 1024 * 1024 + 1;
  * reading specific lines, or reading until a condition is met through predicates.
  */
 class file_reader {
+    template<typename>
+    friend struct shallow_copy;
+
   public:
     /**
      * @brief represent a block of text retrieved from the file_reader.
@@ -86,8 +91,8 @@ class file_reader {
             file_stream_.seekg(0, std::ios::beg);
             return size;
         }()) {
-        // const auto size_buffer = std::min(size_, READER_BUFFER_SIZE);
         current_buffer_.resize(READER_BUFFER_SIZE);
+        buffer_accessor_ = std::string_view(current_buffer_);
     }
 
     block_view read_line(std::size_t line) {
@@ -106,14 +111,27 @@ class file_reader {
         return next_line();
     }
 
+    /**
+     * @brief Reads from the current buffer position until the predicate returns true for the accumulated string view.
+     *
+     * If the buffer doesn't have enough data remaining (less than minimum_size bytes), it triggers a buffer reload
+     * before starting the read operation.
+     *
+     * @tparam Predicate A callable type that takes a std::string_view and returns a boolean
+     * @param predicate A function or callable object that determines when to stop reading. It receives the accumulated
+     *                  string_view from the start position up to the current cursor position.
+     * @param minimum_size The minimum number of bytes that should remain in the buffer before triggering a reload (default: 100)
+     * @return A block_view containing the characters read from the start position up to when the predicate returned true.
+     *         Returns an empty block_view if the predicate never returns true before reaching the end of the buffer.
+     */
     template<std::invocable<std::string_view> Predicate>
     [[nodiscard]] block_view read_until(Predicate&& predicate, std::size_t minimum_size = 100) {
-        if (!current_buffer_.front() != '\0' || ((buffer_size_ - cursor_) <= minimum_size)) {
+        if (!buffer_accessor_.front() != '\0' || ((buffer_size_ - cursor_) <= minimum_size)) {
             load_();
         }
         const auto start_cursor = cursor_;
         while (cursor_ < buffer_size_) {
-            std::string_view sv = {current_buffer_.begin() + start_cursor, current_buffer_.begin() + ++cursor_};
+            std::string_view sv = {buffer_accessor_.begin() + start_cursor, buffer_accessor_.begin() + ++cursor_};
             if (std::invoke(predicate, sv)) {
                 return {sv, load_counter_, this};
             }
@@ -129,9 +147,9 @@ class file_reader {
         }
         const auto start_cursor = cursor_;
         while (cursor_ < buffer_size_) {
-            if (std::invoke(predicate, current_buffer_[++cursor_])) {
+            if (std::invoke(predicate, buffer_accessor_[++cursor_])) {
                 return {
-                    {current_buffer_.begin() + start_cursor, current_buffer_.begin() + ++cursor_},
+                    {buffer_accessor_.begin() + start_cursor, buffer_accessor_.begin() + ++cursor_},
                     load_counter_, this
                 };
             }
@@ -150,13 +168,13 @@ class file_reader {
             return {};
         }
 
-        const auto pos =
-            std::find_if(std::next(current_buffer_.begin(), cursor_), current_buffer_.end(), [](auto c) { return c == '\n' || c == '\0'; });
-        const auto size_line = std::distance(std::next(current_buffer_.begin(), cursor_), pos);
+        const auto pos       = std::find_if(std::next(buffer_accessor_.begin(), cursor_), buffer_accessor_.end(),
+                                            [](auto c) { return c == '\n' || c == '\0'; });
+        const auto size_line = std::distance(std::next(buffer_accessor_.begin(), cursor_), pos);
 
-        std::string_view line {current_buffer_.data() + cursor_, static_cast<std::size_t>(size_line)};
+        std::string_view line {buffer_accessor_.data() + cursor_, static_cast<std::size_t>(size_line)};
 
-        cursor_ = std::distance(current_buffer_.begin(), pos) + 1; // move past the newline character
+        cursor_ = std::distance(buffer_accessor_.begin(), pos) + 1; // move past the newline character
 
         return {line, load_counter_, this};
     }
@@ -168,19 +186,30 @@ class file_reader {
         if (buffer_size_ == 0 || cursor_ >= buffer_size_) {
             return std::nullopt;
         }
-        return std::make_optional(current_buffer_[cursor_++]);
+        return std::make_optional(buffer_accessor_[cursor_++]);
+    }
+
+    [[nodiscard]] std::optional<std::uint8_t> previous_byte() {
+        if ((cursor_ - 1) <= buffer_size_) {
+            load_();
+        }
+        if (buffer_size_ == 0 || (cursor_ - 1) <= buffer_size_) {
+            return std::nullopt;
+        }
+        return std::make_optional(buffer_accessor_[--cursor_]);
     }
 
     [[nodiscard]] std::optional<std::uint8_t> peek() {
         if (cursor_ >= buffer_size_)
             return std::nullopt;
-        return std::make_optional(current_buffer_[cursor_]);
+        return std::make_optional(buffer_accessor_[cursor_]);
     }
 
     [[nodiscard]] const std::filesystem::path& get_path() const { return file_path_; }
     [[nodiscard]] bool exists() const { return std::filesystem::exists(file_path_); }
     [[nodiscard]] auto get_file_cursor() { return file_stream_.tellg(); }
     [[nodiscard]] std::size_t get_buffer_cursor() const { return cursor_; }
+    [[nodiscard]] std::size_t reader_cursor() const { return get_buffer_cursor(); }
     [[nodiscard]] std::size_t size() const { return size_; }
     [[nodiscard]] std::size_t load_counter() const { return load_counter_; }
 
@@ -188,6 +217,8 @@ class file_reader {
     [[nodiscard]] file_reader::sentinel end() { return {}; }
 
   private:
+    file_reader() = default;
+
     /**
      * @brief Loads a block of data from the file into the buffer.
      *
@@ -219,8 +250,8 @@ class file_reader {
 
         if (buffer_size_ != 0) {
             // move cursor backward to the last read position to retrieve the same leftover of buffer that was not read
-            if (cursor_ < current_buffer_.size()) {
-                file_stream_.seekg(-(current_buffer_.size() - cursor_), std::ios::cur);
+            if (cursor_ < buffer_accessor_.size()) {
+                file_stream_.seekg(-(buffer_accessor_.size() - cursor_), std::ios::cur);
             }
         }
         ++load_counter_;
@@ -235,18 +266,20 @@ class file_reader {
         file_stream_.read(&current_buffer_[0], READER_BUFFER_SIZE);
         buffer_size_                  = file_stream_.gcount();
         current_buffer_[buffer_size_] = '\0';
+        buffer_accessor_              = std::string_view(current_buffer_);
     }
 
   private:
-    std::filesystem::path file_path_; //!< path to the file to read
+    std::filesystem::path file_path_;     //!< path to the file to read
 
-    std::ifstream file_stream_;       //!< file stream to read from
-    std::string current_buffer_ {};   //!< buffer of the current read
-    std::size_t buffer_size_ {0};     //!< size of the buffer
-    std::size_t cursor_ {0};          //!< cursor in the buffer of the current block
+    std::ifstream file_stream_;           //!< file stream to read from
+    std::string current_buffer_ {};       //!< buffer of the current read
+    std::string_view buffer_accessor_ {}; //!< access point to the buffer
+    std::size_t buffer_size_ {0};         //!< size of the buffer
+    std::size_t cursor_ {0};              //!< cursor in the buffer of the current block
 
-    std::size_t size_ {0};            //!< file size in bytes
-    std::size_t load_counter_ {0};    //!< counter to inform on how many load occurred
+    std::size_t size_ {0};                //!< file size in bytes
+    std::size_t load_counter_ {0};        //!< counter to inform on how many load occurred
 };
 
 /**
@@ -308,6 +341,33 @@ class file_reader_line {
   private:
     file_reader* file_handler_;
     std::size_t start_line_;
+};
+
+template<>
+struct shallow_copy<file_reader> {
+    static constexpr auto copy(file_reader& object) {
+        file_reader shallow;
+
+        shallow.file_stream_ = std::ifstream(object.file_path_);
+        shallow.file_stream_.seekg(object.file_stream_.tellg());
+
+        shallow.buffer_size_     = object.buffer_size_;
+        shallow.cursor_          = object.cursor_;
+        shallow.size_            = object.size_;
+        shallow.file_path_       = object.file_path_;
+        shallow.buffer_accessor_ = object.buffer_accessor_;
+        shallow.load_counter_    = 0;
+        return shallow;
+    }
+
+    static constexpr auto assign(file_reader& object, file_reader&& other) {
+        object.file_stream_.seekg(other.file_stream_.tellg());
+        object.cursor_ = other.cursor_;
+        if (other.load_counter() > 0) {
+            std::swap(object.current_buffer_, other.current_buffer_);
+            object.buffer_accessor_ = std::string_view(object.current_buffer_);
+        }
+    }
 };
 
 } // namespace fil

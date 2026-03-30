@@ -46,13 +46,17 @@ concept reader = requires(T reader_) {
     std::is_move_assignable_v<T>;
     { reader_.peek() } -> std::convertible_to<std::optional<std::uint8_t>>;
     { reader_.next_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
+    { reader_.previous_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
+    { reader_.reader_cursor() } -> std::convertible_to<std::size_t>;
 };
 
 namespace details_ {
 
 struct reader_noop {
     constexpr std::optional<std::uint8_t> next_byte() { return std::nullopt; }
+    constexpr std::optional<std::uint8_t> previous_byte() { return std::nullopt; }
     constexpr std::optional<std::uint8_t> peek() { return std::nullopt; }
+    constexpr std::size_t reader_cursor() { return 0; }
 };
 static_assert(reader<reader_noop>, "reader_noop must follow the reader concept");
 

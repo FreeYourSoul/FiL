@@ -117,9 +117,11 @@ struct list_rule : composable_rule {
     using result_type = std::vector<value_type>;
 
     template<reader Reader, typename Convertor>
-    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t, std::uint32_t depth = 0) {
 
-        auto copy_reader = shallow_copy<Reader>::operator()(*ctx.reader);
+        using shallow = shallow_copy<Reader>;
+
+        auto copy_reader = shallow::copy(*ctx.reader);
         details_::rule_ctx reset_ctx {
             .reader    = &copy_reader,
             .convertor = ctx.convertor,
@@ -140,6 +142,7 @@ struct list_rule : composable_rule {
 
         ctx.decrease_depth();
         ctx = reset_ctx;
+        shallow::assign(*ctx.reader, std::move(*reset_ctx.reader));
 
         return match_result::SUCCESS;
     }

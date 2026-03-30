@@ -18,7 +18,7 @@ namespace fil {
 template<typename T>
 struct shallow_copy {
     static constexpr auto copy(const T& object) { return object; }
-    static constexpr auto assign(T& object, T&& other) { object = std::forward<T>(other); }
+    static constexpr auto assign(T& object, T&& other) { object = std::move(other); }
 };
 
 } // namespace fil

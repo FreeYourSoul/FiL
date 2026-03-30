@@ -126,7 +126,7 @@ class file_reader {
      */
     template<std::invocable<std::string_view> Predicate>
     [[nodiscard]] block_view read_until(Predicate&& predicate, std::size_t minimum_size = 100) {
-        if (!buffer_accessor_.front() != '\0' || ((buffer_size_ - cursor_) <= minimum_size)) {
+        if (buffer_accessor_.front() != '\0' || ((buffer_size_ - cursor_) <= minimum_size)) {
             load_();
         }
         const auto start_cursor = cursor_;
@@ -251,7 +251,7 @@ class file_reader {
         if (buffer_size_ != 0) {
             // move cursor backward to the last read position to retrieve the same leftover of buffer that was not read
             if (cursor_ < buffer_accessor_.size()) {
-                file_stream_.seekg(-(buffer_accessor_.size() - cursor_), std::ios::cur);
+                file_stream_.seekg(-static_cast<int64_t>(buffer_accessor_.size() - cursor_), std::ios::cur);
             }
         }
         ++load_counter_;

@@ -51,6 +51,8 @@ stdenv.mkDerivation rec {
 
     mkdir -p $out/coverage
 
+    cp $sourceDir/
+
     # During a Nix sandbox build, stdenv's unpackPhase copies the source tree
     # from the Nix store into a writable temporary directory.  CMake compiles
     # from that temporary copy, so .gcno files embed paths like

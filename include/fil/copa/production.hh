@@ -29,15 +29,16 @@
 namespace fil::copa {
 
 template<typename T>
-concept production = requires {
-    typename T::ast_object;
-    std::is_default_constructible_v<typename T::ast_object>;
-    std::is_move_assignable_v<typename T::ast_object>;
-    std::is_copy_assignable_v<typename T::ast_object>;
+concept production =                                           //
+    std::is_default_constructible_v<typename T::ast_object> && //
+    std::is_move_assignable_v<typename T::ast_object> &&       //
+    std::is_copy_assignable_v<typename T::ast_object> &&       //
+    requires {
+        typename T::ast_object;
 
-    { T::rules() } -> rule;
-    { T::convertor() };
-};
+        { T::rules() } -> rule;
+        { T::convertor() };
+    };
 
 /**
  * @tparam Prod production with extra requirements to provide ignore() returning a rule of character to ignore

@@ -49,12 +49,12 @@ class boundary_map {
     void insert(int index, T&& element) {
         auto it = get(index);
         if (it == _map.end()) {
-            _map[index] = std::forward<T>(element);
+            _map[index] = std::move(element);
         } else if (element != it->second) {
-            _map[it->first + 1] = std::forward<T>(element);
+            _map[it->first + 1] = std::move(element);
         } else {
             _map.erase(it);
-            _map[it->first] = std::forward<T>(element);
+            _map[it->first] = std::move(element);
         }
     }
 

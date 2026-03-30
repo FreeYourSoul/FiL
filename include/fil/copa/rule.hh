@@ -42,13 +42,14 @@ enum class match_result {
 };
 
 template<typename T>
-concept reader = requires(T reader_) {
-    std::is_move_assignable_v<T>;
-    { reader_.peek() } -> std::convertible_to<std::optional<std::uint8_t>>;
-    { reader_.next_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
-    { reader_.previous_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
-    { reader_.reader_cursor() } -> std::convertible_to<std::size_t>;
-};
+concept reader =                    //
+    std::is_move_assignable_v<T> && //
+    requires(T reader_) {
+        { reader_.peek() } -> std::convertible_to<std::optional<std::uint8_t>>;
+        { reader_.next_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
+        { reader_.previous_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
+        { reader_.reader_cursor() } -> std::convertible_to<std::size_t>;
+    };
 
 namespace details_ {
 

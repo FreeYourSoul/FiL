@@ -91,6 +91,9 @@ concept rule = requires {
 };
 
 template<rule... Ts>
+struct or_rule;
+
+template<rule... Ts>
 struct tuple_rule {
     static constexpr auto size = sizeof...(Ts);
 
@@ -101,6 +104,11 @@ struct tuple_rule {
     template<rule O>
     constexpr rule auto operator+(const O&) {
         return tuple_rule<Ts..., O> {};
+    }
+
+    template<rule O>
+    constexpr rule auto operator|(const O&) {
+        return or_rule<tuple_rule<Ts...>, O> {};
     }
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
@@ -129,6 +137,60 @@ struct tuple_rule {
 
         if (current == match_result::SUCCESS) {
             return ctx.idx[depth] == size ? match_result::SUCCESS : match_result::CONTINUE;
+        }
+
+        return current;
+    }
+
+  private:
+    std::size_t idx_ = 0;
+};
+
+template<rule... Ts>
+struct or_rule {
+    static constexpr auto size = sizeof...(Ts);
+
+    static_assert(size >= 2, "Match concat must have at least 2 elements");
+
+    using result_type = std::tuple<typename Ts::result_type...>;
+
+    template<rule O>
+    constexpr rule auto operator+(const O&) {
+        return tuple_rule<or_rule<Ts...>, O> {};
+    }
+
+    template<rule O>
+    constexpr rule auto operator|(const O&) {
+        return or_rule<Ts..., O> {};
+    }
+
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+        match_result current = match_result::FAILURE;
+
+        // @todo : execute as a do_parse
+        auto process = [&current, &ctx, c, depth, i = 0]<typename T0>() mutable -> bool {
+            if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
+                if ((ctx.idx.size() - 1) == depth) {
+                    ctx.increase_depth();
+                }
+
+                current = T0::match(ctx, c, depth + 1);
+
+                if (current == match_result::FAILURE) {
+                    ++ctx.idx[depth];
+                }
+                if (current != match_result::CONTINUE) {
+                    ctx.decrease_depth();
+                }
+                return true;
+            }
+            return false;
+        };
+
+        ((process.template operator()<Ts>()) || ...);
+
+        if (current == match_result::FAILURE && ctx.idx[depth] == size) {
+            return match_result::FAILURE;
         }
 
         return current;

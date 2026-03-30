@@ -27,11 +27,13 @@ jobs:
 
       - name: Check coverage file exists
         run: |
-          ls -la result/ || echo "result directory not found"
           ls -la result/coverage/ || echo "coverage directory not found"
-          
+          file result/coverage/cobertura.xml
+          head -20 result/coverage/cobertura.xml
+
       - name: codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: result/coverage/cobertura.xml
+          language: cpp

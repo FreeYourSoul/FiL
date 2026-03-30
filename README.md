@@ -19,7 +19,7 @@ FiL provides various modern C++ features:
 - **[FSM](doc/fsm.md)**: Simple Finite State Machine implementation.
 - **[SOA](doc/soa.md)**: Cache-friendly Structure of Arrays data structure.
 - **[Database KV](doc/database_kv.md)**: Abstraction for Key-Value data stores (RocksDB, Redis, etc.).
-- **[Cop](doc/copa.md)**: DEclarative COmbinatory PArser (generic descent parser).
+- **[Copa](doc/copa.md)**: DEclarative COmbinatory PArser (generic descent parser).
 
 ## Dependencies
 

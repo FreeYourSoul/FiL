@@ -38,6 +38,31 @@ jobs:
           coverage-reports: result/coverage/cobertura.xml
           language: cpp
 
+      - name: Fix compile_commands.json paths
+        run: |
+          cp result/compile_commands.json compile_commands.json
+          python3 - <<'EOF'
+          import json, re, os
+          workspace = os.getcwd()
+          with open('compile_commands.json', 'r') as f:
+              content = f.read()
+              data = json.loads(content)
+          nix_prefix = None
+          for entry in data:
+              file_path = entry.get('file', '')
+              match = re.match(r'^(/nix/store/[^/]+)', file_path)
+              if match:
+                  nix_prefix = match.group(1)
+                  break
+          if nix_prefix:
+              content = content.replace(nix_prefix, workspace)
+              with open('compile_commands.json', 'w') as f:
+                  f.write(content)
+              print(f"Replaced '{nix_prefix}' with '{workspace}'")
+          else:
+              print("No Nix store prefix found, file may already have correct paths")
+          EOF
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

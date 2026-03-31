@@ -78,22 +78,35 @@ jobs:
               print(f"Replaced '{source_prefix}' with '{workspace}'")
           else:
               print("Could not determine source prefix; paths may already be correct")
-          # Replace Nix store compiler wrapper paths with system compilers.
-          # Nix gcc-wrapper is a shell script, not a real binary; SonarQube
-          # CFamily does not support it and marks every compilation unit as
-          # "unsupported" when it is used.
+          # Fixup compiler commands for SonarQube CFamily compatibility.
           data = json.loads(content)
           for entry in data:
               cmd = entry.get('command', '')
               if not cmd:
                   continue
               tokens = cmd.split()
+              # Replace Nix store compiler wrapper paths with system compilers.
+              # Nix gcc-wrapper is a shell script, not a real binary; SonarQube
+              # CFamily marks every compilation unit as "unsupported" when it
+              # encounters an unrecognised compiler binary.
               compiler = tokens[0]
               m = re.match(r'^/nix/store/[^/]+/bin/(.+)$', compiler)
               if m:
                   tokens[0] = m.group(1)
-                  entry['command'] = ' '.join(tokens)
                   print(f"Replaced compiler '{compiler}' with '{tokens[0]}'")
+              # Normalise the C++ standard flag.
+              # SonarQube CFamily 6.x supports up to C++23; C++26 (gnu++26) is
+              # not recognised and causes every compilation unit to be classified
+              # as "unsupported".  Strip the gnu-extension prefix and cap the
+              # version at 23 so the scanner can parse the translation units.
+              def normalize_std(match):
+                  ver = int(match.group(1))
+                  return '-std=c++{}'.format(min(ver, 23))
+              tokens = [re.sub(r'^-std=(?:gnu|c)\+\+(\d+)$', normalize_std, t)
+                        for t in tokens]
+              new_cmd = ' '.join(tokens)
+              if new_cmd != cmd:
+                  entry['command'] = new_cmd
           with open('compile_commands.json', 'w') as f:
               json.dump(data, f, indent=2)
           EOF

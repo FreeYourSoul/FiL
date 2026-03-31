@@ -75,11 +75,27 @@ jobs:
                   break
           if source_prefix:
               content = content.replace(source_prefix, workspace)
-              with open('compile_commands.json', 'w') as f:
-                  f.write(content)
               print(f"Replaced '{source_prefix}' with '{workspace}'")
           else:
               print("Could not determine source prefix; paths may already be correct")
+          # Replace Nix store compiler wrapper paths with system compilers.
+          # Nix gcc-wrapper is a shell script, not a real binary; SonarQube
+          # CFamily does not support it and marks every compilation unit as
+          # "unsupported" when it is used.
+          data = json.loads(content)
+          for entry in data:
+              cmd = entry.get('command', '')
+              if not cmd:
+                  continue
+              tokens = cmd.split()
+              compiler = tokens[0]
+              m = re.match(r'^/nix/store/[^/]+/bin/(.+)$', compiler)
+              if m:
+                  tokens[0] = m.group(1)
+                  entry['command'] = ' '.join(tokens)
+                  print(f"Replaced compiler '{compiler}' with '{tokens[0]}'")
+          with open('compile_commands.json', 'w') as f:
+              json.dump(data, f, indent=2)
           EOF
 
       - name: SonarQube Scan

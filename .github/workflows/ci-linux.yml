@@ -47,20 +47,39 @@ jobs:
           with open('compile_commands.json', 'r') as f:
               content = f.read()
               data = json.loads(content)
-          nix_prefix = None
+          if not data:
+              print("compile_commands.json is empty")
+              exit(0)
+          print("First entry for debugging:")
+          print(json.dumps(data[0], indent=2))
+          source_prefix = None
           for entry in data:
               file_path = entry.get('file', '')
-              match = re.match(r'^(/nix/store/[^/]+)', file_path)
-              if match:
-                  nix_prefix = match.group(1)
+              if not file_path or not os.path.isabs(file_path):
+                  continue
+              # Strategy 1: Nix store path (e.g. /nix/store/<hash>-fil/...)
+              m = re.match(r'^(/nix/store/[^/]+)', file_path)
+              if m:
+                  source_prefix = m.group(1)
                   break
-          if nix_prefix:
-              content = content.replace(nix_prefix, workspace)
+              # Strategy 2: Nix build-sandbox path (e.g. /build/source/...)
+              # Find the longest leading prefix whose removal yields a path that
+              # exists inside the current workspace.
+              parts = [p for p in file_path.split('/') if p]
+              for i in range(1, len(parts)):
+                  relative = '/'.join(parts[i:])
+                  if os.path.exists(os.path.join(workspace, relative)):
+                      source_prefix = '/' + '/'.join(parts[:i])
+                      break
+              if source_prefix is not None:
+                  break
+          if source_prefix:
+              content = content.replace(source_prefix, workspace)
               with open('compile_commands.json', 'w') as f:
                   f.write(content)
-              print(f"Replaced '{nix_prefix}' with '{workspace}'")
+              print(f"Replaced '{source_prefix}' with '{workspace}'")
           else:
-              print("No Nix store prefix found, file may already have correct paths")
+              print("Could not determine source prefix; paths may already be correct")
           EOF
 
       - name: SonarQube Scan

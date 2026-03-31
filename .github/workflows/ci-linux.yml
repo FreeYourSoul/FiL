@@ -40,7 +40,7 @@ jobs:
 
       - name: Fix compile_commands.json paths
         run: |
-          cp result/compile_commands.json compile_commands.json
+          cp --no-preserve=mode result/compile_commands.json compile_commands.json
           python3 - <<'EOF'
           import json, re, os
           workspace = os.getcwd()

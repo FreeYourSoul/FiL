@@ -26,16 +26,13 @@
 
 #include <expected>
 
+#include "fil/copa/error.hh"
 #include "fil/copa/production.hh"
 #include "fil/copa/rule.hh"
 
 namespace fil::copa {
 
 namespace details_ {
-
-struct error_parsing {
-    std::string current_token; //!< token on which the error occurred
-};
 
 /**
  * @tparam Prod production with extra requirements to provide ignore() returning a rule of character to ignore
@@ -72,6 +69,12 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
         ctx.current_token += static_cast<char>(c.value());
 
         result = formula.match(ctx, c.value());
+    }
+    if (result == match_result::FAILURE) {
+        return std::unexpected(error_parsing {
+            .current_token = ctx.current_token,
+            .error_brief   = "An error occurred in do_parse_rule",
+        });
     }
     return ctx.convertor->value();
 }

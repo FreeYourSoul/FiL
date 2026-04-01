@@ -1,8 +1,6 @@
 #ifndef FIL_SHALLOW_COPY_HH
 #define FIL_SHALLOW_COPY_HH
 
-#include <type_traits>
-
 namespace fil {
 
 /**

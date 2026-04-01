@@ -25,11 +25,14 @@
 #define FIL_RULE_HH
 
 #include <cstdint>
+#include <expected>
 #include <optional>
+#include <print>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "error.hh"
 #include "fil/copa/sink.hh"
 #include "fil/meta/shallow_copy.hh"
 
@@ -63,6 +66,9 @@ static_assert(reader<reader_noop>, "reader_noop must follow the reader concept")
 
 template<reader Reader, typename Convertor>
 struct rule_ctx {
+    using reader_type    = Reader;
+    using convertor_type = Convertor;
+
     Reader* reader;
     Convertor* convertor;
 
@@ -73,6 +79,7 @@ struct rule_ctx {
 
     void decrease_depth() { idx.pop_back(); }
 };
+
 } // namespace details_
 
 template<typename T>
@@ -115,7 +122,7 @@ struct tuple_rule {
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
         match_result current = match_result::FAILURE;
 
-        auto process = [&current, &ctx, c, depth, i = 0]<typename T0>() mutable -> bool {
+        auto process = [&current, &ctx, c, depth, i = 0]<rule T0>() mutable -> bool {
             if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
                 if ((ctx.idx.size() - 1) == depth) {
                     ctx.increase_depth();
@@ -147,6 +154,19 @@ struct tuple_rule {
     std::size_t idx_ = 0;
 };
 
+namespace details_ {
+
+template<typename Result>
+std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore);
+
+struct match_space_like { //@todo remove
+    using result_type = char;
+    static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
+        return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
+    }
+};
+} // namespace details_
+
 template<rule... Ts>
 struct or_rule {
     static constexpr auto size = sizeof...(Ts);
@@ -165,41 +185,65 @@ struct or_rule {
         return or_rule<Ts..., O> {};
     }
 
-    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
-        match_result current = match_result::FAILURE;
+    template<reader Reader, typename Convertor>
+    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t, std::uint32_t = 0) {
 
-        // @todo : execute as a do_parse
-        auto process = [&current, &ctx, c, depth, i = 0]<typename T0>() mutable -> bool {
-            if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
-                if ((ctx.idx.size() - 1) == depth) {
-                    ctx.increase_depth();
-                }
+        auto process = [&ctx]<rule Rule>() -> bool {
+            auto shallow_reader = shallow_copy<Reader>::copy(*ctx.reader);
+            details_::rule_ctx ctx_or {
+                .reader        = &shallow_reader,
+                .convertor     = ctx.convertor,
+                .current_token = ctx.current_token,
+            };
 
-                current = T0::match(ctx, c, depth + 1);
+            ctx_or.reader->previous_byte(); // go back a character as we went forward before starting or
+            ctx_or.current_token.pop_back();
 
-                if (current == match_result::FAILURE) {
-                    ++ctx.idx[depth];
-                }
-                if (current != match_result::CONTINUE) {
-                    ctx.decrease_depth();
-                }
-                return true;
+            auto res = details_::do_parse_rule<typename Convertor::value_type>(ctx_or, Rule {}, details_::match_space_like {});
+            if (!res) {
+                // @todo : error handling
+                return false;
             }
-            return false;
+
+            ctx.current_token = {};
+            shallow_copy<Reader>::assign(*ctx.reader, std::move(*ctx_or.reader));
+
+            return true;
         };
 
-        ((process.template operator()<Ts>()) || ...);
-
-        if (current == match_result::FAILURE && ctx.idx[depth] == size) {
-            return match_result::FAILURE;
-        }
-
-        return current;
+        const bool success = ((process.template operator()<Ts>()) || ...);
+        return success ? match_result::SUCCESS : match_result::FAILURE;
     }
 
   private:
     std::size_t idx_ = 0;
 };
+
+namespace details_ {
+
+template<std::size_t N, rule R, rule... Rs>
+struct rule_array_impl : rule_array_impl<N - 1, R, R, Rs...> {}; //!< Recursive case: add another copy of R to Rs
+
+template<rule R, rule... Rs>
+struct rule_array_impl<0, R, Rs...> : tuple_rule<R, Rs...> {};   //!< Base case: when N is 0, we need to stop the recursion
+
+} // namespace details_
+
+template<rule Rule, std::size_t N>
+using rule_array = details_::rule_array_impl<N - 1, Rule>;
+
+/**
+ * Creates a rule that repeats the given rule a specified number of times.
+ *
+ * @tparam N The number of repetitions to apply to the rule.
+ * @tparam R The rule type to be repeated, which must conform to the rule concept.
+ * @param instance An instance of the rule type to be repeated.
+ * @return A rule that represents the composition of the given rule repeated N times in sequence.
+ */
+template<std::size_t N, rule R>
+constexpr rule auto times([[maybe_unused]] const R& instance) {
+    return rule_array<R, N> {};
+}
 
 template<rule Rhs, rule Lhs>
 using pair_rule = tuple_rule<Rhs, Lhs>;
@@ -208,7 +252,11 @@ struct composable_rule {
     template<rule Self, rule O>
     constexpr rule auto operator+(this Self&&, const O&) {
         return pair_rule<Self, O> {};
-    } // namespace fil::descpa
+    }
+    template<rule Self, rule O>
+    constexpr rule auto operator|(this Self&&, const O&) {
+        return or_rule<Self, O> {};
+    }
 };
 
 struct match_space_like : composable_rule {

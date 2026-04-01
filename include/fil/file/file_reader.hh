@@ -193,7 +193,7 @@ class file_reader {
         if ((cursor_ - 1) <= buffer_size_) {
             load_();
         }
-        if (buffer_size_ == 0 || (cursor_ - 1) <= buffer_size_) {
+        if (buffer_size_ == 0 || cursor_ <= 0) {
             return std::nullopt;
         }
         return std::make_optional(buffer_accessor_[--cursor_]);

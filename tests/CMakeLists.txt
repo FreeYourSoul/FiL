@@ -12,6 +12,7 @@ add_executable(header_only_test
         ${CMAKE_CURRENT_SOURCE_DIR}/soa_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/reader_testcase.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/copa_testcase.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/copa_standalone_testcase.cpp
 )
 target_link_libraries(header_only_test fys::fil Catch2::Catch2WithMain)
 catch_discover_tests(header_only_test)

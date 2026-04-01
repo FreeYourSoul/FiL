@@ -57,6 +57,20 @@ class buffer_reader {
         : buffer_(buffer.begin(), buffer.end())
         , buffer_access_(buffer_) {}
 
+    buffer_reader(buffer_reader&& other) noexcept
+        : buffer_(std::move(other.buffer_))
+        , buffer_access_(buffer_)
+        , cursor_(other.cursor_) {}
+
+    buffer_reader& operator=(buffer_reader&& other) noexcept {
+        buffer_        = std::move(other.buffer_);
+        buffer_access_ = std::string_view(buffer_.begin(), buffer_.end());
+        cursor_        = other.cursor_;
+        return *this;
+    }
+    buffer_reader(const buffer_reader&)            = default;
+    buffer_reader& operator=(const buffer_reader&) = default;
+
     /**
      * @return buffer cursor
      */
@@ -78,7 +92,7 @@ class buffer_reader {
      * @return the previous character of the buffer if any
      */
     [[nodiscard]] constexpr std::optional<std::uint8_t> previous_byte() {
-        if (cursor_ <= 1) {
+        if (cursor_ <= 0) {
             return std::nullopt;
         }
         return buffer_access_[--cursor_];

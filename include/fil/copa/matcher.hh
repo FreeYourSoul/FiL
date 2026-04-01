@@ -42,6 +42,7 @@ struct match_string : composable_rule {
         if (Str[ctx.idx.back()++] == c) {
             if (ctx.idx.back() >= Str.size()) {
                 ctx.convertor->operator()(Mem {}, ctx.current_token);
+                ctx.current_token = {};
                 return match_result::SUCCESS;
             }
             return match_result::CONTINUE;
@@ -51,8 +52,8 @@ struct match_string : composable_rule {
     }
 
     template<typename Type>
-    static constexpr void value(Mem::member_type& obj, Type&& value) {
-        member(obj, std::forward<Type>(value));
+    static constexpr void value(Mem::member_type& obj, Type&&) {
+        member(obj, Str.to_string());
     }
 };
 
@@ -118,7 +119,6 @@ struct list_rule : composable_rule {
 
     template<reader Reader, typename Convertor>
     static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t, std::uint32_t depth = 0) {
-
         using shallow = shallow_copy<Reader>;
 
         auto copy_reader = shallow::copy(*ctx.reader);

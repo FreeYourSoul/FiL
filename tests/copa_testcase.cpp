@@ -17,7 +17,6 @@
 #include "fil/copa/sink.hh"
 
 TEST_CASE("copa basic tests", "[copa]") {
-
     SECTION("test char") {
         fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
 
@@ -127,7 +126,7 @@ TEST_CASE("copa basic tests", "[copa]") {
                 CHECK(ctx.idx.back() == 3);
             }
         }
-        SECTION("mixup") {
+        SECTION("mixup string and char matching") {
             fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<>> ctx;
             fil::copa::tuple_rule<                                 //
                 fil::copa::match_char<'L'>,                        //
@@ -442,7 +441,6 @@ TEST_CASE("reader tests", "[copa]") {
 }
 
 TEST_CASE("ast test", "[copa]") {
-
     SECTION("multiple identifier") {
 
         fil::buffer_reader reader("chocobo is the best of the world ");
@@ -557,5 +555,88 @@ TEST_CASE("ast test", "[copa]") {
         CHECK(v.value().vec_value[0] == "chocobo");
         CHECK(v.value().vec_value[1] == "is");
         CHECK(v.value().vec_value[2] == "best");
+    }
+    SECTION("times") {
+        fil::buffer_reader reader("chocobo is best ");
+
+        SECTION("in ast vector") {
+            struct grammar {
+
+                struct ast_object {
+                    std::vector<std::string> vec_value {};
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return fil::copa::times<3>(fil::copa::match_identifier<fil::copa::member<&ast_object::vec_value>> {});
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto g       = grammar {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().vec_value.size() == 3);
+            CHECK(v.value().vec_value[0] == "chocobo");
+            CHECK(v.value().vec_value[1] == "is");
+            CHECK(v.value().vec_value[2] == "best");
+        }
+    }
+
+    SECTION("or_rule") {
+        fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
+        fil::buffer_reader reader("chocobo is best ");
+
+        SECTION("or character : 2 options") {}
+        SECTION("or string : 2 options") {
+
+            struct grammar {
+
+                struct ast_object {
+                    std::string value {};
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return fil::copa::or_rule<                                                                         //
+                        fil::copa::match_string<fil::fixed_string {"chocobo"}, fil::copa::member<&ast_object::value>>, //
+                        fil::copa::match_identifier<fil::copa::member<&ast_object::value>>                             //
+                        > {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto g       = grammar {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value == "chocobo");
+        }
+        SECTION("or identifier : 2 options") {
+            struct grammar {
+
+                struct ast_object {
+                    std::string value {};
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return fil::copa::or_rule<                                                                       //
+                        fil::copa::match_string<fil::fixed_string {"ifrit"}, fil::copa::member<&ast_object::value>>, //
+                        fil::copa::match_identifier<fil::copa::member<&ast_object::value>>                           //
+                        > {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto g       = grammar {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value == "chocobo");
+        }
+
+        SECTION("first match is taken") {
+            SECTION("2 options") {}
+            SECTION("5 options") {}
+        }
     }
 }

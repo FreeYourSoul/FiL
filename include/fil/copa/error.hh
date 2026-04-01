@@ -1,4 +1,4 @@
-// MIT License
+/// MIT License
 //
 // Copyright (c) 2025 Quentin Balland
 // Repository : https://github.com/FreeYourSoul/FiL
@@ -21,33 +21,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef FIL_STATIC_STRING_HH
-#define FIL_STATIC_STRING_HH
+#ifndef FIL_COPA_ERROR_HH
+#define FIL_COPA_ERROR_HH
 
-#include <array>
-#include <cstddef>
+#include <any>
 #include <string>
 
-namespace fil {
+namespace fil::copa {
 
-template<std::size_t N>
-struct fixed_string {
-    std::array<char, N> data_;
-
-    explicit constexpr fixed_string(const char str[N]) {
-        for (std::size_t i = 0; i < N; ++i)
-            data_[i] = str[i];
-    }
-
-    constexpr char operator[](std::size_t i) const { return data_[i]; }
-    [[nodiscard]] constexpr std::string to_string() const { return std::string(data_.data(), N); }
-    [[nodiscard]] constexpr std::size_t size() const { return data_.size(); }
-    [[nodiscard]] constexpr bool empty() const { return data_.empty(); }
+struct error_parsing {
+    std::string current_token; //!< token on which the error occurred
+    std::string source;
+    std::size_t line_number;
+    std::string parsing_step;
+    std::string error_brief;
+    std::any extra;
 };
 
-template<std::size_t N>
-fixed_string(const char (&)[N]) -> fixed_string<N - 1>;
+} // namespace fil::copa
 
-} // namespace fil
-
-#endif // FIL_STATIC_STRING_HH
+#endif // FIL_COPA_ERROR_HH

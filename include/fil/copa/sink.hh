@@ -8,7 +8,7 @@ namespace fil::copa::sink {
 
 template<typename T>
 class aggregator {
-    
+
     template<typename>
     friend struct fil::shallow_copy;
 

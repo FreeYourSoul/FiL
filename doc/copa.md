@@ -85,14 +85,16 @@ int main() {
 - `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
 - `may_rule<Rule>`: Matches zero or one of the provided `Rule`.
 - `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
+- `tuple_rule<Rules...>`: Sequence of rules to be provided in order.
+- `or_rule<Rules...>`: Rule tried in order, at least one must be matching.
 - `eof`: Matches the end of the input.
 
 ## Rule Composition
 
 Rules can be composed using overloaded operators:
 
-- **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`.
-- **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice).
+- **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
+- **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice). (using `or_rule`)
 
 Example:
 

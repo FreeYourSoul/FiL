@@ -222,32 +222,6 @@ struct or_rule {
     std::size_t idx_ = 0;
 };
 
-namespace details_ {
-
-template<std::size_t N, rule R, rule... Rs>
-struct rule_array_impl : rule_array_impl<N - 1, R, R, Rs...> {}; //!< Recursive case: add another copy of R to Rs
-
-template<rule R, rule... Rs>
-struct rule_array_impl<0, R, Rs...> : tuple_rule<R, Rs...> {};   //!< Base case: when N is 0, we need to stop the recursion
-
-} // namespace details_
-
-template<rule Rule, std::size_t N>
-using rule_array = details_::rule_array_impl<N - 1, Rule>;
-
-/**
- * Creates a rule that repeats the given rule a specified number of times.
- *
- * @tparam N The number of repetitions to apply to the rule.
- * @tparam R The rule type to be repeated, which must conform to the rule concept.
- * @param instance An instance of the rule type to be repeated.
- * @return A rule that represents the composition of the given rule repeated N times in sequence.
- */
-template<std::size_t N, rule R>
-constexpr rule auto repeat([[maybe_unused]] const R& instance) {
-    return rule_array<R, N> {};
-}
-
 template<rule Rhs, rule Lhs>
 using pair_rule = tuple_rule<Rhs, Lhs>;
 
@@ -278,18 +252,6 @@ struct match_space_like : composable_rule {
 static constexpr auto space_like = match_space_like {};
 
 namespace details_ {
-struct may_rule_not_present_matcher : composable_rule {
-    using result_type = bool;
-    static constexpr match_result match(auto& ctx, std::uint8_t, std::uint32_t = 0) {
-        // as the rule is called, it means no other rules have been successfully completed, the may_rule rollback the read
-        ctx.reader->previous_byte();
-        return match_result::SUCCESS;
-    }
-};
-} // namespace details_
-
-template<rule R>
-using may_rule = or_rule<R, details_::may_rule_not_present_matcher>;
 
 template<rule Rule>
 constexpr bool shall_eof_be_success(const Rule&) {
@@ -307,8 +269,6 @@ constexpr bool shall_eof_be_success(const tuple_rule<Rs...>&) {
     using last_rule_type = Rs...[size - 1];
     return shall_eof_be_success(last_rule_type {});
 }
-
-namespace details_ {
 
 template<rule Rule>
 constexpr bool strict_eof_check_(const Rule& r) {
@@ -330,8 +290,6 @@ constexpr bool strict_eof_check_(const or_rule<Rs...>& r) {
     return any_rules_is_eof(std::make_index_sequence<size>());
 }
 
-} // namespace details_
-
 template<rule... Rs>
 constexpr bool shall_eof_be_success(const or_rule<Rs...>&) {
     auto any_rules_is_eof = []<std::size_t... Is>(std::index_sequence<Is...>) { //
@@ -341,6 +299,50 @@ constexpr bool shall_eof_be_success(const or_rule<Rs...>&) {
     static constexpr auto size = sizeof...(Rs);
     return any_rules_is_eof(std::make_index_sequence<size>());
 }
+
+constexpr std::size_t rule_size(const auto&) { return 0; }
+
+template<rule... Rs>
+constexpr std::size_t rule_size(const tuple_rule<Rs...>&) {
+    return sizeof...(Rs);
+}
+
+struct may_rule_not_present_matcher : composable_rule {
+    using result_type = bool;
+    static constexpr match_result match(auto& ctx, std::uint8_t, std::uint32_t = 0) {
+        // as the rule is called, it means no other rules have been successfully completed, the may_rule rollback the read
+        ctx.reader->previous_byte();
+        return match_result::SUCCESS;
+    }
+};
+
+template<std::size_t N, rule R, rule... Rs>
+struct rule_array_impl : rule_array_impl<N - 1, R, R, Rs...> {}; //!< Recursive case: add another copy of R to Rs
+
+template<rule R, rule... Rs>
+struct rule_array_impl<0, R, Rs...> : tuple_rule<R, Rs...> {};   //!< Base case: when N is 0, we need to stop the recursion
+
+} // namespace details_
+
+template<rule R>
+using may_rule = or_rule<R, details_::may_rule_not_present_matcher>;
+
+template<rule Rule, std::size_t N>
+using rule_array = details_::rule_array_impl<N - 1, Rule>;
+
+/**
+ * Creates a rule that repeats the given rule a specified number of times.
+ *
+ * @tparam N The number of repetitions to apply to the rule.
+ * @tparam R The rule type to be repeated, which must conform to the rule concept.
+ * @param instance An instance of the rule type to be repeated.
+ * @return A rule that represents the composition of the given rule repeated N times in sequence.
+ */
+template<std::size_t N, rule R>
+constexpr rule auto repeat([[maybe_unused]] const R& instance) {
+    return rule_array<R, N> {};
+}
+
 } // namespace fil::copa
 
 #endif // FIL_RULE_HH

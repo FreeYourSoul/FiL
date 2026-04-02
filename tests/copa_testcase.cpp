@@ -70,7 +70,7 @@ TEST_CASE("Copa: standalone test case", "[copa][standalone]") {
                  + fil::copa::match_identifier<fil::copa::member<&ast_object::command>> {}
                  + fil::copa::match_string<fil::fixed_string {"FOR"}> {}
                  + fil::copa::match_identifier<fil::copa::member<&ast_object::name>> {}
-                 + fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::options>>> {};
+                 + fil::copa::may_rule<fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::options>>>> {};
         }
 
         static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
@@ -105,19 +105,18 @@ TEST_CASE("Copa: standalone test case", "[copa][standalone]") {
         CHECK(result->options[0] == "a");
     }
 
-    // @todo
-    // SECTION("Successful parse with empty options") {
-    //     std::string input = "CMD stop FOR system ";
-    //     fil::buffer_reader reader(std::move(input));
-    //     simple_grammar grammar;
-    //
-    //     const auto result = fil::copa::parse(grammar, std::move(reader));
-    //
-    //     REQUIRE(result.has_value());
-    //     CHECK(result->command == "stop");
-    //     CHECK(result->name == "system");
-    //     CHECK(result->options.empty());
-    // }
+    SECTION("Successful parse with empty options") {
+        std::string input = "CMD stop FOR system ]";
+        fil::buffer_reader reader(std::move(input));
+        simple_grammar grammar;
+
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->command == "stop");
+        CHECK(result->name == "system");
+        CHECK(result->options.empty());
+    }
 
     SECTION("Parse failure on missing keyword") {
         std::string input = "CMD start engine "; // Missing "FOR"
@@ -126,8 +125,6 @@ TEST_CASE("Copa: standalone test case", "[copa][standalone]") {
 
         const auto result = fil::copa::parse(grammar, std::move(reader));
 
-        // Note: Currently copa might return failure or partial result depending on how it's structured.
-        // Based on do_parse_rule, if a rule fails, it returns failure.
         CHECK_FALSE(result.has_value());
     }
 }

@@ -1,56 +1,122 @@
-# copa (Combinator Parser)
+# copa (COmbinator PArser)
 
-`copa` is a combinator-based parser library. It allows you to build complex recursive descent parsers by composing
-rules.
+`copa` is a C++26 header-only combinator-based parser library. It allows you to build complex recursive descent parsers
+by composing simple rules and mapping them directly to C++ structures (AST objects).
+
+## Key Concepts
+
+- **Rule**: A basic building block that matches a part of the input. Rules can be simple (match a character) or
+  complex (composed of other rules).
+- **Matcher**: A specific implementation of a rule (e.g., `match_char`, `match_string`).
+- **Production**: A high-level grammar definition that combines rules with an AST object and a result convertor.
+- **Sink (Aggregator)**: Collects results from matchers and populates the AST object.
 
 ## Basic Usage
 
-The library uses concepts to define rules and productions.
+To use `copa`, you define a **Production**. A production is a struct or class that defines:
+
+1. `ast_object`: The type that will hold the parsing results.
+2. `rules()`: A static method returning the composed rules.
+3. `convertor()`: A static method returning an aggregator for the `ast_object`.
+
+### Example: A Simple Command Parser
+
+The following example parse a string of format : "CMD {command_name} ON {target} {options} "
 
 ```cpp
+#include <iostream>
+#include <vector>
+
 #include <fil/copa/copa.hh>
+#include <fil/copa/matcher.hh>
 #include <fil/copa/sink.hh>
+#include <fil/meta/buffer_reader.hh>
 
-// Example: checking for a specific character
-fil::copa::match_char<'X'> char_x_check;
-fil::copa::details_::matcher_ctx<fil::copa::sink::convertor_noop> ctx;
+// 1. Define your AST structure
+struct MyCommand {
+    std::string command;
+    std::string target;
+    std::vector<std::string> options;
+};
 
-auto res = char_x_check.match(ctx, 'X'); 
-// res == fil::copa::match_result::SUCCESS
+// 2. Define the Grammar Production
+struct CommandGrammar {
+    using ast_object = MyCommand;
+
+    static constexpr auto rules() {
+        using namespace fil::copa;
+        
+        // Rule: "CMD" <id:command> "ON" <id:target> [options...]
+        return match_string<fixed_string{"CMD"}>{}
+             + match_identifier<member<&MyCommand::command>>{}
+             + match_string<fixed_string{"ON"}>{}
+             + match_identifier<member<&MyCommand::target>>{}
+             + list_rule<match_identifier<member<&MyCommand::options>>>{};
+    }
+
+    static constexpr auto convertor() {
+        return fil::copa::sink::aggregator<ast_object>{};
+    }
+};
+
+int main() {
+    std::string input = "CMD start ON engine turbo fast";
+    fil::buffer_reader reader(std::move(input));
+    CommandGrammar grammar;
+
+    // 3. Parse the input
+    auto result = fil::copa::parse(grammar, std::move(reader));
+
+    // result.has_value() == true
+    // result->command    == start
+    // result->target     == engine
+    // result->options    == { turbo, fast }
+}
 ```
 
-## String Matching
+## Available Matchers
 
-```cpp
-// Check for a fixed string
-fil::copa::match_string<fil::copa::fixed_string {"CHOCOBO"}> string_check;
+`copa` provides several built-in matchers in the `fil::copa` namespace:
 
-// Returns CONTINUE while the string is being matched, and SUCCESS when complete
-string_check.match(ctx, 'C'); // CONTINUE
-string_check.match(ctx, 'H'); // CONTINUE
-// ...
-string_check.match(ctx, 'O'); // SUCCESS
-```
+- `match_char<char C>`: Matches a single character `C`.
+- `match_string<fixed_string {S}>`: Matches an exact string `S`.
+- `match_identifier`: Matches an alphanumeric sequence (identifier).
+- `match_space_like`: Matches whitespace characters (space, tab, newline).
+- `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
+- `may_rule<Rule>`: Matches zero or one of the provided `Rule`.
+- `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
+- `eof`: Matches the end of the input.
 
 ## Rule Composition
 
-You can compose rules using the `+` operator.
+Rules can be composed using overloaded operators:
+
+- **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`.
+- **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice).
+
+Example:
 
 ```cpp
-// Match "LOL" by composing 'L', 'O', 'L'
-auto lol_parser = fil::copa::match_char<'L'>{} + 
-                  fil::copa::match_char<'O'>{} + 
-                  fil::copa::match_char<'L'>{};
-
-// This creates a tuple_rule that matches the sequence.
+// Matches either "TRUE" or "FALSE"
+auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_string{"FALSE"}>{};
 ```
 
-## Integrating with File Reader
+## Mapping to AST
 
-`copa` is designed to work efficiently with `file_reader`.
+To map parsed values to your `ast_object`, use the `member` template:
+
+- `member<&Class::field>`: Assigns the matched value to the specified field.
+- If the field is a `std::vector`, `member` will automatically `push_back` the value.
+- If the field is a setter method `void set_field(Value)`, it will call that method.
+
+## Integrating with Readers
+
+The `parse` function takes a `reader`. The library provides `fil::buffer_reader` for in-memory strings and is designed
+to work with `fil::file_reader` for disk-based parsing.
 
 ```cpp
 #include <fil/file/file_reader.hh>
-// Use fil::parse with a production and a reader
-// auto result = fil::copa::parse(production, reader);
+// ...
+fil::file_reader reader(std::filesystem::path("input.txt"));
+auto result = fil::copa::parse(grammar, std::move(reader));
 ```

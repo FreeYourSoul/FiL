@@ -244,7 +244,7 @@ using rule_array = details_::rule_array_impl<N - 1, Rule>;
  * @return A rule that represents the composition of the given rule repeated N times in sequence.
  */
 template<std::size_t N, rule R>
-constexpr rule auto times([[maybe_unused]] const R& instance) {
+constexpr rule auto repeat([[maybe_unused]] const R& instance) {
     return rule_array<R, N> {};
 }
 
@@ -276,6 +276,20 @@ struct match_space_like : composable_rule {
     }
 };
 static constexpr auto space_like = match_space_like {};
+
+namespace details_ {
+struct may_rule_not_present_matcher : composable_rule {
+    using result_type = bool;
+    static constexpr match_result match(auto& ctx, std::uint8_t, std::uint32_t = 0) {
+        // as the rule is called, it means no other rules have been successfully completed, the may_rule rollback the read
+        ctx.reader->previous_byte();
+        return match_result::SUCCESS;
+    }
+};
+} // namespace details_
+
+template<rule R>
+using may_rule = or_rule<R, details_::may_rule_not_present_matcher>;
 
 template<rule Rule>
 constexpr bool shall_eof_be_success(const Rule&) {

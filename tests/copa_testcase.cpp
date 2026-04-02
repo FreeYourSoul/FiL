@@ -429,7 +429,7 @@ TEST_CASE("Copa: times<N> rule", "[copa][times]") {
         }; // dummy
         struct times_grammar {
             using ast_object = times_ast;
-            static constexpr auto rules() { return fil::copa::times<3>(fil::copa::match_char<'X'> {}); }
+            static constexpr auto rules() { return fil::copa::repeat<3>(fil::copa::match_char<'X'> {}); }
             static constexpr auto convertor() { return fil::copa::sink::aggregator<times_ast> {}; }
         };
 

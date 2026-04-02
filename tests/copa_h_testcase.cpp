@@ -19,8 +19,8 @@
 //@todo :: check that or EOF is working
 //@todo :: check that EOF is working in general
 
-TEST_CASE("copa basic tests", "[copa]") {
-    SECTION("test char") {
+TEST_CASE("Copa: matcher tests", "[copa]") {
+    SECTION("test char match") {
         fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
 
         fil::copa::match_char<'X'> char_x_check;
@@ -101,7 +101,6 @@ TEST_CASE("copa basic tests", "[copa]") {
             }
         }
     }
-
     SECTION("test composition") {
         SECTION("compose 3 char") {
             fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
@@ -382,7 +381,7 @@ TEST_CASE("copa basic tests", "[copa]") {
     }
 }
 
-TEST_CASE("reader tests", "[copa][reader]") {
+TEST_CASE("Copa: reader tests", "[copa][reader]") {
 
     SECTION("test parse file single char") {
         const auto f1 = fil::temporary_file("I");
@@ -443,9 +442,8 @@ TEST_CASE("reader tests", "[copa][reader]") {
     }
 }
 
-TEST_CASE("Copa: simple", "[copa]") {
+TEST_CASE("Copa: rule tests", "[copa]") {
     SECTION("multiple identifier") {
-
         fil::buffer_reader reader("chocobo is the best of the world ");
 
         struct grammar {
@@ -485,9 +483,7 @@ TEST_CASE("Copa: simple", "[copa]") {
         CHECK(v.value().word6 == "the");
         CHECK(v.value().word7 == "world");
     }
-
     SECTION("structure in structure") {
-
         fil::buffer_reader reader("chocobo is best ");
 
         struct inner_ast_object {
@@ -531,7 +527,6 @@ TEST_CASE("Copa: simple", "[copa]") {
         CHECK(v.value().value2.inner1 == "is");
         CHECK(v.value().value2.inner2 == "best");
     }
-
     SECTION("tuple check string in vector") {
         fil::buffer_reader reader("chocobo OfDoom ");
 
@@ -553,7 +548,6 @@ TEST_CASE("Copa: simple", "[copa]") {
         REQUIRE(v.value().vec_value.size() == 1);
         CHECK(v.value().vec_value[0] == "chocobo");
     }
-
     SECTION("list simple") {
         fil::buffer_reader reader("chocobo is best ");
 
@@ -581,7 +575,7 @@ TEST_CASE("Copa: simple", "[copa]") {
         CHECK(v.value().vec_value[1] == "is");
         CHECK(v.value().vec_value[2] == "best");
     }
-    SECTION("times") {
+    SECTION("repeat") {
         fil::buffer_reader reader("chocobo is best ");
 
         SECTION("in ast vector") {
@@ -592,7 +586,7 @@ TEST_CASE("Copa: simple", "[copa]") {
                 };
 
                 static constexpr fil::copa::rule auto rules() {
-                    return fil::copa::times<3>(fil::copa::match_identifier<fil::copa::member<&ast_object::vec_value>> {});
+                    return fil::copa::repeat<3>(fil::copa::match_identifier<fil::copa::member<&ast_object::vec_value>> {});
                 }
                 static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
             };
@@ -607,16 +601,12 @@ TEST_CASE("Copa: simple", "[copa]") {
             CHECK(v.value().vec_value[2] == "best");
         }
     }
-
     SECTION("or_rule") {
-        fil::copa::details_::rule_ctx<fil::copa::details_::reader_noop, fil::copa::sink::convertor_noop<char>> ctx;
         fil::buffer_reader reader("chocobo is best ");
 
         SECTION("or character : 2 options") {}
         SECTION("or string : 2 options") {
-
             struct grammar {
-
                 struct ast_object {
                     std::string value {};
                 };
@@ -638,7 +628,6 @@ TEST_CASE("Copa: simple", "[copa]") {
         }
         SECTION("or identifier : 2 options") {
             struct grammar {
-
                 struct ast_object {
                     std::string value {};
                 };
@@ -662,6 +651,62 @@ TEST_CASE("Copa: simple", "[copa]") {
         SECTION("first match is taken") {
             SECTION("2 options") {}
             SECTION("5 options") {}
+        }
+    }
+    SECTION("may_rule") {
+        struct grammar {
+            struct ast_object {
+                std::string value {};
+            };
+
+            static constexpr fil::copa::rule auto rules() {
+                return fil::copa::may_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::value>>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        SECTION("match") {
+            fil::buffer_reader reader("chocobo ");
+
+            auto g       = grammar {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value == "chocobo");
+        }
+        SECTION("not match") {
+            fil::buffer_reader reader("");
+
+            auto g       = grammar {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value.empty());
+        }
+
+        SECTION("not match in composition") {
+            struct grammar_may_composed {
+                struct ast_object {
+                    std::string value1 {};
+                    std::string value2 {};
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return fil::copa::may_rule<
+                               fil::copa::match_string<fil::fixed_string {"NotMatched"}, fil::copa::member<&ast_object::value1>>> {} //
+                         + fil::copa::match_identifier<fil::copa::member<&ast_object::value2>> {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            fil::buffer_reader reader("chocobo ");
+
+            auto g       = grammar_may_composed {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value1.empty());
+            REQUIRE(v.value().value2 == "chocobo");
         }
     }
 }

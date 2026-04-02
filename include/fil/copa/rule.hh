@@ -36,8 +36,9 @@
 #include "fil/copa/sink.hh"
 #include "fil/meta/shallow_copy.hh"
 
-namespace fil::copa {
+#include <algorithm>
 
+namespace fil::copa {
 enum class match_result {
     SUCCESS,
     CONTINUE,
@@ -74,6 +75,8 @@ struct rule_ctx {
 
     std::vector<uint16_t> idx {0};
     std::string current_token; //!< @todo transform into a view
+
+    bool is_main_parser = false;
 
     void increase_depth() { idx.push_back(0); }
 
@@ -259,13 +262,71 @@ struct composable_rule {
     }
 };
 
+//! eof file match, if the matcher is actually called. It means that the file is not ended as a character has been read
+struct eof_rule : composable_rule {
+    using result_type = int;
+    static constexpr match_result match(auto&, std::uint8_t, std::uint32_t = 0) { return match_result::FAILURE; }
+};
+static constexpr auto eof = eof_rule {};
+
 struct match_space_like : composable_rule {
     using result_type = char;
     static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
         return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
     }
 };
+static constexpr auto space_like = match_space_like {};
 
+template<rule Rule>
+constexpr bool shall_eof_be_success(const Rule&) {
+    if constexpr (std::is_same_v<Rule, eof_rule>) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+template<rule... Rs>
+constexpr bool shall_eof_be_success(const tuple_rule<Rs...>&) {
+    static constexpr auto size = sizeof...(Rs);
+
+    using last_rule_type = Rs...[size - 1];
+    return shall_eof_be_success(last_rule_type {});
+}
+
+namespace details_ {
+
+template<rule Rule>
+constexpr bool strict_eof_check_(const Rule& r) {
+    return shall_eof_be_success(r);
+}
+
+template<rule... Rs>
+constexpr bool strict_eof_check_(const tuple_rule<Rs...>& r) {
+    return shall_eof_be_success(r);
+}
+
+template<rule... Rs>
+constexpr bool strict_eof_check_(const or_rule<Rs...>& r) {
+    auto any_rules_is_eof = []<std::size_t... Is>(std::index_sequence<Is...>) { //
+        return (std::is_same_v<Rs...[Is], eof_rule> || ...);
+    };
+
+    static constexpr auto size = sizeof...(Rs);
+    return any_rules_is_eof(std::make_index_sequence<size>());
+}
+
+} // namespace details_
+
+template<rule... Rs>
+constexpr bool shall_eof_be_success(const or_rule<Rs...>&) {
+    auto any_rules_is_eof = []<std::size_t... Is>(std::index_sequence<Is...>) { //
+        return (details_::strict_eof_check_(Rs... [Is] {}) || ...);
+    };
+
+    static constexpr auto size = sizeof...(Rs);
+    return any_rules_is_eof(std::make_index_sequence<size>());
+}
 } // namespace fil::copa
 
 #endif // FIL_RULE_HH

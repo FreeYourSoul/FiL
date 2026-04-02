@@ -91,7 +91,7 @@ class buffer_reader {
      * @note the buffer cursor progress backward
      * @return the previous character of the buffer if any
      */
-    [[nodiscard]] constexpr std::optional<std::uint8_t> previous_byte() {
+    constexpr std::optional<std::uint8_t> previous_byte() {
         if (cursor_ <= 0) {
             return std::nullopt;
         }

@@ -59,7 +59,12 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
     while (result == match_result::CONTINUE) {
         const auto c = ctx.reader->next_byte();
         if (!c.has_value()) {
-            return ctx.convertor->value();
+            if (ctx.idx.back() == 0 && (ctx.is_main_parser || shall_eof_be_success(formula)))
+                return ctx.convertor->value();
+            return std::unexpected(error_parsing {
+                .current_token = ctx.current_token,
+                .error_brief   = "parsing didn't finish properly",
+            });
         }
 
         if (ignore.match(ctx, c.value()) == match_result::SUCCESS) {
@@ -76,6 +81,7 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
             .error_brief   = "An error occurred in do_parse_rule",
         });
     }
+
     return ctx.convertor->value();
 }
 
@@ -96,8 +102,9 @@ class parser {
     constexpr auto parse(const production auto& prod) {
         auto convertor = prod.convertor();
         rule_ctx ctx {
-            .reader    = &input_,
-            .convertor = &convertor,
+            .reader         = &input_,
+            .convertor      = &convertor,
+            .is_main_parser = true,
         };
         return details_::do_parse(ctx, prod);
     }

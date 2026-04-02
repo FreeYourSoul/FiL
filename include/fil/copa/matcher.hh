@@ -94,11 +94,15 @@ struct match_parser : composable_rule {
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         auto convertor = Prod::convertor();
+
         details_::rule_ctx ctx_m_parser {
             .reader        = ctx.reader,
             .convertor     = &convertor,
             .current_token = ctx.current_token,
         };
+
+        ctx_m_parser.reader->previous_byte(); // go back a character as we went forward before starting or
+        ctx_m_parser.current_token.pop_back();
 
         auto res = do_parse(ctx_m_parser, Prod {});
         if (!res) {
@@ -131,12 +135,13 @@ struct list_rule : composable_rule {
             ctx.increase_depth();
         }
 
+        ++ctx.idx.back();
         const auto current = details_::do_parse_rule<typename Convertor::value_type>(ctx, Rule {}, match_space_like {});
+        --ctx.idx.back();
 
         ctx.current_token = {};
 
         if (current) {
-            ++ctx.idx.back();
             return match_result::CONTINUE;
         }
 

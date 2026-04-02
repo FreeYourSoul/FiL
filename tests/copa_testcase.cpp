@@ -1,3 +1,4 @@
+#include "ast.hh"
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
 #include "fil/copa/sink.hh"
@@ -8,110 +9,73 @@
 
 namespace {
 
-/**
- * @brief Extensive test suite for Copa.
- * This file contains the skeleton and explained test cases for the Copa parsing library.
- */
-
 // --- AST Definitions for various test scenarios ---
 
-struct simple_ast {
-    std::string command;
-    std::string name;
-    std::vector<std::string> options;
-};
-
-struct simple_grammar {
-    using ast_object = simple_ast;
-
-    // Rule: "CMD" <identifier:command> "FOR" <identifier:name> [options...]
-    static constexpr fil::copa::rule auto rules() {
-        return fil::copa::match_string<fil::fixed_string {"CMD"}> {}
-             + fil::copa::match_identifier<fil::copa::member<&simple_ast::command>> {}
-             + fil::copa::match_string<fil::fixed_string {"FOR"}> {} + fil::copa::match_identifier<fil::copa::member<&simple_ast::name>> {}
-             + fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&simple_ast::options>>> {};
-    }
-
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<simple_ast> {}; }
-};
-
-struct alt_ast {
-    std::string type;
-    std::string value;
-};
-
 struct alt_grammar {
-    using ast_object = alt_ast;
+    struct ast_object {
+        std::string type;
+        std::string value;
+    };
 
     static constexpr fil::copa::rule auto rules() {
         // ( "INT" <id> ) | ( "STR" <id> | eof)
-        return (fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&alt_ast::type>> {}
-                + fil::copa::match_identifier<fil::copa::member<&alt_ast::value>> {})
+        return (fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&ast_object::type>> {}
+                + fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {})
              //
-             | (fil::copa::match_string<fil::fixed_string {"STR"}, fil::copa::member<&alt_ast::type>> {}
-                + fil::copa::match_identifier<fil::copa::member<&alt_ast::value>> {})
+             | (fil::copa::match_string<fil::fixed_string {"STR"}, fil::copa::member<&ast_object::type>> {}
+                + fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {})
 
              | fil::copa::eof;
     }
 
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<alt_ast> {}; }
-};
-
-struct basic_ast {
-    std::string value;
-};
-
-struct sequence_ast {
-    std::string first;
-    std::string second;
-};
-
-struct list_ast {
-    std::vector<std::string> items;
-};
-
-struct nested_ast {
-    std::string name;
-    std::vector<std::string> tags;
+    static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
 };
 
 // --- Grammar Definitions ---
 
 struct match_string_grammar {
-    using ast_object = basic_ast;
-    static constexpr auto rules() { return fil::copa::match_string<fil::fixed_string {"HELLO"}, fil::copa::member<&basic_ast::value>> {}; }
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<basic_ast> {}; }
-};
-
-struct match_char_grammar {
-    using ast_object = basic_ast;
-    static constexpr auto rules() {
-        // match_char doesn't seem to have a direct member binding constructor like match_string in some versions,
-        // but based on matcher.hh it uses value() template.
-        // We'll use it in a sequence or check if it works standalone.
-        return fil::copa::match_char<'A'> {};
-    }
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<basic_ast> {}; }
+    struct ast_object {
+        std::string value;
+    };
+    static constexpr auto rules() { return fil::copa::match_string<fil::fixed_string {"HELLO"}, fil::copa::member<&ast_object::value>> {}; }
+    static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
 };
 
 struct sequence_grammar {
-    using ast_object = sequence_ast;
-    static constexpr auto rules() {
-        return fil::copa::match_string<fil::fixed_string {"FIRST"}, fil::copa::member<&sequence_ast::first>> {}
-             + fil::copa::match_string<fil::fixed_string {"SECOND"}, fil::copa::member<&sequence_ast::second>> {};
-    }
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<sequence_ast> {}; }
-};
+    struct ast_object {
+        std::string first;
+        std::string second;
+    };
 
-struct list_grammar {
-    using ast_object = list_ast;
-    static constexpr auto rules() { return fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&list_ast::items>>> {}; }
-    static constexpr auto convertor() { return fil::copa::sink::aggregator<list_ast> {}; }
+    static constexpr auto rules() {
+        return fil::copa::match_string<fil::fixed_string {"FIRST"}, fil::copa::member<&ast_object::first>> {}
+             + fil::copa::match_string<fil::fixed_string {"SECOND"}, fil::copa::member<&ast_object::second>> {};
+    }
+    static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
 };
 
 // --- Test Cases ---
 
-TEST_CASE("fil::copa standalone test case", "[copa][standalone]") {
+TEST_CASE("Copa: standalone test case", "[copa][standalone]") {
+    struct simple_grammar {
+        struct ast_object {
+            std::string command;
+            std::string name;
+            std::vector<std::string> options;
+        };
+
+        // Rule: "CMD" <identifier:command> "FOR" <identifier:name> [options...]
+        static constexpr fil::copa::rule auto rules() {
+            return fil::copa::match_string<fil::fixed_string {"CMD"}> {}
+                 + fil::copa::match_identifier<fil::copa::member<&ast_object::command>> {}
+                 + fil::copa::match_string<fil::fixed_string {"FOR"}> {}
+                 + fil::copa::match_identifier<fil::copa::member<&ast_object::name>> {}
+                 + fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::options>>> {};
+        }
+
+        static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+    };
+
     SECTION("Successful parse of a simple command") {
         std::string input = "CMD start FOR engine turbo fast ";
         fil::buffer_reader reader(std::move(input));
@@ -126,7 +90,6 @@ TEST_CASE("fil::copa standalone test case", "[copa][standalone]") {
         CHECK(result->options[0] == "turbo");
         CHECK(result->options[1] == "fast");
     }
-
     SECTION("Successful parse with different identifiers") {
         // std::string input = "CMD stop FOR system ";
         std::string input = "CMD stop FOR system a ";
@@ -135,12 +98,26 @@ TEST_CASE("fil::copa standalone test case", "[copa][standalone]") {
 
         const auto result = fil::copa::parse(grammar, std::move(reader));
 
-        std::println("--- command {} - name - {} - options {}", result->command, result->name, result->options.size());
         REQUIRE(result.has_value());
         CHECK(result->command == "stop");
         CHECK(result->name == "system");
-        CHECK(result->options.empty());
+        REQUIRE(result->options.size() == 1);
+        CHECK(result->options[0] == "a");
     }
+
+    // @todo
+    // SECTION("Successful parse with empty options") {
+    //     std::string input = "CMD stop FOR system ";
+    //     fil::buffer_reader reader(std::move(input));
+    //     simple_grammar grammar;
+    //
+    //     const auto result = fil::copa::parse(grammar, std::move(reader));
+    //
+    //     REQUIRE(result.has_value());
+    //     CHECK(result->command == "stop");
+    //     CHECK(result->name == "system");
+    //     CHECK(result->options.empty());
+    // }
 
     SECTION("Parse failure on missing keyword") {
         std::string input = "CMD start engine "; // Missing "FOR"
@@ -155,7 +132,7 @@ TEST_CASE("fil::copa standalone test case", "[copa][standalone]") {
     }
 }
 
-TEST_CASE("fil::copa OR rule test", "[copa][standalone]") {
+TEST_CASE("Copa: OR rule test", "[copa][standalone]") {
     SECTION("Match first alternative") {
         fil::buffer_reader reader("INT 123 ");
         alt_grammar grammar;
@@ -203,6 +180,14 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
         CHECK_FALSE(result.has_value());
     }
 
+    struct match_char_grammar {
+        struct ast_object {
+            char value;
+        };
+        static constexpr auto rules() { return fil::copa::match_char<'A', fil::copa::member<&ast_object::value>> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+    };
+
     SECTION("match_char") {
         // Test match_char for single character matching.
         // This ensures the parser can correctly match individual characters provided as part of the grammar.
@@ -211,6 +196,15 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
         match_char_grammar grammar;
         const auto result = fil::copa::parse(grammar, std::move(reader));
         REQUIRE(result.has_value());
+        CHECK(result->value == 'A');
+    }
+    SECTION("match_char failed") {
+
+        // Test match_char for single character matching. fails when character is wrong
+        fil::buffer_reader reader("X");
+        match_char_grammar grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+        REQUIRE(!result.has_value());
     }
 
     SECTION("match_identifier") {
@@ -263,14 +257,47 @@ TEST_CASE("Copa: Composition Rules", "[copa][composition]") {
     }
 
     SECTION("List Rule (Repetition)") {
+        struct list_grammar {
+            struct ast_object {
+                std::vector<std::string> items;
+            };
+            static constexpr auto rules() {
+                return fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::items>>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
         // Test list_rule with zero, one, and multiple items.
         // Verify that it correctly populates a std::vector in the AST.
-        fil::buffer_reader reader("item1 item2 item3 ] ");
+        fil::buffer_reader reader("item1 item2 item3 ");
         list_grammar grammar;
         const auto result = fil::copa::parse(grammar, std::move(reader));
         REQUIRE(result.has_value());
         REQUIRE(result->items.size() == 3);
         CHECK(result->items[0] == "item1");
+        CHECK(result->items[1] == "item2");
+        CHECK(result->items[2] == "item3");
+    }
+    SECTION("List Rule (Composed)") {
+        struct list_grammar_braced {
+            struct ast_object {
+                std::vector<std::string> items;
+            };
+            static constexpr auto rules() {
+                return fil::copa::square_wrapped< //
+                    fil::copa::list_rule<fil::copa::match_identifier<fil::copa::member<&ast_object::items>>>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        fil::buffer_reader reader("[ a b c ]");
+        list_grammar_braced grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+        REQUIRE(result.has_value());
+        REQUIRE(result->items.size() == 3);
+        CHECK(result->items[0] == "a");
+        CHECK(result->items[1] == "b");
+        CHECK(result->items[2] == "c");
     }
 }
 

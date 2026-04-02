@@ -57,17 +57,16 @@ struct match_string : composable_rule {
     }
 };
 
-template<char C>
+template<char C, member_type Mem = member_noop>
 struct match_char : composable_rule {
     using result_type = char;
 
-    static constexpr match_result match(auto&, std::uint8_t c, std::uint32_t = 0) {
-        return c == C ? match_result::SUCCESS : match_result::FAILURE;
-    }
-
-    template<typename Type, member_type Mem>
-    static constexpr void value(Type&& value, Mem member) {
-        value.*member = C;
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+        if (c == C) {
+            ctx.convertor->operator()(Mem {}, static_cast<char>(c));
+            return match_result::SUCCESS;
+        }
+        return match_result::FAILURE;
     }
 };
 
@@ -75,6 +74,7 @@ template<member_type Mem = member_noop, rule auto Separator = match_space_like {
 struct match_identifier : composable_rule {
     using result_type = std::string;
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+        const auto peek = ctx.reader->peek();
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || Separator.match(ctx, peek.value(), depth) == match_result::SUCCESS) {
@@ -122,18 +122,20 @@ struct list_rule : composable_rule {
     using result_type = std::vector<value_type>;
 
     template<reader Reader, typename Convertor>
-    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t, std::uint32_t depth = 0) {
-        using shallow = shallow_copy<Reader>;
+    static constexpr match_result match(details_::rule_ctx<Reader, Convertor>& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+        if ((ctx.idx.size() - 1) == depth) {
+            ctx.increase_depth();
+        }
 
+        ctx.reader->previous_byte(); // go back a character as we went forward before starting or
+        ctx.current_token.pop_back();
+
+        using shallow    = shallow_copy<Reader>;
         auto copy_reader = shallow::copy(*ctx.reader);
         details_::rule_ctx reset_ctx {
             .reader    = &copy_reader,
             .convertor = ctx.convertor,
         };
-
-        if ((ctx.idx.size() - 1) == depth) {
-            ctx.increase_depth();
-        }
 
         ++ctx.idx.back();
         const auto current = details_::do_parse_rule<typename Convertor::value_type>(ctx, Rule {}, match_space_like {});
@@ -146,7 +148,7 @@ struct list_rule : composable_rule {
         }
 
         ctx.decrease_depth();
-        ctx = reset_ctx;
+
         shallow::assign(*ctx.reader, std::move(*reset_ctx.reader));
 
         return match_result::SUCCESS;

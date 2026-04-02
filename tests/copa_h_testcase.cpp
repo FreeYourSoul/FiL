@@ -382,7 +382,7 @@ TEST_CASE("copa basic tests", "[copa]") {
     }
 }
 
-TEST_CASE("reader tests", "[copa]") {
+TEST_CASE("reader tests", "[copa][reader]") {
 
     SECTION("test parse file single char") {
         const auto f1 = fil::temporary_file("I");
@@ -443,7 +443,7 @@ TEST_CASE("reader tests", "[copa]") {
     }
 }
 
-TEST_CASE("ast test", "[copa]") {
+TEST_CASE("Copa: simple", "[copa]") {
     SECTION("multiple identifier") {
 
         fil::buffer_reader reader("chocobo is the best of the world ");

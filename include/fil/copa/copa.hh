@@ -63,7 +63,7 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
                 return ctx.convertor->value();
             return std::unexpected(error_parsing {
                 .current_token = ctx.current_token,
-                .error_brief   = "parsing didn't finish properly",
+                .error_brief   = std::format("parsing didn't finish properly : idx.size {} - idx.back {}", ctx.idx.size(), ctx.idx.back()),
             });
         }
 
@@ -76,6 +76,7 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
         result = formula.match(ctx, c.value());
     }
     if (result == match_result::FAILURE) {
+
         return std::unexpected(error_parsing {
             .current_token = ctx.current_token,
             .error_brief   = "An error occurred in do_parse_rule",

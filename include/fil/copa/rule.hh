@@ -300,10 +300,14 @@ constexpr bool shall_eof_be_success(const or_rule<Rs...>&) {
     return any_rules_is_eof(std::make_index_sequence<size>());
 }
 
-constexpr std::size_t rule_size(const auto&) { return 0; }
+/**
+ * every rule at the exception of the tuple rules must have their back idx set to 0 if ended successfully.
+ * @note rules playing with depth decrease the depth of the context when in success which result in this truth
+ */
+constexpr std::size_t rule_idx_value_success(const auto&) { return 0; }
 
 template<rule... Rs>
-constexpr std::size_t rule_size(const tuple_rule<Rs...>&) {
+constexpr std::size_t rule_idx_value_success(const tuple_rule<Rs...>&) {
     return sizeof...(Rs);
 }
 

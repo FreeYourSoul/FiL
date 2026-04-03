@@ -59,7 +59,8 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
     while (result == match_result::CONTINUE) {
         const auto c = ctx.reader->next_byte();
         if (!c.has_value()) {
-            if (ctx.idx.back() == details_::rule_size(formula) && (ctx.is_main_parser || details_::shall_eof_be_success(formula)))
+            if (ctx.idx.back() == details_::rule_idx_value_success(formula)
+                && (ctx.is_main_parser || details_::shall_eof_be_success(formula)))
                 return ctx.convertor->value();
             return std::unexpected(error_parsing {
                 .current_token = ctx.current_token,

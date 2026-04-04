@@ -103,6 +103,35 @@ Example:
 auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_string{"FALSE"}>{};
 ```
 
+## Performance Considerations
+
+### Avoiding `tuple_rule` in `or_rule`
+
+While it is syntactically possible to use (sequences created with the `+` operator) as alternatives within an , this
+pattern is **not recommended** due to performance implications. `tuple_rule` `or_rule`
+When a `tuple_rule` is used as an alternative in an `or_rule` the parser must create a complete copy of the convertor
+state before attempting to match that alternative. This is necessary to ensure proper rollback semantics: if the
+`tuple_rule` fails during matching, the parser needs to restore the convertor to its previous state before trying the
+next alternative.
+
+**Example to avoid:**
+
+```c++
+// INEFFICIENT: tuple_rule inside or_rule requires convertor copies
+auto rule = (match_string<"ABC">{} + match_identifier{}) 
+          | (match_string<"DEF">{} + match_identifier{});
+```
+
+This pattern triggers expensive deep copies of the convertor whenever backtracking is needed. For better performance,
+consider:
+
+- Flattening the alternatives: Combine non-overlapping prefixes into a single rule when possible
+- Restructuring the grammar: Rearrange rules to avoid using parser rule instead
+- Using lookahead patterns: Design your grammar to make early decisions before committing to longer sequences
+
+This consideration is particularly important in performance-critical parsing scenarios or when dealing with large
+inputs.
+
 ## Mapping to AST
 
 To map parsed values to your `ast_object`, use the `member` template:

@@ -559,6 +559,97 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
             CHECK(result->items[2].type == "vector");
         }
     }
+
+    SECTION("Deeply Nested Parameters") {
+        struct level3_ast {
+            std::string data;
+        };
+
+        struct level2_ast {
+            level3_ast nested;
+        };
+
+        struct level1_ast {
+            std::string data;
+            std::vector<level2_ast> nested;
+        };
+        struct level3_grammar {
+            using ast_object = level3_ast;
+
+            static constexpr auto rules() {    //
+                return fil::copa::apostrophed< //
+                    fil::copa::match_identifier<fil::copa::member<&ast_object::data>>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        struct level2_grammar {
+            using ast_object = level2_ast;
+
+            static constexpr auto rules() { //
+                return fil::copa::match_string<fil::fixed_string {"data:"}> {}
+                     + fil::copa::match_parser<level3_grammar, fil::copa::member<&ast_object::nested>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        struct level1_grammar {
+            using ast_object = level1_ast;
+
+            // "struct:" + name + "->" + list_of<level2> + ";"
+            static constexpr auto rules() { //
+                return fil::copa::match_string<fil::fixed_string {"struct:"}> {}
+                     + fil::copa::match_identifier<fil::copa::member<&ast_object::data>> {}
+                     + fil::copa::match_string<fil::fixed_string {"->"}> {}
+                     + fil::copa::list_rule<fil::copa::match_parser<level2_grammar, fil::copa::member<&ast_object::nested>>> {}
+                     + fil::copa::semicol;
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        struct deeply_nested_grammar {
+            struct ast_object {
+                level1_ast deep;
+            };
+
+            // match "{" + level1 + "};"
+            static constexpr auto rules() {
+                return fil::copa::bracket_wrapped< //
+                           fil::copa::match_parser<level1_grammar, fil::copa::member<&ast_object::deep>>> {}
+                     + fil::copa::semicol;
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        SECTION("One level1") {
+            fil::buffer_reader reader(R"(
+{
+ struct:ffx ->  data: "chocobo";
+};
+)");
+            deeply_nested_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            CHECK(result->deep.data == "ffx");
+            CHECK(result->deep.nested.size() == 1);
+            CHECK(result->deep.nested[0].nested.data == "chocobo");
+        }
+        SECTION("Multiple level1") {
+            fil::buffer_reader reader(R"(
+{
+ struct:ffx ->  data: "chocobo" data: "waka" data: "yuna";
+};
+)");
+            deeply_nested_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            CHECK(result->deep.data == "ffx");
+            CHECK(result->deep.nested.size() == 3);
+            CHECK(result->deep.nested[0].nested.data == "chocobo");
+            CHECK(result->deep.nested[1].nested.data == "waka");
+            CHECK(result->deep.nested[2].nested.data == "yuna");
+        }
+    }
 }
 
 TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {

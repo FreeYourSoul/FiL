@@ -44,6 +44,9 @@ using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
 template<rule Content>
 using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
 
+template<rule Content>
+using apostrophed = wrapped<fixed_string {"\""}, Content, fixed_string {"\""}>;
+
 using match_if           = match_string<fixed_string {"if"}>;
 using match_while        = match_string<fixed_string {"while"}>;
 using match_comma        = match_char<','>;

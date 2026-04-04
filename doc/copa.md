@@ -3,6 +3,26 @@
 `copa` is a C++26 header-only combinator-based parser library. It allows you to build complex recursive descent parsers
 by composing simple rules and mapping them directly to C++ structures (AST objects).
 
+## Table of Contents
+
+- [Key Concepts](#key-concepts)
+- [Basic Usage](#basic-usage)
+    - [Example: A Simple Command Parser](#example-a-simple-command-parser)
+- [Available Matchers](#available-matchers)
+    - [Basic matchers](#basic-matchers)
+    - [Rule Composition](#rule-composition)
+    - [Optional matcher](#optional-matcher)
+- [Provided Helpers](#provided-helpers)
+- [Performance Considerations](#performance-considerations)
+    - [Avoiding `tuple_rule` in `or_rule`](#avoiding-tuple_rule-in-or_rule)
+- [Mapping to AST](#mapping-to-ast)
+- [Integrating with Readers](#integrating-with-readers)
+- [Copa Reader](#copa-reader)
+    - [Reader Concept](#reader-concept)
+    - [Core Requirements](#core-requirements)
+    - [The Shallow Copy Concept](#the-shallow-copy-concept)
+    - [Implementation Steps](#implementation-steps)
+
 ## Key Concepts
 
 - **Rule**: A basic building block that matches a part of the input. Rules can be simple (match a character) or
@@ -21,7 +41,7 @@ To use `copa`, you define a **Production**. A production is a struct or class th
 
 ### Example: A Simple Command Parser
 
-The following example parse a string of format : "CMD {command_name} ON {target} {options} "
+The following example parses a string of format: "CMD {command_name} ON {target} {options} "
 
 ```cpp
 #include <iostream>
@@ -78,20 +98,22 @@ int main() {
 
 `copa` provides several built-in matchers in the `fil::copa` namespace:
 
+### Basic matchers
+
 - `match_char<char C>`: Matches a single character `C`.
 - `match_string<fixed_string {S}>`: Matches an exact string `S`.
-- `match_identifier`: Matches an alphanumeric sequence (identifier).
 - `match_space_like`: Matches whitespace characters (space, tab, newline).
-- `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
-- `may_rule<Rule>`: Matches zero or one of the provided `Rule`.
-- `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
+- `match_identifier`: Matches an alphanumeric sequence (identifier).
+
+### Rule Composition
+
 - `tuple_rule<Rules...>`: Sequence of rules to be provided in order.
 - `or_rule<Rules...>`: Rule tried in order, at least one must be matching.
-- `eof`: Matches the end of the input.
+- `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
+- `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
 
-## Rule Composition
-
-Rules can be composed using overloaded operators:
+Rules can be composed using overloaded operators, every rule must inherit from `comsable_rule` to ensure that
+composability accross avery rules:
 
 - **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
 - **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice). (using `or_rule`)
@@ -102,6 +124,26 @@ Example:
 // Matches either "TRUE" or "FALSE"
 auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_string{"FALSE"}>{};
 ```
+
+### Optional matcher
+
+- `may_rule<Rule>`: Matches zero or one of the provided `Rule`. This uses the or_rule behind the hood and thus falls
+  under [the performance consideration](#performance-considerations) stated below.
+
+## Provided Helpers
+
+- `fil::copa::match_semicol`: Matches ';' char
+- `fil::copa::match_comma`: Matches ',' char
+- `fil::copa::match_if` : Matches "if" string
+- `fil::copa::match_while`: Matches "while" string
+- `fil::copa::match_space_like`: Matches space like as defined in the C
+  standard ([std::isspace](https://en.cppreference.com/w/cpp/string/byte/isspace))
+
+Some are helping common composition:
+
+- `fil::copa::parenthesis_wrapped<...>>` : Matches the rule (...) if around parenthesis `(` rule `)`
+- `fil::copa::square_wrapped<...>` : Matches the rule (...) if around square brackets `[` rule `]`
+- `fil::copa::angle_wrapped<...>` : Matches the rule (...) if around angle brackets `<` rule `>`
 
 ## Performance Considerations
 
@@ -151,3 +193,84 @@ to work with `fil::file_reader` for disk-based parsing.
 fil::file_reader reader(std::filesystem::path("input.txt"));
 auto result = fil::copa::parse(grammar, std::move(reader));
 ```
+
+# Copa Reader
+
+A **reader** in Copa is an abstraction that provides sequential access to input data. Whether you're parsing from memory
+buffers, files, network streams, or custom data sources, implementing a reader allows Copa to work seamlessly with your
+data source.
+
+## Reader Concept
+
+A reader is responsible for:
+
+1. **Sequentially accessing data** - Providing bytes one at a time
+2. **Cursor management** - Tracking the current position in the input
+3. **Backtracking support** - Allowing the parser to revert to previous states
+4. **Peek operations** - Looking ahead without consuming data
+
+## Core Requirements
+
+Your custom reader class must implement the following interface:
+
+| Method            | Return Type                   | Description                                |
+|-------------------|-------------------------------|--------------------------------------------|
+| `next_byte()`     | `std::optional<std::uint8_t>` | Returns and consumes the next byte         |
+| `previous_byte()` | `std::optional<std::uint8_t>` | Returns and un-consumes the previous byte  |
+| `peek()`          | `std::optional<std::uint8_t>` | Returns the next byte without consuming it |
+| `reader_cursor()` | `std::size_t`                 | Returns the current cursor position        |
+
+## The Shallow Copy Concept
+
+### What is Shallow Copy?
+
+When a rule fails (e.g., in an `or_rule`), the parser must backtrack. Readers implement this via a `shallow_copy`
+specialization, which allows the parser to save the current state (cursor) without duplicating the underlying data.
+This is done for performance reason in order to avoid unecessary copy of the data.
+If a shallow copy is not implemented. A normal copy of the reader would be made (which could imply a deepcopy or a copy
+that has the read cursor badly set)
+
+### Why is it Important?
+
+Imagine parsing with an `or_rule` that tries multiple alternatives. For each alternative, the parser needs to save the
+reader's state. If the alternative fails, it restores the reader to the saved state and tries the next alternative.
+
+**Without shallow copy**: Every backtracking attempt would require a full copy of your data (extremely inefficient for
+large files).
+
+**With shallow copy**: Only the cursor position is copied, while the actual data remains shared. This is safe because:
+
+- The original reader stays alive during the entire parse operation
+- All shallow copies are destroyed after parsing completes
+- No modifications are made to the underlying data
+
+### Implementing Shallow Copy
+
+Specialize the `fil::shallow_copy` template for your reader type:
+
+```c++
+// specialization of the shallow_copy
+template<> 
+struct shallow_copy<YourReaderType> {
+     // Create a shallow copy with shared data and copied cursor YourReaderType shallow;
+
+    static constexpr auto copy(const YourReaderType& object) {
+        //... implement a copy that does not imply a full data copy
+        // easiest way is to declare shallow_copy as a friend of your reader
+    }
+    
+    static constexpr void assign(YourReaderType& object, YourReaderType&& other) {
+       // Handle move assignment (usually just cursor update)
+    }
+};
+
+```
+
+## Implementation Steps
+
+1. **Create a reader class** that manages access to your data source
+2. **Implement all required interface methods** for sequential access
+3. **Track cursor position** accurately for backtracking
+4. **Specialize `fil::shallow_copy`** to enable efficient state saving
+5. **Verify the concept** using `static_assert` with `copa::reader<YourType>`
+

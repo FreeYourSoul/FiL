@@ -44,10 +44,15 @@ using square_wrapped = wrapped<fixed_string {"["}, Content, fixed_string {"]"}>;
 template<rule Content>
 using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
 
-using match_if      = match_string<fixed_string {"if"}>;
-using match_while   = match_string<fixed_string {"while"}>;
-using match_comma   = match_char<','>;
-using match_semicol = match_char<';'>;
+using match_if           = match_string<fixed_string {"if"}>;
+using match_while        = match_string<fixed_string {"while"}>;
+using match_comma        = match_char<','>;
+using match_semicol      = match_char<';'>;
+using match_double_point = match_char<':'>;
+
+static constexpr auto semicol      = match_semicol {};
+static constexpr auto comma        = match_comma {};
+static constexpr auto double_point = match_double_point {};
 
 } // namespace fil::copa
 

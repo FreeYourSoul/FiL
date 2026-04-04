@@ -1,4 +1,3 @@
-#include "../include/fil/meta/buffer_reader.hh"
 #include "ast.hh"
 
 #include <catch2/catch_test_macros.hpp>
@@ -10,6 +9,7 @@
 
 #include "fil/file/file_reader.hh"
 #include "fil/file/temporary.hh"
+#include "fil/meta/buffer_reader.hh"
 
 #include "fil/copa/ast.hh"
 #include "fil/copa/copa.hh"

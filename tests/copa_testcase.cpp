@@ -4,6 +4,7 @@
 #include "fil/copa/sink.hh"
 #include "fil/meta/buffer_reader.hh"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <string>
 #include <vector>
 
@@ -194,6 +195,70 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
         const auto result = fil::copa::parse(grammar, std::move(reader));
         REQUIRE(result.has_value());
         CHECK(result->value == 'A');
+    }
+    SECTION("match_char multiple") {
+        fil::buffer_reader reader("CHOCOBO");
+
+        struct match_chocobo_char_grammar {
+            struct ast_object {
+                char c1;
+                char c2;
+                char c3;
+                char c4;
+                char c5;
+                char c6;
+                char c7;
+            };
+            static constexpr auto rules() {
+                return                                                                  //
+                    fil::copa::match_char<'C', fil::copa::member<&ast_object::c1>> {}   //
+                    + fil::copa::match_char<'H', fil::copa::member<&ast_object::c2>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::c3>> {} //
+                    + fil::copa::match_char<'C', fil::copa::member<&ast_object::c4>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::c5>> {} //
+                    + fil::copa::match_char<'B', fil::copa::member<&ast_object::c6>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::c7>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        match_chocobo_char_grammar grammar {};
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+        REQUIRE(result.has_value());
+        CHECK(result->c1 == 'C');
+        CHECK(result->c2 == 'H');
+        CHECK(result->c3 == 'O');
+        CHECK(result->c4 == 'C');
+        CHECK(result->c5 == 'O');
+        CHECK(result->c6 == 'B');
+        CHECK(result->c7 == 'O');
+    }
+    SECTION("match_char multiple (with setter)") {
+        fil::buffer_reader reader("CHOCOBO");
+
+        struct match_chocobo_char_grammar {
+            struct ast_object {
+                std::string value;
+
+                void append_value(char c) { value.push_back(c); }
+            };
+            static constexpr auto rules() {
+                return                                                                            //
+                    fil::copa::match_char<'C', fil::copa::member<&ast_object::append_value>> {}   //
+                    + fil::copa::match_char<'H', fil::copa::member<&ast_object::append_value>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::append_value>> {} //
+                    + fil::copa::match_char<'C', fil::copa::member<&ast_object::append_value>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::append_value>> {} //
+                    + fil::copa::match_char<'B', fil::copa::member<&ast_object::append_value>> {} //
+                    + fil::copa::match_char<'O', fil::copa::member<&ast_object::append_value>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        match_chocobo_char_grammar grammar {};
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+        REQUIRE(result.has_value());
+        CHECK(result->value == "CHOCOBO");
     }
     SECTION("match_char failed") {
 
@@ -413,27 +478,166 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
         REQUIRE(result.has_value());
         CHECK(result->sub.val == "SUB");
     }
+
+    SECTION("Nested list grammar") {
+        struct item_ast {
+            std::string name;
+            std::string type;
+        };
+
+        struct item_grammar {
+            using ast_object = item_ast;
+
+            static constexpr auto rules() {
+                return fil::copa::match_identifier<fil::copa::member<&ast_object::name>> {} //
+                     + fil::copa::double_point                                              //
+                     + fil::copa::match_identifier<fil::copa::member<&ast_object::type>> {} //
+                     + fil::copa::semicol;
+            }
+
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        struct nested_list_grammar {
+
+            struct ast_object {
+                std::vector<item_ast> items; // List of complex structures
+            };
+
+            static constexpr auto rules() {
+                return fil::copa::list_rule<fil::copa::match_parser<item_grammar, fil::copa::member<&ast_object::items>>> {};
+            }
+
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        SECTION("item grammar check") {
+            fil::buffer_reader reader("a:int;");
+            item_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            CHECK(result->name == "a");
+            CHECK(result->type == "int");
+        }
+
+        SECTION("zero element") {
+            auto content = GENERATE("", " ; ", "a : int", " :int;", ":;");
+
+            fil::buffer_reader reader(content);
+            nested_list_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            CHECK(result->items.empty());
+        }
+
+        SECTION("single element") {
+            auto content = GENERATE( //
+                "a:int;",            //
+                "a   :int; ",        //
+                "a   :    int \t\n;");
+
+            fil::buffer_reader reader(content);
+            nested_list_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            REQUIRE(result->items.size() == 1);
+            CHECK(result->items[0].name == "a");
+            CHECK(result->items[0].type == "int");
+        }
+
+        SECTION("multiple element") {
+            fil::buffer_reader reader("a : int ;  b:string   ; c :   vector ;  ");
+            nested_list_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            REQUIRE(result->items.size() == 3);
+            CHECK(result->items[0].name == "a");
+            CHECK(result->items[0].type == "int");
+            CHECK(result->items[1].name == "b");
+            CHECK(result->items[1].type == "string");
+            CHECK(result->items[2].name == "c");
+            CHECK(result->items[2].type == "vector");
+        }
+    }
 }
 
-TEST_CASE("Copa: times<N> rule", "[copa][times]") {
+TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
     SECTION("Fixed repetition") {
-        // Test the times<N> rule to match exactly N occurrences.
-        // Rule: times<3>(match_char<'X'>)
+        // Test the repeat<N> rule to match exactly N occurrences.
+        // Rule: repeat<3>(match_char<'X'>)
         // Input: "XXX" -> Success
         // Input: "XX" -> Failure
-        struct times_ast {
-            std::vector<std::string> v;
+        struct repeat_ast {
+            std::vector<char> v;
         }; // dummy
-        struct times_grammar {
-            using ast_object = times_ast;
-            static constexpr auto rules() { return fil::copa::repeat<3>(fil::copa::match_char<'X'> {}); }
-            static constexpr auto convertor() { return fil::copa::sink::aggregator<times_ast> {}; }
+        struct repeat_grammar {
+            using ast_object = repeat_ast;
+            static constexpr auto rules() { return fil::copa::repeat<3>(fil::copa::match_char<'X', fil::copa::member<&ast_object::v>> {}); }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<repeat_ast> {}; }
         };
 
         fil::buffer_reader reader("XXX");
-        times_grammar grammar;
+        repeat_grammar grammar;
         const auto result = fil::copa::parse(grammar, std::move(reader));
         REQUIRE(result.has_value());
+        REQUIRE(result->v.size() == 3);
+        CHECK(result->v[0] == 'X');
+        CHECK(result->v[1] == 'X');
+        CHECK(result->v[2] == 'X');
+    }
+
+    SECTION("Or repeat edge case") {
+        struct times_edge_grammar {
+            struct ast_object {
+                std::vector<char> chars;
+            };
+
+            static constexpr auto rules() {
+                return fil::copa::repeat<5>(fil::copa::match_char<'X', fil::copa::member<&ast_object::chars>> {}) // Three times
+                     | fil::copa::repeat<3>(fil::copa::match_char<'X', fil::copa::member<&ast_object::chars>> {}) // Two times
+                     // will never match because superior to 3 which will match before
+                     | fil::copa::repeat<4>(fil::copa::match_char<'X', fil::copa::member<&ast_object::chars>> {}); // Five times
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        SECTION("match 5") {
+            // match first iteration
+            fil::buffer_reader reader("XXXXX");
+            times_edge_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            REQUIRE(result->chars.size() == 5);
+            CHECK(result->chars[0] == 'X');
+            CHECK(result->chars[1] == 'X');
+            CHECK(result->chars[2] == 'X');
+            CHECK(result->chars[3] == 'X');
+            CHECK(result->chars[4] == 'X');
+        }
+
+        SECTION("match 3") {
+            // match first iteration
+            fil::buffer_reader reader("XXX");
+            times_edge_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            REQUIRE(result->chars.size() == 3);
+            CHECK(result->chars[0] == 'X');
+            CHECK(result->chars[1] == 'X');
+            CHECK(result->chars[2] == 'X');
+        }
+
+        SECTION("match 4 (actually match 3)") {
+            // match first iteration
+            fil::buffer_reader reader("XXXX");
+            times_edge_grammar grammar;
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            REQUIRE(result->chars.size() == 3);
+            CHECK(result->chars[0] == 'X');
+            CHECK(result->chars[1] == 'X');
+            CHECK(result->chars[2] == 'X');
+        }
     }
 }
 

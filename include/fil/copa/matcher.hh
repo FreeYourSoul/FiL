@@ -64,20 +64,20 @@ struct match_char : composable_rule {
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (c == C) {
             ctx.convertor->operator()(Mem {}, static_cast<char>(c));
+            ctx.current_token = {};
             return match_result::SUCCESS;
         }
         return match_result::FAILURE;
     }
 };
 
-template<member_type Mem = member_noop, rule auto Separator = match_space_like {}>
+template<member_type Mem = member_noop>
 struct match_identifier : composable_rule {
     using result_type = std::string;
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
-        const auto peek = ctx.reader->peek();
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
-            if (!peek.has_value() || Separator.match(ctx, peek.value(), depth) == match_result::SUCCESS) {
+            if (!peek.has_value() || !std::isalnum(peek.value())) {
                 ctx.convertor->operator()(Mem {}, ctx.current_token);
                 ctx.current_token = {};
                 return match_result::SUCCESS;

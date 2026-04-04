@@ -24,10 +24,12 @@
 #ifndef FIL_RULE_HH
 #define FIL_RULE_HH
 
+#include <print>
+
 #include <cstdint>
 #include <expected>
+#include <memory>
 #include <optional>
-#include <print>
 #include <string>
 #include <utility>
 #include <vector>
@@ -168,6 +170,16 @@ struct match_space_like { //@todo remove
         return std::isspace(c) ? match_result::SUCCESS : match_result::FAILURE;
     }
 };
+
+template<typename>
+struct is_tuple_rule_impl : std::false_type {};
+
+template<rule... Rs>
+struct is_tuple_rule_impl<tuple_rule<Rs...>> : std::true_type {};
+
+template<typename Rule>
+concept is_tuple_rule = is_tuple_rule_impl<Rule>::value;
+
 } // namespace details_
 
 template<rule... Ts>
@@ -193,9 +205,19 @@ struct or_rule {
 
         auto process = [&ctx]<rule Rule>() -> bool {
             auto shallow_reader = shallow_copy<Reader>::copy(*ctx.reader);
+            auto* convertor     = ctx.convertor;
+
+            // if tuple, make a copy of the convertor for re-assignment at the end in case of error
+            // this is an inefficient path; it is not recommended to do or_rule with tuples_rule as the rollback in case of error is costly
+            std::unique_ptr<Convertor> convertor_copy = nullptr;
+            if constexpr (details_::is_tuple_rule<Rule>) {
+                convertor_copy = std::make_unique<Convertor>();
+                convertor      = convertor_copy.get();
+            }
+
             details_::rule_ctx ctx_or {
                 .reader        = &shallow_reader,
-                .convertor     = ctx.convertor,
+                .convertor     = convertor,
                 .current_token = ctx.current_token,
             };
 
@@ -209,6 +231,9 @@ struct or_rule {
             }
 
             ctx.current_token = {};
+            if constexpr (details_::is_tuple_rule<Rule>) {
+                *ctx.convertor = std::move(*ctx_or.convertor);
+            }
             shallow_copy<Reader>::assign(*ctx.reader, std::move(*ctx_or.reader));
 
             return true;
@@ -344,6 +369,7 @@ using rule_array = details_::rule_array_impl<N - 1, Rule>;
  */
 template<std::size_t N, rule R>
 constexpr rule auto repeat([[maybe_unused]] const R& instance) {
+    static_assert(N > 0, "cannot have a repeat 0");
     return rule_array<R, N> {};
 }
 

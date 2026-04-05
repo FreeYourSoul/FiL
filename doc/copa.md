@@ -107,8 +107,10 @@ int main() {
 
 ### Rule Composition
 
-- `tuple_rule<Rules...>`: Sequence of rules to be provided in order.
-- `or_rule<Rules...>`: Rule tried in order, at least one must be matching.
+- `tuple_rule<Rules...>`: Sequence of rules to be provided in order.  
+  This rule can be added to an instance of a rule by using the `+` operator.
+- `or_rule<Rules...>`: Rule tried in order, at least one must be matching.  
+  This rule can be added to an instance of a rule by using the `|` operator.
 - `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
 - `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
 
@@ -117,6 +119,7 @@ composability accross avery rules:
 
 - **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
 - **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice). (using `or_rule`)
+- **optional (`~`)**: `!RuleA` matches `RuleA` or not (choice). (using `or_rule`)
 
 Example:
 
@@ -127,8 +130,13 @@ auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_st
 
 ### Optional matcher
 
-- `may_rule<Rule>`: Matches zero or one of the provided `Rule`. This uses the or_rule behind the hood and thus falls
-  under [the performance consideration](#performance-considerations) stated below.
+- `may_rule<Rule>`: Matches zero or one of the provided `Rule`.
+
+> This uses the or_rule behind the hood and thus falls
+> under [the performance consideration](#avoiding-tuple_rule-in-or_rule) stated below. The main thing to note is: it is
+> expensive to use the may_rule with a tuple_rule.
+
+This rule can be added to an instance of a rule by using the `~` operator.
 
 ## Provided Helpers
 
@@ -145,12 +153,14 @@ Some are helping common composition:
 - `fil::copa::square_wrapped<...>` : Matches the rule (...) if around square brackets `[` rule `]`
 - `fil::copa::angle_wrapped<...>` : Matches the rule (...) if around angle brackets `<` rule `>`
 
-## Performance Considerations
+## Important consideration Considerations
 
 ### Avoiding `tuple_rule` in `or_rule`
 
-While it is syntactically possible to use (sequences created with the `+` operator) as alternatives within an , this
-pattern is **not recommended** due to performance implications. `tuple_rule` `or_rule`
+**Avoid for performance reason**
+
+While it is syntactically possible to use (sequences created with the `+` operator) as alternatives within an `or_rule`,
+this pattern is **not recommended** due to performance implications.  
 When a `tuple_rule` is used as an alternative in an `or_rule` the parser must create a complete copy of the convertor
 state before attempting to match that alternative. This is necessary to ensure proper rollback semantics: if the
 `tuple_rule` fails during matching, the parser needs to restore the convertor to its previous state before trying the
@@ -165,14 +175,22 @@ auto rule = (match_string<"ABC">{} + match_identifier{})
 ```
 
 This pattern triggers expensive deep copies of the convertor whenever backtracking is needed. For better performance,
-consider:
+consider it.
+> This consideration is particularly important in performance-critical parsing scenarios or when dealing with large
+> inputs.
+
+**Avoid it for behavioral reasons:**
+
+When using `or_rule` (the `|` operator) with a `tuple_rule` (the `+` operator) that contains multiple parsing rules with
+side effects, a critical issue emerges: side effects from partially matched rules are not rolled back when the overall
+alternative fails.
+
+It is advised to do the following to avoid `or_rule` of `tuple_rule`
 
 - Flattening the alternatives: Combine non-overlapping prefixes into a single rule when possible
 - Restructuring the grammar: Rearrange rules to avoid using parser rule instead
-- Using lookahead patterns: Design your grammar to make early decisions before committing to longer sequences
-
-This consideration is particularly important in performance-critical parsing scenarios or when dealing with large
-inputs.
+- Using lookahead patterns: Design your grammar to make early decisions before committing to longer sequences. Using a
+  keyword to separate different possibilities is a good solution.
 
 ## Mapping to AST
 

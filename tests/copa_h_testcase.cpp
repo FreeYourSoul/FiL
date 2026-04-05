@@ -604,7 +604,27 @@ TEST_CASE("Copa: rule tests", "[copa]") {
     SECTION("or_rule") {
         fil::buffer_reader reader("chocobo is best ");
 
-        SECTION("or character : 2 options") {}
+        SECTION("or character : 2 options") {
+            struct grammar_char {
+                struct ast_object {
+                    char value;
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return fil::copa::or_rule<                                             //
+                        fil::copa::match_char<'X', fil::copa::member<&ast_object::value>>, //
+                        fil::copa::match_char<'c', fil::copa::member<&ast_object::value>>  //
+                        > {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto g       = grammar_char {};
+            const auto v = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(v.has_value());
+            REQUIRE(v.value().value == 'c');
+        }
         SECTION("or string : 2 options") {
             struct grammar {
                 struct ast_object {
@@ -707,6 +727,38 @@ TEST_CASE("Copa: rule tests", "[copa]") {
             REQUIRE(v.has_value());
             REQUIRE(v.value().value1.empty());
             REQUIRE(v.value().value2 == "chocobo");
+        }
+
+        SECTION("use operator !") {
+            struct grammar_operator {
+                struct ast_object {
+                    std::string value {};
+                };
+
+                static constexpr fil::copa::rule auto rules() {
+                    return ~fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            SECTION("match") {
+                fil::buffer_reader reader("chocobo ");
+
+                auto g       = grammar_operator {};
+                const auto v = fil::copa::parse(g, std::move(reader));
+
+                REQUIRE(v.has_value());
+                REQUIRE(v.value().value == "chocobo");
+            }
+            SECTION("not match") {
+                fil::buffer_reader reader("");
+
+                auto g       = grammar_operator {};
+                const auto v = fil::copa::parse(g, std::move(reader));
+
+                REQUIRE(v.has_value());
+                REQUIRE(v.value().value.empty());
+            }
         }
     }
 }

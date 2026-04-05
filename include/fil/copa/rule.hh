@@ -250,6 +250,9 @@ struct or_rule {
 template<rule Rhs, rule Lhs>
 using pair_rule = tuple_rule<Rhs, Lhs>;
 
+template<rule R>
+struct may_rule;
+
 struct composable_rule {
     template<rule Self, rule O>
     constexpr rule auto operator+(this Self&&, const O&) {
@@ -258,6 +261,10 @@ struct composable_rule {
     template<rule Self, rule O>
     constexpr rule auto operator|(this Self&&, const O&) {
         return or_rule<Self, O> {};
+    }
+    template<rule Self>
+    constexpr rule auto operator~(this Self&&) {
+        return may_rule<Self> {};
     }
 };
 
@@ -354,7 +361,7 @@ struct rule_array_impl<0, R, Rs...> : tuple_rule<R, Rs...> {};   //!< Base case:
 } // namespace details_
 
 template<rule R>
-using may_rule = or_rule<R, details_::may_rule_not_present_matcher>;
+struct may_rule : or_rule<R, details_::may_rule_not_present_matcher> {};
 
 template<rule Rule, std::size_t N>
 using rule_array = details_::rule_array_impl<N - 1, Rule>;

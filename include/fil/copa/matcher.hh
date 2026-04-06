@@ -74,7 +74,7 @@ struct match_char : composable_rule {
 template<member_type Mem = member_noop>
 struct match_identifier : composable_rule {
     using result_type = std::string;
-    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || !std::isalnum(peek.value())) {

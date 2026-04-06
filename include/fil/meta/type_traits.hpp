@@ -43,6 +43,9 @@ concept to_string_able = requires(const T& elem) {
     { to_string(elem) } -> std::convertible_to<std::string>;
 };
 
+template<typename T>
+concept is_iterator = !std::is_same_v<typename std::iterator_traits<T>::value_type, void>;
+
 } // namespace fil
 
 #endif // FIL_TYPE_TRAITS_HH

@@ -7,7 +7,7 @@ add_library(fys::fil::descpa ALIAS descpa)
 
 target_include_directories(descpa INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/fil/descpa/descpa.hh>
+        $<INSTALL_INTERFACE:include>
 )
 
 target_compile_features(descpa INTERFACE cxx_std_26)

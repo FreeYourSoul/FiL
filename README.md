@@ -2,8 +2,6 @@
 
 [![CI Linux Build](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/FreeYourSoul/FiL/actions/workflows/ci-linux.yml)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f0e4ad29546841038cd558a38d619e21)](https://app.codacy.com/gh/FreeYourSoul/FiL?utm_source=github.com&utm_medium=referral&utm_content=FreeYourSoul/FiL&utm_campaign=Badge_Grade)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=FreeYourSoul_FiL&metric=coverage)](https://sonarcloud.io/summary/new_code?id=FreeYourSoul_FiL)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=FreeYourSoul_FiL&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=FreeYourSoul_FiL)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=FreeYourSoul_FiL&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=FreeYourSoul_FiL)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=FreeYourSoul_FiL&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=FreeYourSoul_FiL)
 ![](https://tokei.rs/b1/github/FreeYourSoul/FiL?category=lines)

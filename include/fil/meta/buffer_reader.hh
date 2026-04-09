@@ -135,7 +135,7 @@ template<>
 struct shallow_copy<buffer_reader> {
     static constexpr auto copy(const buffer_reader& object) {
         buffer_reader shallow;
-        shallow.buffer_access_ = object.buffer_;
+        shallow.buffer_access_ = object.buffer_access_;
         shallow.cursor_        = object.cursor_;
         return shallow;
     }

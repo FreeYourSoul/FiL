@@ -1,11 +1,13 @@
 #include "ast.hh"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
+#include <variant>
 
 #include "fil/file/file_reader.hh"
 #include "fil/file/temporary.hh"
@@ -668,9 +670,46 @@ TEST_CASE("Copa: rule tests", "[copa]") {
             REQUIRE(v.value().value == "chocobo");
         }
 
-        SECTION("first match is taken") {
-            SECTION("2 options") {}
-            SECTION("5 options") {}
+        SECTION("test or_rule special cases") {
+
+            struct accessor_grammar {
+                struct ast_object {
+                    std::string value1;
+                    std::string value2;
+                };
+
+                static constexpr auto rules() {
+                    return (fil::copa::match_string<fil::fixed_string {"this"}, fil::copa::member<&ast_object::value1>> {}      //
+                            | fil::copa::match_string<fil::fixed_string {"target"}, fil::copa::member<&ast_object::value1>> {}) //
+                         + fil::copa::match_char<'.'> {}                                                                        //
+                         + fil::copa::match_identifier<fil::copa::member<&ast_object::value2>> {};                              //
+                }
+
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+            struct grammar {
+                struct ast_object {
+                    std::variant<accessor_grammar::ast_object, std::string> value;
+                };
+
+                static constexpr auto rules() {
+                    return fil::copa::match_parser<accessor_grammar, fil::copa::member<&ast_object::value>> {} //
+                         | fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {};              //
+                }
+
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+            SECTION("parser matched") {
+                fil::buffer_reader reader_parser("this.chocobo ");
+
+                auto g       = grammar {};
+                const auto v = fil::copa::parse(g, std::move(reader_parser));
+
+                REQUIRE(v.has_value());
+                REQUIRE(std::holds_alternative<accessor_grammar::ast_object>(v->value));
+                REQUIRE(std::get<accessor_grammar::ast_object>(v->value).value1 == "this");
+                REQUIRE(std::get<accessor_grammar::ast_object>(v->value).value2 == "chocobo");
+            }
         }
     }
     SECTION("may_rule") {

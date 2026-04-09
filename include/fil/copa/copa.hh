@@ -64,7 +64,8 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
                 return ctx.convertor->value();
             return std::unexpected(error_parsing {
                 .current_token = ctx.current_token,
-                .error_brief   = std::format("parsing didn't finish properly : idx.size {} - idx.back {}", ctx.idx.size(), ctx.idx.back()),
+                .error_brief   = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
+                                             ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
             });
         }
 

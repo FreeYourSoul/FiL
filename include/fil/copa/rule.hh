@@ -211,7 +211,7 @@ struct or_rule {
             // this is an inefficient path; it is not recommended to do or_rule with tuples_rule as the rollback in case of error is costly
             std::unique_ptr<Convertor> convertor_copy = nullptr;
             if constexpr (details_::is_tuple_rule<Rule>) {
-                convertor_copy = std::make_unique<Convertor>();
+                convertor_copy = std::make_unique<Convertor>(*ctx.convertor);
                 convertor      = convertor_copy.get();
             }
 
@@ -235,7 +235,6 @@ struct or_rule {
                 *ctx.convertor = std::move(*ctx_or.convertor);
             }
             shallow_copy<Reader>::assign(*ctx.reader, std::move(*ctx_or.reader));
-
             return true;
         };
 

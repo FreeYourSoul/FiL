@@ -146,6 +146,13 @@ TEST_CASE("Copa: OR rule test", "[copa][standalone]") {
         REQUIRE(result.has_value());
         CHECK(result->value == "hello");
     }
+
+    SECTION("Match failure") {
+        fil::buffer_reader reader("INt hello ");
+        alt_grammar grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+        REQUIRE(!result.has_value());
+    }
 }
 
 TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {

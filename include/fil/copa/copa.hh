@@ -53,7 +53,7 @@ rule auto retrieve_ignore_rules(const Prod&) {
 rule auto retrieve_ignore_rules(const auto&) { return match_space_like {}; }
 
 template<typename Result>
-std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore) {
+std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore) {
 
     auto result = match_result::CONTINUE;
     while (result == match_result::CONTINUE) {
@@ -62,11 +62,16 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
             if (ctx.idx.back() == details_::rule_idx_value_success(formula)
                 && (ctx.is_main_parser || details_::shall_eof_be_success(formula)))
                 return ctx.convertor->value();
-            return std::unexpected(error_parsing {
-                .current_token = ctx.current_token,
+
+            error_parsing err {
+                .token_failure = ctx.current_token,
+                .source        = "source",
+                .cursor        = ctx.reader->reader_cursor(),
+                .parsing_step  = typeid(decltype(formula)).name(),
                 .error_brief   = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
                                              ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
-            });
+            };
+            return std::unexpected(error_stack {std::move(err)});
         }
 
         if (ignore.match(ctx, c.value()) == match_result::SUCCESS) {
@@ -78,18 +83,21 @@ std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& f
         result = formula.match(ctx, c.value());
     }
     if (result == match_result::FAILURE) {
-
-        return std::unexpected(error_parsing {
-            .current_token = ctx.current_token,
+        error_parsing err {
+            .token_failure = ctx.current_token,
+            .source        = "source",
+            .cursor        = ctx.reader->reader_cursor(),
+            .parsing_step  = typeid(decltype(formula)).name(),
             .error_brief   = "An error occurred in do_parse_rule",
-        });
+        };
+        return std::unexpected(error_stack {std::move(err)});
     }
 
     return ctx.convertor->value();
 }
 
 template<reader Reader, typename Convertor, production Prod>
-std::expected<typename Prod::ast_object, error_parsing> do_parse(rule_ctx<Reader, Convertor>& ctx, const Prod& prod) {
+std::expected<typename Prod::ast_object, error_stack> do_parse(rule_ctx<Reader, Convertor>& ctx, const Prod& prod) {
     const rule auto formula = prod.rules();
     const rule auto ignore  = details_::retrieve_ignore_rules(prod);
 

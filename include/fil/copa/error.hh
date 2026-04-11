@@ -26,16 +26,32 @@
 
 #include <any>
 #include <string>
+#include <vector>
 
 namespace fil::copa {
 
 struct error_parsing {
-    std::string current_token; //!< token on which the error occurred
-    std::string source;
-    std::size_t line_number;
-    std::string parsing_step;
-    std::string error_brief;
-    std::any extra;
+    std::string token_failure; //!< token on which the error occurred
+    std::string source;        //!< source in which the error occurred
+    std::size_t cursor;        //!< cursor at which the error occurred
+    std::string parsing_step;  //!< name of the matcher failing
+    std::string error_brief;   //!< brief error
+};
+
+class error_stack {
+  public:
+    error_stack() = default;
+    explicit error_stack(error_parsing&& error) { push(std::move(error)); }
+
+    void push(error_stack&& error) {
+        stack.insert(stack.end(), std::make_move_iterator(error.stack.begin()), std::make_move_iterator(error.stack.end()));
+    }
+    void push(error_parsing&& error) { stack.push_back(std::move(error)); }
+
+    void pretty_print_error() const;
+
+  private:
+    std::vector<error_parsing> stack;
 };
 
 } // namespace fil::copa

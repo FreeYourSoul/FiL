@@ -45,7 +45,7 @@ target_include_directories(fil INTERFACE
 target_compile_features(fil INTERFACE cxx_std_26)
 
 add_subdirectory(include/fil/copa)
-target_link_libraries(fil INTERFACE fmt::fmt fys::fil::descpa)
+target_link_libraries(fil INTERFACE fmt::fmt fys::fil::copa)
 
 if (WITH_FIL_ROCKSDB)
     add_subdirectory(internal/src/kv_db)
@@ -80,7 +80,7 @@ message("fil : CMAKE_INSTALL_LIBDIR ----" ${CMAKE_INSTALL_LIBDIR})
 message("fil : CMAKE_INSTALL_BINDIR ----" ${CMAKE_INSTALL_BINDIR})
 message("fil : CMAKE_INSTALL_INCLUDEDIR ----" ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS fil descpa
+install(TARGETS fil copa
         EXPORT filTargets
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"

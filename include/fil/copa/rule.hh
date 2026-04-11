@@ -76,9 +76,11 @@ struct rule_ctx {
     Convertor* convertor;
 
     std::vector<uint16_t> idx {0};
-    std::string current_token; //!< @todo transform into a view
+    std::string current_token;
 
     bool is_main_parser = false;
+
+    error_stack err_stack; //!< current stack of error that occurred
 
     void increase_depth() { idx.push_back(0); }
 
@@ -162,7 +164,7 @@ struct tuple_rule {
 namespace details_ {
 
 template<typename Result>
-std::expected<Result, error_parsing> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore);
+std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& formula, const rule auto& ignore);
 
 struct match_space_like { //@todo remove
     using result_type = char;
@@ -226,7 +228,7 @@ struct or_rule {
 
             auto res = details_::do_parse_rule<typename Convertor::value_type>(ctx_or, Rule {}, details_::match_space_like {});
             if (!res) {
-                // @todo : error handling
+                ctx.err_stack.push(std::move(res).error());
                 return false;
             }
 

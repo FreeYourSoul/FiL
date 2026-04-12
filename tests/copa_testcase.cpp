@@ -148,7 +148,7 @@ TEST_CASE("Copa: OR rule test", "[copa][standalone]") {
     }
 
     SECTION("Match failure") {
-        fil::buffer_reader reader("INt hello ");
+        fil::buffer_reader reader("INT ");
         alt_grammar grammar;
         const auto result = fil::copa::parse(grammar, std::move(reader));
         REQUIRE(!result.has_value());

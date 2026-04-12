@@ -32,7 +32,6 @@ namespace fil::copa {
 
 struct error_parsing {
     std::string token_failure; //!< token on which the error occurred
-    std::string source;        //!< source in which the error occurred
     std::size_t cursor;        //!< cursor at which the error occurred
     std::string parsing_step;  //!< name of the matcher failing
     std::string error_brief;   //!< brief error
@@ -40,15 +39,25 @@ struct error_parsing {
 
 class error_stack {
   public:
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = error_parsing;
+    using pointer           = error_parsing*;
+    using reference         = error_parsing&;
+    using iterator_category = std::random_access_iterator_tag;
+
     error_stack() = default;
     explicit error_stack(error_parsing&& error) { push(std::move(error)); }
 
-    void push(error_stack&& error) {
-        stack.insert(stack.end(), std::make_move_iterator(error.stack.begin()), std::make_move_iterator(error.stack.end()));
-    }
     void push(error_parsing&& error) { stack.push_back(std::move(error)); }
-
+    void clear() { stack.clear(); }
     void pretty_print_error() const;
+
+    [[nodiscard]] std::size_t size() const { return stack.size(); }
+
+    std::vector<error_parsing>::iterator begin() { return stack.begin(); }
+    std::vector<error_parsing>::iterator end() { return stack.end(); }
+    std::vector<error_parsing>::reverse_iterator rbegin() { return stack.rbegin(); }
+    std::vector<error_parsing>::reverse_iterator rend() { return stack.rend(); }
 
   private:
     std::vector<error_parsing> stack;

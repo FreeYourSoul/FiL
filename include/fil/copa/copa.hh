@@ -63,16 +63,18 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
                 && (ctx.is_main_parser || details_::shall_eof_be_success(formula)))
                 return ctx.convertor->value();
 
-            error_parsing err {
+            ctx.err_stack.push({
                 .token_failure = ctx.current_token,
-                .source        = "source",
                 .cursor        = ctx.reader->reader_cursor(),
                 .parsing_step  = typeid(decltype(formula)).name(),
                 .error_brief   = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
                                              ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
-            };
-            return std::unexpected(error_stack {std::move(err)});
+            });
+            return std::unexpected(error_stack {std::move(ctx.err_stack)});
         }
+
+        if (c == '\n')
+            ctx.current_line += 1;
 
         if (ignore.match(ctx, c.value()) == match_result::SUCCESS) {
             continue;
@@ -83,14 +85,7 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
         result = formula.match(ctx, c.value());
     }
     if (result == match_result::FAILURE) {
-        error_parsing err {
-            .token_failure = ctx.current_token,
-            .source        = "source",
-            .cursor        = ctx.reader->reader_cursor(),
-            .parsing_step  = typeid(decltype(formula)).name(),
-            .error_brief   = "An error occurred in do_parse_rule",
-        };
-        return std::unexpected(error_stack {std::move(err)});
+        return std::unexpected(ctx.err_stack);
     }
 
     return ctx.convertor->value();

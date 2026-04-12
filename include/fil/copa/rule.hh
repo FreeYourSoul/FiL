@@ -37,6 +37,7 @@
 #include "error.hh"
 #include "fil/copa/sink.hh"
 #include "fil/meta/shallow_copy.hh"
+#include "rule.hh"
 
 #include <algorithm>
 
@@ -76,6 +77,7 @@ struct rule_ctx {
     Convertor* convertor;
 
     std::vector<uint16_t> idx {0};
+    std::size_t current_line {0};
     std::string current_token;
 
     bool is_main_parser = false;
@@ -154,6 +156,13 @@ struct tuple_rule {
             return ctx.idx[depth] == size ? match_result::SUCCESS : match_result::CONTINUE;
         }
 
+        ctx.err_stack.push({
+            .token_failure = ctx.current_token,
+            .cursor        = ctx.reader->reader_cursor(),
+            .parsing_step  = typeid(tuple_rule).name(),
+            .error_brief   = std::format("an error occurred while parsing element {} of the tuple rule : ", depth),
+        });
+
         return current;
     }
 
@@ -228,7 +237,6 @@ struct or_rule {
 
             auto res = details_::do_parse_rule<typename Convertor::value_type>(ctx_or, Rule {}, details_::match_space_like {});
             if (!res) {
-                ctx.err_stack.push(std::move(res).error());
                 return false;
             }
 
@@ -241,6 +249,17 @@ struct or_rule {
         };
 
         const bool success = ((process.template operator()<Ts>()) || ...);
+
+        if (success)
+            ctx.err_stack.clear();
+        else
+            ctx.err_stack.push({
+                .token_failure = ctx.current_token,
+                .cursor        = ctx.reader->reader_cursor(),
+                .parsing_step  = typeid(or_rule).name(),
+                .error_brief   = std::format("or rule failed to be parsed"),
+            });
+
         return success ? match_result::SUCCESS : match_result::FAILURE;
     }
 

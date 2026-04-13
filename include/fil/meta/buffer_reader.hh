@@ -29,7 +29,7 @@
 #include <span>
 #include <string>
 
-#include "fil/copa/rule.hh"
+#include "fil/meta/reader.hh"
 #include "fil/meta/shallow_copy.hh"
 
 namespace fil {
@@ -49,6 +49,17 @@ class buffer_reader {
     friend struct shallow_copy;
 
   public:
+    class buffer_line {
+      public:
+        explicit buffer_line(std::string_view l)
+            : line_(l) {}
+
+        [[nodiscard]] std::string_view get() const { return line_; }
+
+      private:
+        std::string_view line_;
+    };
+
     explicit constexpr buffer_reader(std::string&& buffer)
         : buffer_(std::move(buffer))
         , buffer_access_(buffer_) {}
@@ -109,6 +120,20 @@ class buffer_reader {
         return buffer_access_[cursor_];
     }
 
+    buffer_line read_line(std::size_t line) {
+        const auto it_line = std::ranges::find_if(buffer_access_.begin(), buffer_access_.end(), [count = 1, &line](char c) mutable {
+            if (c != '\n')
+                return false;
+            return ++count == line;
+        });
+        return buffer_line {buffer_access_.substr(cursor_, buffer_access_.size() - std::distance(it_line, buffer_access_.end()))};
+    }
+
+    buffer_line next_line() {
+        const auto it_next_line = std::ranges::find(buffer_access_.begin(), buffer_access_.end(), '\n');
+        return buffer_line {buffer_access_.substr(cursor_, buffer_access_.size() - std::distance(it_next_line, buffer_access_.end()))};
+    }
+
     /**
      * @return true if the buffer is the result of shallow_copy
      */
@@ -123,11 +148,9 @@ class buffer_reader {
     std::size_t cursor_ = 0;
 };
 
-static_assert(copa::reader<buffer_reader>, "buffer_reader must be a reader compatible with descpa");
+static_assert(meta::bytes_reader<buffer_reader>, "buffer_reader must be a byte reader");
+static_assert(meta::line_reader<buffer_reader>, "buffer_reader must be a line reader");
 
-} // namespace fil
-
-namespace fil {
 /**
  * @brief specialization of the shallow_copy making it possible to copy the buffer without copying the buffer.
  */
@@ -142,6 +165,7 @@ struct shallow_copy<buffer_reader> {
 
     static constexpr auto assign(buffer_reader& object, buffer_reader&& other) { object.cursor_ = other.cursor_; }
 };
+
 } // namespace fil
 
 #endif // FIL_BUFFER_READER_HH

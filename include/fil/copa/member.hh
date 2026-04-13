@@ -24,6 +24,7 @@
 #ifndef FIL_MEMBER_HH
 #define FIL_MEMBER_HH
 
+#include <string>
 #include <type_traits>
 #include <utility>
 

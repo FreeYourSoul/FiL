@@ -88,6 +88,34 @@ struct match_identifier : composable_rule {
     }
 };
 
+template<member_type Mem = member_noop, //
+         auto Conversion =
+             [](const std::string& token) {
+                 try {
+                     return std::stoi(token, nullptr, 10);
+                 } catch (...) {
+                     return 0;
+                 }
+             }>
+struct match_number : composable_rule {
+    using result_type = decltype(Conversion("0"));
+
+    static_assert(std::is_integral_v<result_type>, "type of a match_number must be an integral type");
+
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+        if (std::isalnum(c)) {
+            const auto peek = ctx.reader->peek();
+            if (!peek.has_value() || !std::isdigit(peek.value())) {
+                ctx.convertor->operator()(Mem {}, Conversion(ctx.current_token));
+                ctx.current_token = {};
+                return match_result::SUCCESS;
+            }
+            return match_result::CONTINUE;
+        }
+        return match_result::FAILURE;
+    }
+};
+
 template<production Prod, member_type Mem = member_noop>
 struct match_parser : composable_rule {
     using result_type = Prod::ast_object;

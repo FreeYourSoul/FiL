@@ -20,6 +20,7 @@
 #include <string_view>
 #include <utility>
 
+#include "fil/meta/reader.hh"
 #include "fil/meta/shallow_copy.hh"
 
 namespace fil {
@@ -342,6 +343,9 @@ class file_reader_line {
     file_reader* file_handler_;
     std::size_t start_line_;
 };
+
+static_assert(meta::bytes_reader<file_reader>, "buffer_reader must be a byte reader");
+static_assert(meta::line_reader<file_reader>, "buffer_reader must be a line reader");
 
 template<>
 struct shallow_copy<file_reader> {

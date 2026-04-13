@@ -189,6 +189,57 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
         CHECK_FALSE(result.has_value());
     }
 
+    SECTION("match_number : success") {
+        SECTION("match single integer") {
+            struct match_integer_grammar {
+                struct ast_object {
+                    std::string type;
+                    int value;
+                };
+                static constexpr auto rules() {
+                    return                                                                                          //
+                        fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&ast_object::type>> {} //
+                        + fil::copa::match_number<fil::copa::member<&ast_object::value>> {};
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto grammar = match_integer_grammar {};
+            fil::buffer_reader reader("INT 4242 ");
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+            CHECK(result->type == "INT");
+            CHECK(result->value == 4242);
+        }
+
+        SECTION("match for vector of integer") {
+            struct match_integer_grammar {
+                struct ast_object {
+                    std::string type;
+                    std::vector<int> values;
+                };
+                static constexpr auto rules() {
+                    return                                                                                          //
+                        fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&ast_object::type>> {} //
+                        + fil::copa::repeat<4>(fil::copa::match_number<fil::copa::member<&ast_object::values>> {});
+                }
+                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+            };
+
+            auto grammar = match_integer_grammar {};
+            fil::buffer_reader reader("INT 4242 0 1 1337 ");
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(result.has_value());
+
+            CHECK(result->type == "INT");
+            REQUIRE(result->values.size() == 4);
+            CHECK(result->values[0] == 4242);
+            CHECK(result->values[1] == 0);
+            CHECK(result->values[2] == 1);
+            CHECK(result->values[3] == 1337);
+        }
+    }
+
     struct match_char_grammar {
         struct ast_object {
             char value;

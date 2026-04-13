@@ -32,10 +32,34 @@ inline std::string make_string(const file_reader::block_view& block_view) {
 
 inline std::string make_string(const std::string& line) { return line; }
 
-template<reader Reader>
-void print_error(Reader& reader, const error_info& error) {
-    auto reader_print = shallow_copy<Reader>::copy(reader);
+template<typename T>
+concept line_retrieved = requires(const T& t) {
+    { t.get() } -> std::convertible_to<std::string_view>;
+};
 
+template<typename T>
+concept error_line_reader = reader<T> && requires(T& t, std::size_t line_number) {
+    { t.read_line(line_number) } -> line_retrieved;
+    { t.next_line() } -> line_retrieved;
+};
+
+/**
+ * @brief Prints a formatted error message with context lines from the source file.
+ *
+ * This function displays a detailed error report showing:
+ * - Up to 3 lines of context before the error line
+ * - The error line itself with the problematic token highlighted in red
+ * - Up to 2 lines of context after the error line
+ * - A visual indicator (^) pointing to the exact location of the error
+ * - The parsing step where the error occurred
+ * - A detailed error message
+ *
+ * @tparam Reader A type that satisfies the `error_line_reader` concept, providing file reading capabilities line per line
+ * @param reader The reader instance used to access the source file content
+ * @param error The error information containing line number, cursor position, token, and error message
+ */
+template<error_line_reader Reader>
+void print_error(Reader& reader, const error_info& error) {
     const std::size_t read_start = (error.line < 3uz) ? 1uz : error.line - 3uz;
 
     std::string error_line;

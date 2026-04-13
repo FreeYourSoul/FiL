@@ -36,6 +36,7 @@
 
 #include "fil/copa/error.hh"
 #include "fil/copa/sink.hh"
+#include "fil/meta/reader.hh"
 #include "fil/meta/shallow_copy.hh"
 #include "fil/meta/typename.hh"
 #include "rule.hh"
@@ -48,14 +49,7 @@ enum class match_result {
 };
 
 template<typename T>
-concept reader =                    //
-    std::is_move_assignable_v<T> && //
-    requires(T reader_) {
-        { reader_.peek() } -> std::convertible_to<std::optional<std::uint8_t>>;
-        { reader_.next_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
-        { reader_.previous_byte() } -> std::convertible_to<std::optional<std::uint8_t>>;
-        { reader_.reader_cursor() } -> std::convertible_to<std::size_t>;
-    };
+concept reader = meta::bytes_reader<T>; //!< copa reader requires to read bytes per bytes
 
 namespace details_ {
 

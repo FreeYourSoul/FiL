@@ -103,7 +103,7 @@ struct match_number : composable_rule {
     static_assert(std::is_integral_v<result_type>, "type of a match_number must be an integral type");
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
-        if (std::isalnum(c)) {
+        if (std::isdigit(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || !std::isdigit(peek.value())) {
                 ctx.convertor->operator()(Mem {}, Conversion(ctx.current_token));

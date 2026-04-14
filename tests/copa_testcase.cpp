@@ -190,19 +190,29 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
     }
 
     SECTION("match_number : success") {
-        SECTION("match single integer") {
-            struct match_integer_grammar {
-                struct ast_object {
-                    std::string type;
-                    int value;
-                };
-                static constexpr auto rules() {
-                    return                                                                                          //
-                        fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&ast_object::type>> {} //
-                        + fil::copa::match_number<fil::copa::member<&ast_object::value>> {};
-                }
-                static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        struct match_integer_grammar {
+            struct ast_object {
+                std::string type;
+                int value;
             };
+            static constexpr auto rules() {
+                return                                                                                          //
+                    fil::copa::match_string<fil::fixed_string {"INT"}, fil::copa::member<&ast_object::type>> {} //
+                    + fil::copa::match_number<fil::copa::member<&ast_object::value>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        SECTION("match failure not-integer") {
+            auto grammar = match_integer_grammar {};
+            fil::buffer_reader reader(" INT chocobo ");
+            const auto result = fil::copa::parse(grammar, std::move(reader));
+            REQUIRE(!result.has_value());
+
+            fil::copa::print_error(reader, result.error().get_errors().back());
+        }
+
+        SECTION("match single integer") {
 
             auto grammar = match_integer_grammar {};
             fil::buffer_reader reader("INT 4242 ");

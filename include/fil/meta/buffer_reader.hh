@@ -120,18 +120,29 @@ class buffer_reader {
         return buffer_access_[cursor_];
     }
 
-    buffer_line read_line(std::size_t line) {
-        const auto it_line = std::ranges::find_if(buffer_access_.begin(), buffer_access_.end(), [count = 1, &line](char c) mutable {
+    buffer_line read_line(std::size_t line_nb) {
+        const auto it_line = std::ranges::find_if(buffer_access_.begin(), buffer_access_.end(), [count = 1, &line_nb](char c) mutable {
             if (c != '\n')
                 return false;
-            return ++count == line;
+            return ++count == line_nb;
         });
-        return buffer_line {buffer_access_.substr(cursor_, buffer_access_.size() - std::distance(it_line, buffer_access_.end()))};
+
+        const auto size = buffer_access_.size() - std::distance(it_line, buffer_access_.end());
+        const auto line = buffer_access_.substr(cursor_, size);
+
+        cursor_ = std::distance(buffer_access_.begin(), it_line);
+
+        return buffer_line {line};
     }
 
     buffer_line next_line() {
         const auto it_next_line = std::ranges::find(buffer_access_.begin(), buffer_access_.end(), '\n');
-        return buffer_line {buffer_access_.substr(cursor_, buffer_access_.size() - std::distance(it_next_line, buffer_access_.end()))};
+        const auto size         = buffer_access_.size() - std::distance(it_next_line, buffer_access_.end());
+        const auto line         = buffer_access_.substr(cursor_, size);
+
+        cursor_ = std::distance(buffer_access_.begin(), it_next_line);
+
+        return buffer_line {line};
     }
 
     /**

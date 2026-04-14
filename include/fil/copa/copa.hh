@@ -29,6 +29,7 @@
 #include "fil/copa/error.hh"
 #include "fil/copa/production.hh"
 #include "fil/copa/rule.hh"
+#include "fil/meta/typename.hh"
 
 namespace fil::copa {
 
@@ -65,9 +66,10 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
 
             ctx.err_stack.push({
                 .token_failure = ctx.current_token,
+                .line          = ctx.current_line,
                 .cursor        = ctx.reader->reader_cursor(),
-                .parsing_step  = typeid(decltype(formula)).name(),
-                .error_brief   = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
+                .parsing_step  = meta::type_name<decltype(formula)>(),
+                .error_msg     = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
                                              ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
             });
             return std::unexpected(error_stack {std::move(ctx.err_stack)});

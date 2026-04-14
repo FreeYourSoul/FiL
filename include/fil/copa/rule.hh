@@ -24,22 +24,21 @@
 #ifndef FIL_RULE_HH
 #define FIL_RULE_HH
 
-#include <print>
-
+#include <algorithm>
 #include <cstdint>
 #include <expected>
 #include <memory>
 #include <optional>
+#include <print>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "error.hh"
+#include "fil/copa/error.hh"
 #include "fil/copa/sink.hh"
 #include "fil/meta/shallow_copy.hh"
+#include "fil/meta/typename.hh"
 #include "rule.hh"
-
-#include <algorithm>
 
 namespace fil::copa {
 enum class match_result {
@@ -77,7 +76,7 @@ struct rule_ctx {
     Convertor* convertor;
 
     std::vector<uint16_t> idx {0};
-    std::size_t current_line {0};
+    std::size_t current_line {1};
     std::string current_token;
 
     bool is_main_parser = false;
@@ -130,14 +129,16 @@ struct tuple_rule {
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t depth = 0) {
         match_result current = match_result::FAILURE;
+        std::string step_name;
 
-        auto process = [&current, &ctx, c, depth, i = 0]<rule T0>() mutable -> bool {
+        auto process = [&step_name, &current, &ctx, c, depth, i = 0]<rule T0>() mutable -> bool {
             if (depth < ctx.idx.size() && i++ == ctx.idx[depth]) {
                 if ((ctx.idx.size() - 1) == depth) {
                     ctx.increase_depth();
                 }
 
-                current = T0::match(ctx, c, depth + 1);
+                current   = T0::match(ctx, c, depth + 1);
+                step_name = meta::type_name<T0>();
 
                 if (current == match_result::SUCCESS) {
                     ++ctx.idx[depth];
@@ -156,12 +157,16 @@ struct tuple_rule {
             return ctx.idx[depth] == size ? match_result::SUCCESS : match_result::CONTINUE;
         }
 
-        ctx.err_stack.push({
-            .token_failure = ctx.current_token,
-            .cursor        = ctx.reader->reader_cursor(),
-            .parsing_step  = typeid(tuple_rule).name(),
-            .error_brief   = std::format("an error occurred while parsing element {} of the tuple rule : ", depth),
-        });
+        if (current == match_result::FAILURE) {
+            ctx.err_stack.push({
+                .token_failure = ctx.current_token,
+                .line          = ctx.current_line,
+                .cursor        = ctx.reader->reader_cursor(),
+                .parsing_step  = meta::type_name<tuple_rule>(),
+                .error_msg     = std::format("an error occurred while parsing element {} of the tuple rule : rule failed is : {}",
+                                             ctx.idx[depth], step_name),
+            });
+        }
 
         return current;
     }
@@ -255,9 +260,10 @@ struct or_rule {
         else
             ctx.err_stack.push({
                 .token_failure = ctx.current_token,
+                .line          = ctx.current_line,
                 .cursor        = ctx.reader->reader_cursor(),
-                .parsing_step  = typeid(or_rule).name(),
-                .error_brief   = std::format("or rule failed to be parsed"),
+                .parsing_step  = meta::type_name<or_rule>(),
+                .error_msg     = std::format("or rule failed to be parsed"),
             });
 
         return success ? match_result::SUCCESS : match_result::FAILURE;

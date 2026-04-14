@@ -2,7 +2,11 @@
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
 #include "fil/copa/sink.hh"
+#include "fil/file/file_reader.hh"
+#include "fil/file/temporary.hh"
 #include "fil/meta/buffer_reader.hh"
+#include "print_error.hh"
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <string>
@@ -374,10 +378,15 @@ TEST_CASE("Copa: Edge Cases and Error Handling", "[copa][errors]") {
     SECTION("Partial Match Failure") {
         // Test a sequence where the first part matches but the second fails.
         // Ensure the whole parse fails.
-        fil::buffer_reader reader("FIRST WRONG");
+        std::string content {"\nFIRST WRONG\nd\n"};
+        fil::buffer_reader reader(content);
         sequence_grammar grammar;
         const auto result = fil::copa::parse(grammar, std::move(reader));
         CHECK_FALSE(result.has_value());
+
+        const auto f1 = fil::temporary_file(content);
+        fil::file_reader file_reader {f1};
+        fil::copa::print_error(file_reader, result.error().get_errors().back());
     }
 
     SECTION("Empty Input") {

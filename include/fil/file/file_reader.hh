@@ -64,7 +64,7 @@ class file_reader {
         [[nodiscard]] bool is_valid() const { return reader_ != nullptr && reader_->load_counter() == load_id_block_; }
 
         /**
-         * @return string view representing the line of the
+         * @return string view representing the block read from the file
          */
         [[nodiscard]] std::string_view get() const { return is_valid() ? block_ : std::string_view {}; }
 
@@ -327,7 +327,7 @@ class file_reader::line_iterator {
 }
 
 /**
- * @brief wrapper around file_handler to manipulate lines per lines through a ranges interface
+ * @brief wrapper around file_handler to manipulate lines per lines through a range interface
  */
 class file_reader_line {
   public:
@@ -335,8 +335,8 @@ class file_reader_line {
         : file_handler_(&file_handler)
         , start_line_(start_line_) {}
 
-    file_reader::line_iterator begin() { return file_handler_->make_line_iterator(start_line_); }
-    file_reader::sentinel end() { return file_handler_->end(); }
+    file_reader::line_iterator begin() const { return file_handler_->make_line_iterator(start_line_); }
+    file_reader::sentinel end() const { return file_handler_->end(); }
 
   private:
     file_reader* file_handler_;

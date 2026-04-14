@@ -14,6 +14,8 @@
 #define FIL_TEMPORARY_HH
 
 #include <filesystem>
+#include <format>
+#include <random>
 
 namespace fil {
 
@@ -30,16 +32,16 @@ class temporary_file {
             std::mt19937 gen(rd());
             std::uniform_int_distribution<> dis(1000, 9999);
 
-            const auto filename  = fmt::format("{}_{}{}", prefix, dis(gen), extension);
+            const auto filename  = std::format("{}_{}{}", prefix, dis(gen), extension);
             const auto temp_path = std::filesystem::temp_directory_path() / filename;
             std::ofstream file(temp_path);
             if (!file) {
-                throw std::runtime_error(fmt::format("Could not open file for writing: {}", temp_path.string()));
+                throw std::runtime_error(std::format("Could not open file for writing: {}", temp_path.string()));
             }
 
             file << content;
             if (!file) {
-                throw std::runtime_error(fmt::format("Error writing to file: {}", temp_path.string()));
+                throw std::runtime_error(std::format("Error writing to file: {}", temp_path.string()));
             }
 
             return temp_path;

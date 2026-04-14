@@ -24,43 +24,43 @@
 #ifndef FIL_COPA_ERROR_HH
 #define FIL_COPA_ERROR_HH
 
-#include <any>
 #include <string>
 #include <vector>
 
 namespace fil::copa {
 
-struct error_parsing {
+struct error_info {
     std::string token_failure; //!< token on which the error occurred
+    std::size_t line;          //!< line number at which the error occurred
     std::size_t cursor;        //!< cursor at which the error occurred
     std::string parsing_step;  //!< name of the matcher failing
-    std::string error_brief;   //!< brief error
+    std::string error_msg;     //!< error message from the parsing error
 };
 
 class error_stack {
   public:
     using difference_type   = std::ptrdiff_t;
-    using value_type        = error_parsing;
-    using pointer           = error_parsing*;
-    using reference         = error_parsing&;
+    using value_type        = error_info;
+    using pointer           = error_info*;
+    using reference         = error_info&;
     using iterator_category = std::random_access_iterator_tag;
 
     error_stack() = default;
-    explicit error_stack(error_parsing&& error) { push(std::move(error)); }
+    explicit error_stack(error_info&& error) { push(std::move(error)); }
 
-    void push(error_parsing&& error) { stack.push_back(std::move(error)); }
-    void clear() { stack.clear(); }
-    void pretty_print_error() const;
+    void push(error_info&& error) { stack_.push_back(std::move(error)); }
+    void clear() { stack_.clear(); }
 
-    [[nodiscard]] std::size_t size() const { return stack.size(); }
+    [[nodiscard]] const std::vector<error_info>& get_errors() const { return stack_; }
+    [[nodiscard]] std::size_t size() const { return stack_.size(); }
 
-    std::vector<error_parsing>::iterator begin() { return stack.begin(); }
-    std::vector<error_parsing>::iterator end() { return stack.end(); }
-    std::vector<error_parsing>::reverse_iterator rbegin() { return stack.rbegin(); }
-    std::vector<error_parsing>::reverse_iterator rend() { return stack.rend(); }
+    std::vector<error_info>::iterator begin() { return stack_.begin(); }
+    std::vector<error_info>::iterator end() { return stack_.end(); }
+    std::vector<error_info>::reverse_iterator rbegin() { return stack_.rbegin(); }
+    std::vector<error_info>::reverse_iterator rend() { return stack_.rend(); }
 
   private:
-    std::vector<error_parsing> stack;
+    std::vector<error_info> stack_;
 };
 
 } // namespace fil::copa

@@ -205,11 +205,12 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
 
         SECTION("match failure not-integer") {
             auto grammar = match_integer_grammar {};
-            fil::buffer_reader reader(" INT chocobo ");
+            fil::buffer_reader reader("INT chocobo ");
             const auto result = fil::copa::parse(grammar, std::move(reader));
             REQUIRE(!result.has_value());
 
-            fil::copa::print_error(reader, result.error().get_errors().back());
+            fil::buffer_reader r("INT chocobo ");
+            fil::copa::print_error(r, result.error().get_errors().back());
         }
 
         SECTION("match single integer") {
@@ -223,7 +224,7 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
         }
 
         SECTION("match for vector of integer") {
-            struct match_integer_grammar {
+            struct match_integers_grammar {
                 struct ast_object {
                     std::string type;
                     std::vector<int> values;
@@ -236,7 +237,7 @@ TEST_CASE("Copa: Basic Matchers", "[copa][matchers]") {
                 static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
             };
 
-            auto grammar = match_integer_grammar {};
+            auto grammar = match_integers_grammar {};
             fil::buffer_reader reader("INT 4242 0 1 1337 ");
             const auto result = fil::copa::parse(grammar, std::move(reader));
             REQUIRE(result.has_value());

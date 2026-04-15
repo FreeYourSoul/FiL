@@ -49,6 +49,9 @@ class buffer_reader {
     friend struct shallow_copy;
 
   public:
+    /**
+     * @brief wrapper aground the buffer line: used to respect the meta::line_reader concept
+     */
     class buffer_line {
       public:
         explicit buffer_line(std::string_view l)
@@ -89,7 +92,7 @@ class buffer_reader {
 
     /**
      * @note the buffer cursor progress forward
-     * @return the next character of the buffer if any
+     * @return the next character of the buffer, if any
      */
     [[nodiscard]] constexpr std::optional<std::uint8_t> next_byte() {
         if (cursor_ >= buffer_access_.size()) {
@@ -100,7 +103,7 @@ class buffer_reader {
 
     /**
      * @note the buffer cursor progress backward
-     * @return the previous character of the buffer if any
+     * @return the previous character of the buffer, if any
      */
     constexpr std::optional<std::uint8_t> previous_byte() {
         if (cursor_ <= 0) {
@@ -111,7 +114,7 @@ class buffer_reader {
 
     /**
      * @note the buffer cursor doesn't progress forward
-     * @return the next character if any
+     * @return the next character, if any
      */
     [[nodiscard]] constexpr std::optional<std::uint8_t> peek() const {
         if (buffer_access_.empty()) {
@@ -121,18 +124,22 @@ class buffer_reader {
     }
 
     buffer_line read_line(std::size_t line_nb) {
-        const auto it_line = std::ranges::find_if(buffer_access_.begin(), buffer_access_.end(), [count = 1, &line_nb](char c) mutable {
-            if (c != '\n')
-                return false;
-            return ++count == line_nb;
-        });
+        std::size_t cursor_begin        = 0;
+        std::size_t cursor_end          = 0;
+        std::size_t current_line_number = 1;
 
-        const auto size = buffer_access_.size() - std::distance(it_line, buffer_access_.end());
-        const auto line = buffer_access_.substr(cursor_, size);
+        for (const char c : buffer_access_) {
+            if (current_line_number < line_nb)
+                ++cursor_begin;
+            if (c == '\n')
+                ++current_line_number;
+            if (current_line_number > line_nb)
+                break;
+            ++cursor_end;
+        }
+        cursor_ = cursor_end;
 
-        cursor_ = std::distance(buffer_access_.begin(), it_line);
-
-        return buffer_line {line};
+        return buffer_line {buffer_access_.substr(cursor_begin, cursor_end - cursor_begin)};
     }
 
     buffer_line next_line() {

@@ -23,7 +23,6 @@ void write_file(const std::filesystem::path& file_path, const std::string& conte
 } // namespace
 
 TEST_CASE("buffer reader", "[reader]") {
-
     SECTION("string buffer :: empty string") {
         fil::buffer_reader reader("");
 
@@ -57,6 +56,53 @@ TEST_CASE("buffer reader", "[reader]") {
             CHECK(reader.next_byte() == 'i');
             CHECK(!reader.next_byte().has_value());
         }
+    }
+    SECTION("read line-per-line") {
+        fil::buffer_reader r(R"(_____begin
+Golden feathers catch the light,
+A beacon burning warm and bright,
+Beneath the moon or blazing sun,
+The chocobo is ready to run.
+
+No engine roars, no wheels do spin,
+Just powerful legs and feathers thin,
+Through valleys green and mountains tall,
+This yellow bird outruns them all.
+
+"Kweh!" it cries with joy and glee,
+As swift as wind and wild and free,
+With saddle snug and spirit bold,
+More precious far than gems or gold.
+
+From sandy shores to snowy peak,
+For those who seek the mystique,
+The chocobo will bear the load,
+And hop along the winding road.
+
+So feed it greens and treat it well,
+This friend who breaks the travel spell,
+For when the world is dark and grim,
+You'll ride together, you and him.
+----end)");
+
+        SECTION("read random lines") {
+            const auto line12 = r.read_line(12).get();
+            CHECK(line12 == R"("Kweh!" it cries with joy and glee,)");
+
+            const auto line17 = r.read_line(17).get();
+            CHECK(line17 == R"(From sandy shores to snowy peak,)");
+
+            const auto line22 = r.read_line(22).get();
+            CHECK(line22 == R"(So feed it greens and treat it well,)");
+        }
+
+        SECTION("next line from start to end") {
+            CHECK(r.next_line().get() == "_____begin");
+            CHECK(r.next_line().get() == "Golden feathers catch the light,");
+            CHECK(r.next_line().get() == "A beacon burning warm and bright,");
+        }
+
+        SECTION("next line from after read random line") {}
     }
 }
 

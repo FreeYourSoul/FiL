@@ -94,15 +94,56 @@ You'll ride together, you and him.
 
             const auto line22 = r.read_line(22).get();
             CHECK(line22 == R"(So feed it greens and treat it well,)");
+
+            const auto line26 = r.read_line(26).get();
+            CHECK(line26 == R"(----end)");
+
+            SECTION("out of range read line") {
+                const auto line42 = r.read_line(42).get();
+                CHECK(line42.empty());
+            }
         }
 
         SECTION("next line from start to end") {
             CHECK(r.next_line().get() == "_____begin");
             CHECK(r.next_line().get() == "Golden feathers catch the light,");
             CHECK(r.next_line().get() == "A beacon burning warm and bright,");
+            CHECK(r.next_line().get() == "Beneath the moon or blazing sun,");
+            CHECK(r.next_line().get() == "The chocobo is ready to run.");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "No engine roars, no wheels do spin,");
+            CHECK(r.next_line().get() == "Just powerful legs and feathers thin,");
+            CHECK(r.next_line().get() == "Through valleys green and mountains tall,");
+            CHECK(r.next_line().get() == "This yellow bird outruns them all.");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "\"Kweh!\" it cries with joy and glee,");
+            CHECK(r.next_line().get() == "As swift as wind and wild and free,");
+            CHECK(r.next_line().get() == "With saddle snug and spirit bold,");
+            CHECK(r.next_line().get() == "More precious far than gems or gold.");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "From sandy shores to snowy peak,");
+            CHECK(r.next_line().get() == "For those who seek the mystique,");
+            CHECK(r.next_line().get() == "The chocobo will bear the load,");
+            CHECK(r.next_line().get() == "And hop along the winding road.");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "So feed it greens and treat it well,");
+            CHECK(r.next_line().get() == "This friend who breaks the travel spell,");
+            CHECK(r.next_line().get() == "For when the world is dark and grim,");
+            CHECK(r.next_line().get() == "You'll ride together, you and him.");
+            CHECK(r.next_line().get() == "----end");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "");
+            CHECK(r.next_line().get() == "");
         }
 
-        SECTION("next line from after read random line") {}
+        SECTION("next line from after read random line") {
+            const auto line12 = r.read_line(12).get();
+            CHECK(line12 == R"("Kweh!" it cries with joy and glee,)");
+
+            CHECK(r.next_line().get() == "As swift as wind and wild and free,");
+            CHECK(r.next_line().get() == "With saddle snug and spirit bold,");
+            CHECK(r.next_line().get() == "More precious far than gems or gold.");
+        }
     }
 }
 

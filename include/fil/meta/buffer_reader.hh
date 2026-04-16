@@ -137,19 +137,24 @@ class buffer_reader {
                 break;
             ++cursor_end;
         }
-        cursor_ = cursor_end;
+        cursor_ = cursor_end + (cursor_end < buffer_access_.size() ? 1 : 0);
 
         return buffer_line {buffer_access_.substr(cursor_begin, cursor_end - cursor_begin)};
     }
 
     buffer_line next_line() {
-        const auto it_next_line = std::ranges::find(buffer_access_.begin(), buffer_access_.end(), '\n');
-        const auto size         = buffer_access_.size() - std::distance(it_next_line, buffer_access_.end());
-        const auto line         = buffer_access_.substr(cursor_, size);
+        const std::size_t cursor_begin = cursor_;
+        std::size_t cursor_end         = cursor_;
 
-        cursor_ = std::distance(buffer_access_.begin(), it_next_line);
+        const auto it = std::ranges::find_if(buffer_access_.substr(cursor_), [&cursor_end](const char c) {
+            ++cursor_end;
+            return c == '\n';
+        });
 
-        return buffer_line {line};
+        cursor_ = cursor_end;
+
+        const bool line_found = it != buffer_access_.end();
+        return buffer_line {buffer_access_.substr(cursor_begin, cursor_end - cursor_begin - (line_found ? 1 : 0))};
     }
 
     /**

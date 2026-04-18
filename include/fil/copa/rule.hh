@@ -68,6 +68,7 @@ struct rule_ctx {
 
     Reader* reader;
     Convertor* convertor;
+    Convertor::ctx_extension* convertor_ctx = nullptr;
 
     std::vector<uint16_t> idx {0};
     std::size_t current_line {1};

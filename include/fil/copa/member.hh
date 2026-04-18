@@ -89,14 +89,6 @@ concept member_type = requires {
     typename T::member_value_type;
 };
 
-struct ast_node_rhs {};
-struct ast_node_lhs {};
-
-template<typename T>
-concept ast_tree_member = std::is_same_v<T, member_noop>  //
-                       || std::is_same_v<T, ast_node_rhs> //
-                       || std::is_same_v<T, ast_node_lhs>;
-
 } // namespace fil::copa
 
 #endif // FIL_MEMBER_HH

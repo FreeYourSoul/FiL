@@ -810,4 +810,34 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
     }
 }
 
+TEST_CASE("Copa: AST generator : simple") {
+
+    enum class op {
+        plus
+    };
+
+    struct plus_grammar {
+        using ast_object = fil::copa::ast_node<op>;
+
+        static constexpr auto rules() { return fil::copa::match_number {} + fil::copa::match_char<'+'> {}; }
+        static constexpr auto convertor() {
+            return fil::copa::sink::ast_tree_generator<ast_object, 0, [](std::string&&) { return op::plus; }> {};
+        }
+    };
+
+    struct grammar {
+        using ast_object = fil::copa::ast_node<op>;
+
+        static constexpr auto rules() {
+            return fil::copa::match_parser<plus_grammar> {} //
+                 | fil::copa::match_identifier {};
+        }
+        static constexpr auto convertor() {
+            return fil::copa::sink::ast_tree_generator<ast_object, 0, [](std::string&&) { return op::plus; }> {};
+        }
+    };
+
+    SECTION("parse simple") { fil::buffer_reader reader("2 + 1"); }
+}
+
 } // namespace

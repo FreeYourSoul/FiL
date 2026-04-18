@@ -2,6 +2,7 @@
 #define FIL_SINK_HH
 
 #include <memory>
+#include <variant>
 
 #include "fil/copa/member.hh"
 #include "fil/meta/shallow_copy.hh"
@@ -14,12 +15,13 @@ class aggregator {
     friend struct fil::shallow_copy;
 
   public:
-    using value_type = T;
+    using value_type    = T;
+    using ctx_extension = void;
 
     constexpr aggregator() = default;
 
     template<member_type Mem, typename Value>
-    constexpr void operator()(Mem mem, Value&& value) {
+    constexpr void operator()(void*, Mem mem, Value&& value) {
         mem(value_, std::forward<Value>(value));
     }
 
@@ -31,54 +33,64 @@ class aggregator {
 
 template<typename T = char>
 struct convertor_noop {
-    using value_type = T;
+    using value_type    = T;
+    using ctx_extension = void;
 
-    constexpr void operator()(const auto&, auto&&) {}
+    constexpr void operator()(void*, const auto&, auto&&) {}
     constexpr value_type value() const { return {}; }
 };
 
-template<typename T>
-concept tree_node_type = requires(T& t) {
-    typename T::node;
-    { t.right_hand_side };
-    { t.left_hand_side };
-};
-
-template<tree_node_type T>
-struct ast_node {
-    using node = T::node;
-    using lhs  = decltype(T::lhs);
-    using rhs  = decltype(T::rhs);
-
-    node node_;
-    std::shared_ptr<lhs> lhs_;
-    std::shared_ptr<rhs> rhs_;
-};
-
-template<tree_node_type T>
+template<typename ast_node, std::uint32_t Precedence, std::invocable<std::string&&> auto generate_node_func>
 class ast_tree_generator {
-
   public:
+    struct ctx_extension {
+        std::shared_ptr<ast_node> previous_node;
+        std::uint32_t previous_precedence;
+    };
+
     constexpr ast_tree_generator() = default;
 
-    template<typename Value, typename Mem>
-    constexpr void operator()(Mem mem, Value&& value) =
-        delete ("wrong usage of ast_tree generator : this shall not be used with matcher taking member types");
+    constexpr void operator()(ctx_extension* ctx, std::variant<ast_node, std::string>&& value) {
+        if (node_ == nullptr) {
+            op_value = std::move(value);
+            node_    = std::make_shared<ast_node>();
+            return;
+        }
 
-    template<typename Value> // partial template specialization no-op
-    constexpr void operator()(member_noop, Value&& value) { /*no-op*/ }
+        const bool first_pass = ctx->previous_node == nullptr;
 
-    template<typename Value> // partial template specialization lhs
-    constexpr void operator()(ast_node_lhs, Value&& value) {}
+        node_->value_ = generate_node_func(std::move(op_value));
+        if (Precedence >= ctx->previous_precedence || first_pass) {
+            node_->lhs_              = std::move(value);
+            ctx->previous_node->rhs_ = std::move(node_);
+            node_                    = ctx->previous_node;
+        } else {
+            ctx->previous_node->rhs_ = std::move(value);
+            node_->lhs_              = std::move(ctx->previous_node);
+            ctx->previous_node       = node_;
+        }
 
-    template<typename Value> // partial template specialization rhs
-    constexpr void operator()(ast_node_rhs, Value&& value) {}
+        ctx->previous_precedence = Precedence;
+    }
+
+    constexpr const ast_node& value() const { return node_; }
 
   private:
-    ast_node<T> node_;
+    std::shared_ptr<ast_node> node_ = nullptr;
+
+    std::string op_value;
 };
 
 } // namespace fil::copa::sink
+
+namespace fil::copa {
+template<typename T>
+struct ast_node {
+    T value;
+    std::variant<std::shared_ptr<ast_node>, std::string> lhs;
+    std::variant<std::shared_ptr<ast_node>, std::string> rhs;
+};
+} // namespace fil::copa
 
 namespace fil {
 

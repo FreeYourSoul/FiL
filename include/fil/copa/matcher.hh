@@ -41,7 +41,7 @@ struct match_string : composable_rule {
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (Str[ctx.idx.back()++] == c) {
             if (ctx.idx.back() >= Str.size()) {
-                ctx.convertor->operator()(Mem {}, ctx.current_token);
+                ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, ctx.current_token);
                 ctx.current_token = {};
                 return match_result::SUCCESS;
             }
@@ -63,7 +63,7 @@ struct match_char : composable_rule {
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
         if (c == C) {
-            ctx.convertor->operator()(Mem {}, static_cast<char>(c));
+            ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, static_cast<char>(c));
             ctx.current_token = {};
             return match_result::SUCCESS;
         }
@@ -78,7 +78,7 @@ struct match_identifier : composable_rule {
         if (std::isalnum(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || !std::isalnum(peek.value())) {
-                ctx.convertor->operator()(Mem {}, ctx.current_token);
+                ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, ctx.current_token);
                 ctx.current_token = {};
                 return match_result::SUCCESS;
             }
@@ -106,7 +106,7 @@ struct match_number : composable_rule {
         if (std::isdigit(c)) {
             const auto peek = ctx.reader->peek();
             if (!peek.has_value() || !std::isdigit(peek.value())) {
-                ctx.convertor->operator()(Mem {}, Conversion(ctx.current_token));
+                ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, Conversion(ctx.current_token));
                 ctx.current_token = {};
                 return match_result::SUCCESS;
             }
@@ -137,7 +137,7 @@ struct match_parser : composable_rule {
             return match_result::FAILURE;
         }
 
-        ctx.convertor->operator()(Mem {}, std::move(res).value());
+        ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, std::move(res).value());
         ctx.current_token = {};
 
         return match_result::SUCCESS;

@@ -813,29 +813,63 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
 TEST_CASE("Copa: AST generator : simple") {
 
     enum class op {
-        plus
+        plus,
+        minus,
+        multiply,
+        divide,
+        INVALID
     };
-
-    struct plus_grammar {
-        using ast_object = fil::copa::ast_node<op>;
-
-        static constexpr auto rules() { return fil::copa::match_number {} + fil::copa::match_char<'+'> {}; }
-        static constexpr auto convertor() {
-            return fil::copa::sink::ast_tree_generator<ast_object, 0, [](std::string&&) { return op::plus; }> {};
-        }
+    constexpr static auto d = [](std::string&& token) {
+        if (token == "+")
+            return op::plus;
+        if (token == "-")
+            return op::minus;
+        if (token == "*")
+            return op::multiply;
+        if (token == "/")
+            return op::divide;
+        return op::INVALID;
     };
-
-    struct grammar {
-        using ast_object = fil::copa::ast_node<op>;
-
-        static constexpr auto rules() {
-            return fil::copa::match_parser<plus_grammar> {} //
-                 | fil::copa::match_identifier {};
-        }
-        static constexpr auto convertor() {
-            return fil::copa::sink::ast_tree_generator<ast_object, 0, [](std::string&&) { return op::plus; }> {};
-        }
-    };
+    //
+    // struct level_2_grammar {
+    //     using ast_object = fil::copa::ast_node<d>;
+    //
+    //     static constexpr auto rules() {
+    //         return fil::copa::match_char<'*', ast_object::operand> {} //
+    //              | fil::copa::match_char<'/', ast_object::operand> {};
+    //     }
+    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 2> {}; }
+    // };
+    //
+    // struct level_1_grammar {
+    //     using ast_object = fil::copa::ast_node<d>;
+    //
+    //     static constexpr auto rules() {
+    //         return fil::copa::match_char<'+', ast_object::operand> {} //
+    //              | fil::copa::match_char<'-', ast_object::operand> {};
+    //     }
+    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 1> {}; }
+    // };
+    //
+    // struct base_grammar {
+    //     using ast_object = fil::copa::ast_node<d>;
+    //
+    //     static constexpr auto rules() { return fil::copa::match_number<ast_object::leaf> {}; }
+    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+    // };
+    //
+    // struct grammar {
+    //     using ast_object = fil::copa::ast_node<d>;
+    //
+    //     static constexpr auto rules() {
+    //         return fil::copa::list_rule<fil::copa::or_rule< //
+    //             fil::copa::match_parser<level_1_grammar>,   //
+    //             fil::copa::match_parser<level_2_grammar>,   //
+    //             fil::copa::match_parser<base_grammar>       //
+    //             >> {};
+    //     }
+    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+    // };
 
     SECTION("parse simple") { fil::buffer_reader reader("2 + 1"); }
 }

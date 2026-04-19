@@ -20,9 +20,13 @@ class aggregator {
 
     constexpr aggregator() = default;
 
+    template<callback_type Cb, typename Value>
+    constexpr void operator()(void* ctx, Cb cb, Value&& value) {
+        cb(ctx, value_, std::forward<Value>(value));
+    }
     template<member_type Mem, typename Value>
-    constexpr void operator()(void*, Mem mem, Value&& value) {
-        mem(value_, std::forward<Value>(value));
+    constexpr void operator()(void* ctx, Mem mem, Value&& value) {
+        mem(ctx, value_, std::forward<Value>(value));
     }
 
     constexpr const value_type& value() const { return value_; }
@@ -40,7 +44,7 @@ struct convertor_noop {
     constexpr value_type value() const { return {}; }
 };
 
-template<typename ast_node, std::uint32_t Precedence, std::invocable<std::string&&> auto generate_node_func>
+template<typename ast_node, std::uint32_t Precedence>
 class ast_tree_generator {
   public:
     struct ctx_extension {
@@ -50,18 +54,29 @@ class ast_tree_generator {
 
     constexpr ast_tree_generator() = default;
 
-    constexpr void operator()(ctx_extension* ctx, std::variant<ast_node, std::string>&& value) {
+    template<member_type Mem, typename Value>
+    constexpr void operator()(ctx_extension* ctx, Mem mem, Value&& value) //
+        = delete ("Bad usage of ast_tree_generator (cannot use fil::copa::member object");
+
+    template<typename Value>
+    constexpr void operator()(ctx_extension* ctx, ast_node::leaf, Value&& value) {
         if (node_ == nullptr) {
-            op_value = std::move(value);
-            node_    = std::make_shared<ast_node>();
+            node_ = std::make_shared<ast_node>();
+        }
+        node_->lhs_ = std::forward<Value>(value);
+    }
+
+    template<typename Value>
+    constexpr void operator()(ctx_extension* ctx, ast_node::operand cb, Value&& value) {
+        if (node_ == nullptr) {
             return;
         }
 
-        const bool first_pass = ctx->previous_node == nullptr;
+        node_->value = cb(std::forward<Value>(value));
 
-        node_->value_ = generate_node_func(std::move(op_value));
-        if (Precedence >= ctx->previous_precedence || first_pass) {
-            node_->lhs_              = std::move(value);
+        if (ctx->previous_node == nullptr /*first pass*/) {
+            ctx->previous_node = node_;
+        } else if (Precedence >= ctx->previous_precedence) {
             ctx->previous_node->rhs_ = std::move(node_);
             node_                    = ctx->previous_node;
         } else {
@@ -78,17 +93,24 @@ class ast_tree_generator {
   private:
     std::shared_ptr<ast_node> node_ = nullptr;
 
-    std::string op_value;
+    std::string value_;
+    std::string operand_;
 };
 
 } // namespace fil::copa::sink
 
 namespace fil::copa {
-template<typename T>
+
+template<std::invocable<std::string> auto Callback>
 struct ast_node {
-    T value;
+    using operand_type = std::invoke_result_t<decltype(Callback), std::string>;
+
+    operand_type value;
     std::variant<std::shared_ptr<ast_node>, std::string> lhs;
     std::variant<std::shared_ptr<ast_node>, std::string> rhs;
+
+    struct operand : callback<Callback> {};
+    struct leaf : callback<> {};
 };
 } // namespace fil::copa
 

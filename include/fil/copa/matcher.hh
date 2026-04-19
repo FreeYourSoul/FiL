@@ -32,7 +32,7 @@
 
 namespace fil::copa {
 
-template<fixed_string Str, member_type Mem = member_noop>
+template<fixed_string Str, mem_or_cb_type Mem = member_noop>
 struct match_string : composable_rule {
     static_assert(!Str.empty(), "String of match char must be non empty");
 
@@ -52,12 +52,12 @@ struct match_string : composable_rule {
     }
 
     template<typename Type>
-    static constexpr void value(Mem::member_type& obj, Type&&) {
+    static constexpr void value(auto& obj, Type&&) {
         member(obj, Str.to_string());
     }
 };
 
-template<char C, member_type Mem = member_noop>
+template<char C, mem_or_cb_type Mem = member_noop>
 struct match_char : composable_rule {
     using result_type = char;
 
@@ -71,7 +71,7 @@ struct match_char : composable_rule {
     }
 };
 
-template<member_type Mem = member_noop>
+template<mem_or_cb_type Mem = member_noop>
 struct match_identifier : composable_rule {
     using result_type = std::string;
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
@@ -98,8 +98,7 @@ template<member_type Mem = member_noop, //
                  }
              }>
 struct match_number : composable_rule {
-    using result_type = decltype(Conversion("0"));
-
+    using result_type = std::decay_t<decltype(Conversion("0"))>;
     static_assert(std::is_integral_v<result_type>, "type of a match_number must be an integral type");
 
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
@@ -116,7 +115,7 @@ struct match_number : composable_rule {
     }
 };
 
-template<production Prod, member_type Mem = member_noop>
+template<production Prod, mem_or_cb_type Mem = member_noop>
 struct match_parser : composable_rule {
     using result_type = Prod::ast_object;
 

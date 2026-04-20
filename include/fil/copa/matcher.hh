@@ -88,15 +88,14 @@ struct match_identifier : composable_rule {
     }
 };
 
-template<member_type Mem = member_noop, //
-         auto Conversion =
-             [](const std::string& token) {
-                 try {
-                     return std::stoi(token, nullptr, 10);
-                 } catch (...) {
-                     return 0;
-                 }
-             }>
+template<mem_or_cb_type Mem = member_noop, //
+         auto Conversion    = [](const std::string& token) -> int {
+             try {
+                 return std::stoi(token, nullptr, 10);
+             } catch (...) {
+                 return 0;
+             }
+         }>
 struct match_number : composable_rule {
     using result_type = std::decay_t<decltype(Conversion("0"))>;
     static_assert(std::is_integral_v<result_type>, "type of a match_number must be an integral type");
@@ -125,6 +124,7 @@ struct match_parser : composable_rule {
         details_::rule_ctx ctx_m_parser {
             .reader        = ctx.reader,
             .convertor     = &convertor,
+            .convertor_ctx = ctx.convertor_ctx,
             .current_token = ctx.current_token,
         };
 

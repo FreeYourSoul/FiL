@@ -813,13 +813,13 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
 TEST_CASE("Copa: AST generator : simple") {
 
     enum class op {
+        INVALID,
         plus,
         minus,
         multiply,
-        divide,
-        INVALID
+        divide
     };
-    constexpr static auto d = [](std::string&& token) {
+    using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
         if (token == "+")
             return op::plus;
         if (token == "-")
@@ -829,10 +829,10 @@ TEST_CASE("Copa: AST generator : simple") {
         if (token == "/")
             return op::divide;
         return op::INVALID;
-    };
-    //
+    }>;
+
     // struct level_2_grammar {
-    //     using ast_object = fil::copa::ast_node<d>;
+    //     using ast_object = ast_node;
     //
     //     static constexpr auto rules() {
     //         return fil::copa::match_char<'*', ast_object::operand> {} //
@@ -840,38 +840,45 @@ TEST_CASE("Copa: AST generator : simple") {
     //     }
     //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 2> {}; }
     // };
-    //
-    // struct level_1_grammar {
-    //     using ast_object = fil::copa::ast_node<d>;
-    //
-    //     static constexpr auto rules() {
-    //         return fil::copa::match_char<'+', ast_object::operand> {} //
-    //              | fil::copa::match_char<'-', ast_object::operand> {};
-    //     }
-    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 1> {}; }
-    // };
-    //
-    // struct base_grammar {
-    //     using ast_object = fil::copa::ast_node<d>;
-    //
-    //     static constexpr auto rules() { return fil::copa::match_number<ast_object::leaf> {}; }
-    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
-    // };
-    //
-    // struct grammar {
-    //     using ast_object = fil::copa::ast_node<d>;
-    //
-    //     static constexpr auto rules() {
-    //         return fil::copa::list_rule<fil::copa::or_rule< //
-    //             fil::copa::match_parser<level_1_grammar>,   //
-    //             fil::copa::match_parser<level_2_grammar>,   //
-    //             fil::copa::match_parser<base_grammar>       //
-    //             >> {};
-    //     }
-    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
-    // };
 
-    SECTION("parse simple") { fil::buffer_reader reader("2 + 1"); }
+    struct level_1_grammar {
+        using ast_object = ast_node;
+
+        static constexpr auto rules() {
+            return fil::copa::match_string<fil::fixed_string {"+"}, ast_object::operand> {} //
+                 | fil::copa::match_string<fil::fixed_string {"-"}, ast_object::operand> {};
+        }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+    };
+    struct base_grammar {
+        using ast_object = ast_node;
+
+        static constexpr auto rules() { return fil::copa::match_number<ast_object::leaf> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+    };
+
+    struct grammar {
+        using ast_object = ast_node;
+
+        static constexpr auto rules() {
+            return fil::copa::list_rule<fil::copa::or_rule< //
+                fil::copa::match_parser<level_1_grammar>,   //
+                // fil::copa::match_parser<level_2_grammar>,   //
+                fil::copa::match_parser<base_grammar> //
+                >> {};
+        }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+    };
+
+    SECTION("parse simple") {
+        fil::buffer_reader reader("2 + 1");
+
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        if (!result.has_value())
+            fil::copa::print_error(reader, result.error().get_errors().back());
+        REQUIRE(result.has_value());
+    }
 }
 
 } // namespace

@@ -29,6 +29,12 @@
 namespace fil::copa {
 
 template<typename T>
+concept generator = requires {
+    typename T::value_type;
+    typename T::ctx_extension;
+} && !std::is_void_v<typename T::ctx_extension>;
+
+template<typename T>
 concept production =                                           //
     std::is_default_constructible_v<typename T::ast_object> && //
     std::is_move_assignable_v<typename T::ast_object> &&       //
@@ -37,7 +43,7 @@ concept production =                                           //
         typename T::ast_object;
 
         { T::rules() } -> rule;
-        { T::convertor() };
+        { T::convertor() } -> generator;
     };
 
 /**

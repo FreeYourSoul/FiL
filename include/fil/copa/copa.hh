@@ -109,11 +109,15 @@ class parser {
 
     constexpr auto parse(const production auto& prod) {
         auto convertor = prod.convertor();
+        typename decltype(convertor)::ctx_extension ext;
         rule_ctx ctx {
             .reader         = &input_,
             .convertor      = &convertor,
+            .convertor_ctx  = &ext,
             .is_main_parser = true,
         };
+
+        std::println("parser::parse");
         return details_::do_parse(ctx, prod);
     }
 

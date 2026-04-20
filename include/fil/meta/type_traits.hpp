@@ -46,6 +46,11 @@ concept to_string_able = requires(const T& elem) {
 template<typename T>
 concept is_iterator = !std::is_same_v<typename std::iterator_traits<T>::value_type, void>;
 
+template<typename T, template<typename...> typename Template>
+concept instance_of = requires { //
+    []<template<typename...> typename U, typename... Args>(U<Args...>&) {}(std::declval<T&>());
+};
+
 } // namespace fil
 
 #endif // FIL_TYPE_TRAITS_HH

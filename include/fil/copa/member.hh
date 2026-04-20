@@ -24,6 +24,7 @@
 #ifndef FIL_MEMBER_HH
 #define FIL_MEMBER_HH
 
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -39,7 +40,7 @@ class member_fn {
         : ptr_(p) {}
 
     template<typename T, typename Value>
-    constexpr void operator()(auto*, T& obj, Value&& value) {
+    constexpr void operator()(T& obj, Value&& value) {
         if constexpr (IsSetter) {
             obj.*ptr_(std::forward<Value>(value));
         } else {
@@ -62,7 +63,7 @@ struct member {
     static constexpr bool is_vector          = is_std_vector<member_value_type>;
 
     template<typename Value>
-    constexpr void operator()(auto*, member_type& obj, Value&& value) {
+    constexpr void operator()(member_type& obj, Value&& value) {
         if constexpr (is_function_member) {
             (obj.*MemberPtr)(std::forward<Value>(value));
         } else if constexpr (is_vector) {
@@ -73,19 +74,19 @@ struct member {
     }
 };
 
-struct default_callback {
-    constexpr void operator()(auto*, auto&&) const {}
-};
-
-template<auto Callback = default_callback {}>
+template<auto Callback>
 struct callback {
-    constexpr void operator()(auto* ctx, auto&, auto&& value) const { Callback(ctx, std::forward<decltype(value)>(value)); }
+    constexpr auto operator()(auto&& value) const { //
+        return Callback(std::forward<decltype(value)>(value));
+    }
 };
 
-struct member_noop : callback<> {
+struct member_noop {
     using is_member_ptr     = void;
     using member_type       = int;
     using member_value_type = int;
+
+    constexpr void operator()(auto&, auto&&) const {}
 };
 
 template<typename T>
@@ -96,9 +97,7 @@ concept member_type = requires {
 };
 
 template<typename T>
-concept callback_type = requires {
-    { T::operator() };
-};
+concept callback_type = std::is_invocable_v<T, std::string>;
 
 template<typename T>
 concept mem_or_cb_type = member_type<T> || callback_type<T>;

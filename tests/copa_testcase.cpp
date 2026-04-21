@@ -812,7 +812,7 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
 
 TEST_CASE("Copa: AST generator : simple") {
 
-    enum class op {
+    enum class op : int {
         INVALID,
         plus,
         minus,
@@ -862,9 +862,9 @@ TEST_CASE("Copa: AST generator : simple") {
 
         static constexpr auto rules() {
             return fil::copa::list_rule<fil::copa::or_rule< //
-                fil::copa::match_parser<level_1_grammar>,   //
+                fil::copa::match_parser<base_grammar>,      //
+                fil::copa::match_parser<level_1_grammar>    //
                 // fil::copa::match_parser<level_2_grammar>,   //
-                fil::copa::match_parser<base_grammar> //
                 >> {};
         }
         static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }

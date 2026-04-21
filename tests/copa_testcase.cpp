@@ -1,4 +1,10 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <string>
+#include <vector>
+
 #include "ast.hh"
+#include "debug.hh"
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
 #include "fil/copa/sink.hh"
@@ -6,11 +12,6 @@
 #include "fil/file/temporary.hh"
 #include "fil/meta/buffer_reader.hh"
 #include "print_error.hh"
-
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
-#include <string>
-#include <vector>
 
 namespace {
 
@@ -845,16 +846,16 @@ TEST_CASE("Copa: AST generator : simple") {
         using ast_object = ast_node;
 
         static constexpr auto rules() {
-            return fil::copa::match_string<fil::fixed_string {"+"}, ast_object::operand> {} //
-                 | fil::copa::match_string<fil::fixed_string {"-"}, ast_object::operand> {};
+            return fil::copa::match_string<fil::fixed_string {"+"}, ast_node::operand> {} //
+                 | fil::copa::match_string<fil::fixed_string {"-"}, ast_node::operand> {};
         }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
     };
     struct base_grammar {
         using ast_object = ast_node;
 
-        static constexpr auto rules() { return fil::copa::match_number<ast_object::leaf> {}; }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+        static constexpr auto rules() { return fil::copa::match_number<ast_node::leaf> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
     };
 
     struct grammar {
@@ -867,17 +868,51 @@ TEST_CASE("Copa: AST generator : simple") {
                 // fil::copa::match_parser<level_2_grammar>,   //
                 >> {};
         }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 0> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
     };
 
-    SECTION("parse simple") {
-        fil::buffer_reader reader("2 + 1");
+    SECTION("parse simple : one node") {
+        fil::buffer_reader reader("1337 + 42");
 
         grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
-        if (!result.has_value())
-            fil::copa::print_error(reader, result.error().get_errors().back());
         REQUIRE(result.has_value());
+        CHECK(result.value().value == op::plus);
+        CHECK(std::holds_alternative<int>(result.value().lhs));
+        CHECK(std::holds_alternative<int>(result.value().rhs));
+        CHECK(std::get<int>(result.value().lhs) == 1337);
+        CHECK(std::get<int>(result.value().rhs) == 42);
+
+        fil::copa::debug::print_ast_tree(result.value());
+    }
+    SECTION("parse simple : multiple node same/high precedence") {
+        fil::buffer_reader reader("1337 + 42 - 10 + 2");
+
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        fil::copa::debug::print_ast_tree(result.value());
+
+        CHECK(result.value().value == op::plus);
+        CHECK(std::holds_alternative<int>(result.value().lhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        CHECK(std::get<int>(result.value().lhs) == 1337);
+
+        auto node_rhs1 = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(node_rhs1 != nullptr);
+        CHECK(node_rhs1->value == op::minus);
+        CHECK(std::holds_alternative<int>(node_rhs1->lhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_rhs1->rhs));
+        CHECK(std::get<int>(node_rhs1->lhs) == 42);
+
+        auto node_rhs2 = std::get<std::shared_ptr<ast_node>>(node_rhs1->rhs);
+        REQUIRE(node_rhs2 != nullptr);
+        CHECK(node_rhs2->value == op::plus);
+        CHECK(std::holds_alternative<int>(node_rhs2->lhs));
+        CHECK(std::holds_alternative<int>(node_rhs2->rhs));
+        CHECK(std::get<int>(node_rhs2->lhs) == 10);
+        CHECK(std::get<int>(node_rhs2->rhs) == 2);
     }
 }
 

@@ -117,7 +117,6 @@ class parser {
             .is_main_parser = true,
         };
 
-        std::println("parser::parse");
         return details_::do_parse(ctx, prod);
     }
 

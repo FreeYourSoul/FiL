@@ -46,7 +46,7 @@ struct convertor_noop {
     constexpr value_type value(auto*) const { return {}; }
 };
 
-template<typename ast_node, std::uint32_t Precedence>
+template<typename ast_node>
 class ast_tree_generator {
   public:
     using value_type = ast_node;
@@ -61,7 +61,8 @@ class ast_tree_generator {
         std::size_t count_in {0}; //!< testing @todo : remove
     };
 
-    constexpr ast_tree_generator() = default;
+    explicit constexpr ast_tree_generator(std::uint32_t precedence)
+        : precedence_(precedence) {}
 
     template<member_type Mem, typename Value>
     constexpr void operator()(ctx_extension* ctx, Mem mem, Value&& value) //
@@ -76,15 +77,12 @@ class ast_tree_generator {
 
         ctx->tmp_node      = std::make_shared<ast_node>();
         ctx->tmp_node->lhs = std::forward<Value>(value);
-
-        std::println("leaf -- {} : {} ", value, typeid(Value).name(), ctx->count_in);
     }
 
     template<typename Value>
     constexpr void operator()(ctx_extension* ctx, ast_node::operand cb, Value&& value) {
 
         if (ctx->tmp_node == nullptr) {
-            std::println("tmp node is null -- error");
             return;
         }
 
@@ -97,21 +95,17 @@ class ast_tree_generator {
         if (ctx->previous_node == nullptr /*first pass*/) {
             ctx->previous_node = std::move(ctx->tmp_node);
             ctx->current_node  = ctx->previous_node;
-            std::println("first-pass -- {} ", ctx->count_in);
-        } else if (Precedence >= ctx->previous_precedence) {
+        } else if (precedence_ >= ctx->previous_precedence) {
             ctx->previous_node->rhs = std::move(ctx->tmp_node);
             ctx->previous_node      = std::get<std::shared_ptr<ast_node>>(ctx->previous_node->rhs);
-            std::println("precedence-higher -- {} ", ctx->count_in);
         } else {
-            ctx->previous_node->rhs = std::forward<Value>(value);
-            ctx->tmp_node->lhs      = std::move(ctx->previous_node);
-            ctx->previous_node      = ctx->tmp_node;
-            std::println("precedence-lower -- {} ", ctx->count_in);
+            ctx->previous_node->rhs = std::move(ctx->tmp_node->lhs);
+            ctx->tmp_node->lhs      = ctx->current_node;
+            ctx->current_node       = std::move(ctx->tmp_node);
+            ctx->previous_node      = ctx->current_node;
         }
 
-        fil::copa::debug::print_ast_tree(*ctx->current_node);
-
-        ctx->previous_precedence = Precedence;
+        ctx->previous_precedence = precedence_;
     }
 
     constexpr value_type value(ctx_extension* ctx) const {
@@ -127,21 +121,24 @@ class ast_tree_generator {
         }
         return value_node;
     }
+
+  private:
+    std::uint32_t precedence_;
 };
 
 } // namespace fil::copa::sink
 
 namespace fil::copa {
 
-template<std::invocable<std::string> auto Callback>
+template<std::invocable<std::string> auto CallbackOp>
 struct ast_node {
-    using operand_type = std::invoke_result_t<decltype(Callback), std::string>;
+    using operand_type = std::invoke_result_t<decltype(CallbackOp), std::string>;
 
     operand_type value;
     std::variant<std::shared_ptr<ast_node>, std::string, int, char> lhs;
     std::variant<std::shared_ptr<ast_node>, std::string, int, char> rhs;
 
-    struct operand : callback<Callback> {};
+    struct operand : callback<CallbackOp> {};
     struct leaf : callback<[](const std::string& value) { return value; }> {};
 };
 

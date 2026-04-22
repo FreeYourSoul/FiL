@@ -811,7 +811,7 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
     }
 }
 
-TEST_CASE("Copa: AST generator : simple") {
+TEST_CASE("Copa: AST generator") {
 
     enum class op : int {
         INVALID,
@@ -832,15 +832,15 @@ TEST_CASE("Copa: AST generator : simple") {
         return op::INVALID;
     }>;
 
-    // struct level_2_grammar {
-    //     using ast_object = ast_node;
-    //
-    //     static constexpr auto rules() {
-    //         return fil::copa::match_char<'*', ast_object::operand> {} //
-    //              | fil::copa::match_char<'/', ast_object::operand> {};
-    //     }
-    //     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object, 2> {}; }
-    // };
+    struct level_2_grammar {
+        using ast_object = ast_node;
+
+        static constexpr auto rules() {
+            return fil::copa::match_string<fil::fixed_string {"*"}, ast_node::operand> {} //
+                 | fil::copa::match_string<fil::fixed_string {"/"}, ast_node::operand> {};
+        }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {2}; }
+    };
 
     struct level_1_grammar {
         using ast_object = ast_node;
@@ -849,13 +849,13 @@ TEST_CASE("Copa: AST generator : simple") {
             return fil::copa::match_string<fil::fixed_string {"+"}, ast_node::operand> {} //
                  | fil::copa::match_string<fil::fixed_string {"-"}, ast_node::operand> {};
         }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {1}; }
     };
     struct base_grammar {
         using ast_object = ast_node;
 
         static constexpr auto rules() { return fil::copa::match_number<ast_node::leaf> {}; }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
     };
 
     struct grammar {
@@ -864,14 +864,20 @@ TEST_CASE("Copa: AST generator : simple") {
         static constexpr auto rules() {
             return fil::copa::list_rule<fil::copa::or_rule< //
                 fil::copa::match_parser<base_grammar>,      //
-                fil::copa::match_parser<level_1_grammar>    //
-                // fil::copa::match_parser<level_2_grammar>,   //
+                fil::copa::match_parser<level_1_grammar>,   //
+                fil::copa::match_parser<level_2_grammar>    //
                 >> {};
         }
-        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node, 0> {}; }
+        static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
     };
 
     SECTION("parse simple : one node") {
+        /* AST generated
+                 +
+               /   \
+             1337   42
+        */
+
         fil::buffer_reader reader("1337 + 42");
 
         grammar g;
@@ -882,17 +888,22 @@ TEST_CASE("Copa: AST generator : simple") {
         CHECK(std::holds_alternative<int>(result.value().rhs));
         CHECK(std::get<int>(result.value().lhs) == 1337);
         CHECK(std::get<int>(result.value().rhs) == 42);
-
-        fil::copa::debug::print_ast_tree(result.value());
     }
     SECTION("parse simple : multiple node same/high precedence") {
         fil::buffer_reader reader("1337 + 42 - 10 + 2");
+        /* AST generated
+                +
+              /   \
+            1337    -
+                  /   \
+                42     +
+                     /   \
+                   10     2
+         */
 
         grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
-
-        fil::copa::debug::print_ast_tree(result.value());
 
         CHECK(result.value().value == op::plus);
         CHECK(std::holds_alternative<int>(result.value().lhs));
@@ -913,6 +924,167 @@ TEST_CASE("Copa: AST generator : simple") {
         CHECK(std::holds_alternative<int>(node_rhs2->rhs));
         CHECK(std::get<int>(node_rhs2->lhs) == 10);
         CHECK(std::get<int>(node_rhs2->rhs) == 2);
+    }
+
+    SECTION("parse simple : two node low-precedence") {
+        fil::buffer_reader reader("1337 * 42 + 10");
+        /** AST generated
+                 +
+               /   \
+              *      4
+            /   \
+          1337  42
+
+        */
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        CHECK(result.value().value == op::plus);
+        CHECK(std::holds_alternative<int>(result.value().rhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::get<int>(result.value().rhs) == 10);
+
+        auto node_lhs1 = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(node_lhs1 != nullptr);
+        CHECK(node_lhs1->value == op::multiply);
+        CHECK(std::holds_alternative<int>(node_lhs1->lhs));
+        CHECK(std::holds_alternative<int>(node_lhs1->rhs));
+        CHECK(std::get<int>(node_lhs1->lhs) == 1337);
+        CHECK(std::get<int>(node_lhs1->rhs) == 42);
+    }
+    SECTION("parse simple : two node higher-precedence") {
+        fil::buffer_reader reader("1337 + 42 / 10");
+        /** AST generated
+                 +
+               /   \
+             1337   `/`
+                   /   \
+                 42    10
+
+        */
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        CHECK(result.value().value == op::plus);
+        CHECK(std::holds_alternative<int>(result.value().lhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        CHECK(std::get<int>(result.value().lhs) == 1337);
+
+        auto node_rhs1 = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(node_rhs1 != nullptr);
+        CHECK(node_rhs1->value == op::divide);
+        CHECK(std::holds_alternative<int>(node_rhs1->lhs));
+        CHECK(std::holds_alternative<int>(node_rhs1->rhs));
+        CHECK(std::get<int>(node_rhs1->lhs) == 42);
+        CHECK(std::get<int>(node_rhs1->rhs) == 10);
+    }
+
+    SECTION("parse simple : mixed node higher-lower-precedence") {
+        fil::buffer_reader reader("1337 + 42 / 10 - 8");
+        /** AST generated
+                    -
+                  /   \
+                 +     8
+               /   \
+             1337   `/`
+                   /   \
+                 42    10
+
+        */
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        CHECK(result.value().value == op::minus);
+        CHECK(std::holds_alternative<int>(result.value().rhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::get<int>(result.value().rhs) == 8);
+
+        auto node_lhs1 = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(node_lhs1 != nullptr);
+        CHECK(node_lhs1->value == op::plus);
+        CHECK(std::holds_alternative<int>(node_lhs1->lhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_lhs1->rhs));
+        CHECK(std::get<int>(node_lhs1->lhs) == 1337);
+
+        auto node_rhs2 = std::get<std::shared_ptr<ast_node>>(node_lhs1->rhs);
+        REQUIRE(node_rhs2 != nullptr);
+        CHECK(node_rhs2->value == op::divide);
+        CHECK(std::holds_alternative<int>(node_rhs2->lhs));
+        CHECK(std::holds_alternative<int>(node_rhs2->rhs));
+        CHECK(std::get<int>(node_rhs2->lhs) == 42);
+        CHECK(std::get<int>(node_rhs2->rhs) == 10);
+    }
+
+    SECTION("parse more-complex : mixed node") {
+        fil::buffer_reader reader("2 + 3 * 4 * 2 - 6 / 2 + 1");
+        /** AST generated
+                       +
+                     /    \
+                    -      1
+                 /     \
+                +       `/`
+              /   \     /  \
+             2     *   6    2
+                 /   \
+                3     *
+                    /   \
+                   4     2
+
+        */
+        grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        CHECK(result.value().value == op::plus);
+        CHECK(std::holds_alternative<int>(result.value().rhs));
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+
+        // right branch
+        CHECK(std::get<int>(result.value().rhs) == 1);
+
+        // check left branch
+        {
+            auto node_lhs1 = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+            REQUIRE(node_lhs1 != nullptr);
+            CHECK(node_lhs1->value == op::minus);
+            CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_lhs1->lhs));
+            CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_lhs1->rhs));
+
+            {
+                auto node_lhs2 = std::get<std::shared_ptr<ast_node>>(node_lhs1->lhs);
+                REQUIRE(node_lhs2 != nullptr);
+                CHECK(node_lhs2->value == op::plus);
+                CHECK(std::holds_alternative<int>(node_lhs2->lhs));
+                CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_lhs2->rhs));
+                CHECK(std::get<int>(node_lhs2->lhs) == 2);
+
+                auto node_lhs2_rhs = std::get<std::shared_ptr<ast_node>>(node_lhs2->rhs);
+                CHECK(node_lhs2_rhs->value == op::multiply);
+                CHECK(std::holds_alternative<int>(node_lhs2_rhs->lhs));
+                CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(node_lhs2_rhs->rhs));
+                CHECK(std::get<int>(node_lhs2_rhs->lhs) == 3);
+
+                auto node_lhs2_rhs_rhs = std::get<std::shared_ptr<ast_node>>(node_lhs2_rhs->rhs);
+                CHECK(node_lhs2_rhs_rhs->value == op::multiply);
+                CHECK(std::holds_alternative<int>(node_lhs2_rhs_rhs->lhs));
+                CHECK(std::holds_alternative<int>(node_lhs2_rhs_rhs->rhs));
+                CHECK(std::get<int>(node_lhs2_rhs_rhs->lhs) == 4);
+                CHECK(std::get<int>(node_lhs2_rhs_rhs->rhs) == 2);
+            }
+            {
+                auto node_rhs2 = std::get<std::shared_ptr<ast_node>>(node_lhs1->rhs);
+
+                REQUIRE(node_rhs2 != nullptr);
+                CHECK(node_rhs2->value == op::divide);
+                CHECK(std::holds_alternative<int>(node_rhs2->lhs));
+                CHECK(std::holds_alternative<int>(node_rhs2->rhs));
+                CHECK(std::get<int>(node_rhs2->lhs) == 6);
+                CHECK(std::get<int>(node_rhs2->rhs) == 2);
+            }
+        }
     }
 }
 

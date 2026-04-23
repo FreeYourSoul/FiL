@@ -45,7 +45,7 @@ template<rule Content>
 using angle_wrapped = wrapped<fixed_string {"<"}, Content, fixed_string {">"}>;
 
 template<rule Content>
-using apostrophed = wrapped<fixed_string {"\""}, Content, fixed_string {"\""}>;
+using apostrophe_wrapped = wrapped<fixed_string {"\""}, Content, fixed_string {"\""}>;
 
 using match_if           = match_string<fixed_string {"if"}>;
 using match_while        = match_string<fixed_string {"while"}>;
@@ -56,6 +56,16 @@ using match_double_point = match_char<':'>;
 static constexpr auto semicol      = match_semicol {};
 static constexpr auto comma        = match_comma {};
 static constexpr auto double_point = match_double_point {};
+
+template<rule Content>
+parenthesis_wrapped<Content> parenthesised(const Content&) {
+    return {};
+}
+
+template<rule Content>
+apostrophe_wrapped<Content> apostrophed(const Content&) {
+    return {};
+}
 
 } // namespace fil::copa
 

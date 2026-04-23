@@ -56,12 +56,10 @@ class ast_tree_generator {
 
         std::shared_ptr<ast_node> current_node;
         std::shared_ptr<ast_node> previous_node;
-        std::uint32_t previous_precedence;
-
-        std::size_t count_in {0}; //!< testing @todo : remove
+        std::uint32_t previous_precedence {0};
     };
 
-    explicit constexpr ast_tree_generator(std::uint32_t precedence)
+    explicit constexpr ast_tree_generator(std::uint32_t precedence = 0)
         : precedence_(precedence) {}
 
     template<member_type Mem, typename Value>
@@ -73,22 +71,18 @@ class ast_tree_generator {
 
     template<typename Value>
     constexpr void operator()(ctx_extension* ctx, ast_node::leaf, Value&& value) {
-        ++ctx->count_in;
-
         ctx->tmp_node      = std::make_shared<ast_node>();
         ctx->tmp_node->lhs = std::forward<Value>(value);
     }
 
     template<typename Value>
     constexpr void operator()(ctx_extension* ctx, ast_node::operand cb, Value&& value) {
+        static_assert(!std::is_void_v<std::invoke_result_t<typename ast_node::operand, Value>>, //
+                      "An operand cannot have a callback returning void : this callback must be used to set the value of the ast_node.");
 
         if (ctx->tmp_node == nullptr) {
             return;
         }
-
-        ++ctx->count_in;
-
-        static_assert(!std::is_void_v<std::invoke_result_t<typename ast_node::operand, Value>>);
 
         ctx->tmp_node->value = cb(std::forward<Value>(value));
 
@@ -123,7 +117,7 @@ class ast_tree_generator {
     }
 
   private:
-    std::uint32_t precedence_;
+    std::uint32_t precedence_; //!< precedence of the current instance of the generator, tree construction depends on that difference
 };
 
 } // namespace fil::copa::sink

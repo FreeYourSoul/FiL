@@ -98,6 +98,11 @@ int main() {
 
 `copa` provides several built-in matchers in the `fil::copa` namespace:
 
+> **Greedy Matcher**: Copa design is based on greedy matching. If a matcher can match multiple times, it will match
+> until it can't anymore. For instance, this means that it is impossible to match a list of integer followed by an
+> integer of a specific value. As the list would consume that integer.  
+> The design of the parser must take that into account.
+
 ### Basic matchers
 
 - `match_char<char C>`: Matches a single character `C`.

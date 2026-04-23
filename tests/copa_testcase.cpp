@@ -15,6 +15,14 @@
 
 namespace {
 
+template<typename T>
+struct s {
+    using ast_object = T::ast_object;
+
+    static constexpr auto rules() { return T::rules(); }
+    static constexpr auto convertor() { return T::convert(); }
+};
+
 // --- AST Definitions for various test scenarios ---
 
 struct alt_grammar {
@@ -639,6 +647,41 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
         }
     }
 
+    SECTION("Recursive : Nested") {
+        struct grammar_recursive_nested {
+            struct ast_object {
+                std::vector<std::string> datas;
+
+                void concat(ast_object&& obj) {
+                    datas.insert(datas.end(), std::make_move_iterator(obj.datas.begin()), std::make_move_iterator(obj.datas.end()));
+                }
+            };
+
+            static constexpr auto rules() {
+                return fil::copa::list( //
+                    fil::copa::match_identifier<fil::copa::member<&ast_object::datas>> {}
+                    | fil::copa::parenthesised(
+                        fil::copa::match_parser<grammar_recursive_nested, fil::copa::member<&ast_object::concat>> {}));
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        static_assert(fil::copa::production<grammar_recursive_nested>);
+
+        fil::buffer_reader reader("chocobo (cannot fly (they just) run)");
+        grammar_recursive_nested g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+
+        REQUIRE(result.has_value());
+        REQUIRE(result->datas.size() == 6);
+        CHECK(result->datas[0] == "chocobo");
+        CHECK(result->datas[1] == "cannot");
+        CHECK(result->datas[2] == "fly");
+        CHECK(result->datas[3] == "they");
+        CHECK(result->datas[4] == "just");
+        CHECK(result->datas[5] == "run");
+    }
+
     SECTION("Deeply Nested Parameters") {
         struct level3_ast {
             std::string data;
@@ -655,8 +698,8 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
         struct level3_grammar {
             using ast_object = level3_ast;
 
-            static constexpr auto rules() {    //
-                return fil::copa::apostrophed< //
+            static constexpr auto rules() {           //
+                return fil::copa::apostrophe_wrapped< //
                     fil::copa::match_identifier<fil::copa::member<&ast_object::data>>> {};
             }
             static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }

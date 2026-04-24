@@ -668,18 +668,32 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
 
         static_assert(fil::copa::production<grammar_recursive_nested>);
 
-        fil::buffer_reader reader("chocobo (cannot fly (they just) run)");
-        grammar_recursive_nested g;
-        const auto result = fil::copa::parse(g, std::move(reader));
+        SECTION("simple") {
+            fil::buffer_reader reader("chocobo (run)");
+            grammar_recursive_nested g;
+            const auto result = fil::copa::parse(g, std::move(reader));
 
-        REQUIRE(result.has_value());
-        REQUIRE(result->datas.size() == 6);
-        CHECK(result->datas[0] == "chocobo");
-        CHECK(result->datas[1] == "cannot");
-        CHECK(result->datas[2] == "fly");
-        CHECK(result->datas[3] == "they");
-        CHECK(result->datas[4] == "just");
-        CHECK(result->datas[5] == "run");
+            REQUIRE(result.has_value());
+            REQUIRE(result->datas.size() == 2);
+            CHECK(result->datas[0] == "chocobo");
+            CHECK(result->datas[1] == "run");
+        }
+
+        SECTION("more complext") {
+
+            fil::buffer_reader reader("chocobo (cannot fly (they just) run)");
+            grammar_recursive_nested g;
+            const auto result = fil::copa::parse(g, std::move(reader));
+
+            REQUIRE(result.has_value());
+            REQUIRE(result->datas.size() == 6);
+            CHECK(result->datas[0] == "chocobo");
+            CHECK(result->datas[1] == "cannot");
+            CHECK(result->datas[2] == "fly");
+            CHECK(result->datas[3] == "they");
+            CHECK(result->datas[4] == "just");
+            CHECK(result->datas[5] == "run");
+        }
     }
 
     SECTION("Deeply Nested Parameters") {
@@ -1128,6 +1142,18 @@ TEST_CASE("Copa: AST generator") {
                 CHECK(std::get<int>(node_rhs2->rhs) == 2);
             }
         }
+    }
+
+    SECTION("parse : sub graph") {
+        fil::buffer_reader reader("2 * (3 + 4)");
+
+        /* sub graph is the addition -- added as a leaf to the multiplication
+         *
+               /   \
+              2      +
+                   /   \
+                  3     4
+        */
     }
 }
 

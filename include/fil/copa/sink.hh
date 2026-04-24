@@ -71,8 +71,14 @@ class ast_tree_generator {
 
     template<typename Value>
     constexpr void operator()(ctx_extension* ctx, ast_node::leaf, Value&& value) {
-        ctx->tmp_node      = std::make_shared<ast_node>();
-        ctx->tmp_node->lhs = std::forward<Value>(value);
+        ctx->tmp_node = std::make_shared<ast_node>();
+        if constexpr (std::is_same_v<ast_node, Value>) {
+            auto node_ptr      = std::make_shared<Value>();
+            *node_ptr          = std::forward<Value>(value);
+            ctx->tmp_node->lhs = std::move(node_ptr);
+        } else {
+            ctx->tmp_node->lhs = std::forward<Value>(value);
+        }
     }
 
     template<typename Value>

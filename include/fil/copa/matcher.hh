@@ -71,6 +71,45 @@ struct match_char : composable_rule {
     }
 };
 
+/**
+ * @brief Matches a sequence of consecutive alphanumeric characters (an identifier).
+ *
+ * @details `match_identifier` recognizes and extracts identifiers from the input stream.
+ * An identifier is a sequence of alphanumeric characters (`[a-zA-Z0-9]+`) that terminates
+ * when a non-alphanumeric character is encountered. This rule is commonly used for matching
+ * variable names, keywords, symbols, and other word-like tokens in parsing.
+ *
+ * @tparam Mem  The target member or callback where the matched identifier will be stored.
+ *              Defaults to `member_noop` (no operation).
+ *              - Use @c fil::copa::member<&ClassName::member> to bind to a `std::string` member
+ *              - Use a callback type to process the identifier with custom logic
+ *
+ * @par Template Members
+ * - `result_type`: @c std::string, the type of the matched identifier
+ *
+ * @note Termination Conditions
+ * `match_identifier` completes matching when:
+ * - A non-alphanumeric character is encountered
+ * - Whitespace is encountered (spaces, tabs, newlines)
+ * - Any special character (symbols, punctuation, etc.) is found
+ *
+ * @par Character Classification
+ * The rule uses @c std::isalnum() following the C standardization of classification of character:
+ * - Alphanumeric: `a-z`, `A-Z`, `0-9`
+ * - Non-alphanumeric: anything else (whitespace, symbols, punctuation)
+ *
+ * @par Whitespace Handling
+ * Whitespace is not consumed by `match_identifier` itself. Instead, whitespace
+ * between tokens is handled by the default ignore rules (typically `match_space_like`).
+ * This allows seamless integration with multi-rule grammars where whitespace
+ * naturally separates tokens.
+ *
+ * @attention Limitations
+ * - Cannot match identifiers containing underscores or hyphens (by default)
+ * - Does not distinguish between keywords and regular identifiers
+ * - No length restrictions on identifier names
+ * - Cannot enforce identifier conventions (e.g., camelCase, snake_case)
+ */
 template<mem_or_cb_type Mem = member_noop>
 struct match_identifier : composable_rule {
     using result_type = std::string;
@@ -114,6 +153,37 @@ struct match_number : composable_rule {
     }
 };
 
+/**
+ * @brief Embeds a nested grammar production within another grammar rule.
+ *
+ * @details`match_parser` allows the composition of multiple grammars by treating a complete
+ * grammar production as a single matching rule. This enables modular, hierarchical,
+ * and recursive grammar definitions.
+ *
+ * @tparam Prod The grammar that will be matched @c fil::copa::production type to be parsed as a nested rule.
+ * @tparam Mem  The target member or callback where the parsed result will be stored.
+ *              Defaults to @c fil::copa::member_noop` (which implies no operation to be executed with the parse result).
+ *              - Use `@c fil::copa::member<&ClassName::member>` to bind to a member variable
+ *              - Use a callback type to process the parsed result with custom logic defined as a concept @c callback_type
+ *
+ * @par Requirements
+ * - `Prod` must be a valid @c fil::copa::production
+ * - The nested grammar must be fully defined before @c match_parser is instantiated
+ *   (though forward declarations are allowed if instantiation is deferred)
+ *
+ * @par Parsing Behavior
+ * When a `match_parser` is encountered during parsing:
+ * 1. A new parser instance is created for the nested grammar `Prod`
+ * 2. The parser attempts to match the input against `Prod::rules()`
+ * 3. If successful, the resulting `Prod::ast_object` is produced
+ * 4. The result is passed to the member/callback specified by `Mem`
+ * 5. If parsing fails, the entire match fails and input is not consumed
+ *
+ * @see @c fil::copa::production
+ * @see @c fil::copa::member
+ * @see @c fil::copa::sink::aggregator
+ * @see @c fil::copa::list_rule
+ */
 template<typename Prod, mem_or_cb_type Mem = member_noop>
 struct match_parser : composable_rule {
     using result_type = Prod::ast_object;
@@ -144,6 +214,43 @@ struct match_parser : composable_rule {
     }
 };
 
+/**
+ * @brief Matches zero or more consecutive occurrences of a rule and collects results into a container.
+ *
+ * @details `list_rule` applies a given rule repeatedly to the input stream until the rule fails to match.
+ * All successful matches are accumulated into a `std::vector` of the rule's result type.
+ * This rule allows matching variable-length sequences of homogeneous elements without specifying
+ * an exact count.
+ *
+ * @tparam Rule The rule to be applied repeatedly.
+ *              Must satisfy the @c fil::copa::rule concept.
+ *
+ * @note Greedy Zero-or-More Semantics
+ * `list_rule` is greedy and accepts zero matches, making it suitable for:
+ * - Optional lists that may be empty
+ * - Variable-length sequences where the end is determined by a different rule failing
+ * - Greedy consumption of input until the pattern no longer matches
+ *
+ * @attention  Performance Considerations
+ * - Each iteration performs a full rule evaluation, which may be expensive for complex rules
+ * - Reader state is shallow-copied (see @c fil::shallow_copy for more details) on each iteration for backtracking safety
+ * - The result vector grows dynamically as matches are found
+ * - Early termination occurs as soon as the rule fails to be matched
+ *
+ * @par Parsing Behavior
+ * The rule proceeds as follows:
+ * 1. Attempts to apply `Rule` to the current input position
+ * 2. If `Rule` matches successfully, the result is added to the accumulating vector
+ * 3. The input position advances past the matched content
+ * 4. Step 1 is repeated from the new position
+ * 5. When `Rule` fails to match, collection stops
+ * 6. Returns `SUCCESS` with the accumulated vector (which may be empty if no matches occurred)
+ *
+ * @see @c fil::copa::rule
+ * @see @c fil::copa::match_parser
+ * @see @c fil::copa::sink::aggregator
+ * @see @c fil::copa::composable_rule
+ */
 template<rule Rule>
 struct list_rule : composable_rule {
     using value_type  = Rule::result_type;
@@ -183,6 +290,12 @@ struct list_rule : composable_rule {
     }
 };
 
+/**
+ * @brief helper function to build an instance of a list type
+ * @tparam Rule to embed in a list rule
+ * @return instance of the provided rule as a list
+ * @see @c fil::copa::list_rule
+ */
 template<rule Rule>
 list_rule<Rule> list(const Rule&) {
     return list_rule<Rule> {};

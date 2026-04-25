@@ -13,7 +13,7 @@ by composing simple rules and mapping them directly to C++ structures (AST objec
     - [Rule Composition](#rule-composition)
     - [Optional matcher](#optional-matcher)
 - [Provided Helpers](#provided-helpers)
-- [Performance Considerations](#performance-considerations)
+- [Important Considerations](#important-considerations)
     - [Avoiding `tuple_rule` in `or_rule`](#avoiding-tuple_rule-in-or_rule)
 - [Mapping to AST](#mapping-to-ast)
 - [Integrating with Readers](#integrating-with-readers)
@@ -22,6 +22,15 @@ by composing simple rules and mapping them directly to C++ structures (AST objec
     - [Core Requirements](#core-requirements)
     - [The Shallow Copy Concept](#the-shallow-copy-concept)
     - [Implementation Steps](#implementation-steps)
+- [AST Tree Generator](#ast-tree-generator)
+    - [Overview](#overview)
+    - [Core Concepts](#core-concepts)
+    - [AST Node Structure](#ast-node-structure)
+    - [Using ast_tree_generator](#using-ast_tree_generator)
+    - [Example: Expression Parser with Operator Precedence](#example-expression-parser-with-operator-precedence)
+    - [Advanced Features](#advanced-features)
+
+---
 
 ## Key Concepts
 
@@ -30,6 +39,8 @@ by composing simple rules and mapping them directly to C++ structures (AST objec
 - **Matcher**: A specific implementation of a rule (e.g., `match_char`, `match_string`).
 - **Production**: A high-level grammar definition that combines rules with an AST object and a result convertor.
 - **Sink (Aggregator)**: Collects results from matchers and populates the AST object.
+
+---
 
 ## Basic Usage
 
@@ -43,7 +54,7 @@ To use `copa`, you define a **Production**. A production is a struct or class th
 
 The following example parses a string of format: "CMD {command_name} ON {target} {options} "
 
-```cpp
+```c++
 #include <iostream>
 #include <vector>
 
@@ -65,7 +76,7 @@ struct CommandGrammar {
 
     static constexpr auto rules() {
         using namespace fil::copa;
-        
+    
         // Rule: "CMD" <id:command> "ON" <id:target> [options...]
         return match_string<fixed_string{"CMD"}>{}
              + match_identifier<member<&MyCommand::command>>{}
@@ -94,12 +105,14 @@ int main() {
 }
 ```
 
+---
+
 ## Available Matchers
 
 `copa` provides several built-in matchers in the `fil::copa` namespace:
 
 > **Greedy Matcher**: Copa design is based on greedy matching. If a matcher can match multiple times, it will match
-> until it can't anymore. For instance, this means that it is impossible to match a list of integer followed by an
+> until it can't anymore. For instance, this means that it is impossible to match a list of integers followed by an
 > integer of a specific value. As the list would consume that integer.  
 > The design of the parser must take that into account.
 
@@ -109,6 +122,7 @@ int main() {
 - `match_string<fixed_string {S}>`: Matches an exact string `S`.
 - `match_space_like`: Matches whitespace characters (space, tab, newline).
 - `match_identifier`: Matches an alphanumeric sequence (identifier).
+- `match_number`: Matches numeric values.
 
 ### Rule Composition
 
@@ -120,15 +134,15 @@ int main() {
 - `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
 
 Rules can be composed using overloaded operators, every rule must inherit from `comsable_rule` to ensure that
-composability accross avery rules:
+composability across every rule:
 
-- **Sequence (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
+- **Sequence    (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
 - **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice). (using `or_rule`)
-- **optional (`~`)**: `!RuleA` matches `RuleA` or not (choice). (using `or_rule`)
+- **Optional    (`~`)**: `~RuleA` matches `RuleA` or not (choice). (using `or_rule`)
 
 Example:
 
-```cpp
+```c++
 // Matches either "TRUE" or "FALSE"
 auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_string{"FALSE"}>{};
 ```
@@ -143,22 +157,33 @@ auto boolean_rule = match_string<fixed_string{"TRUE"}>{} | match_string<fixed_st
 
 This rule can be added to an instance of a rule by using the `~` operator.
 
+---
+
 ## Provided Helpers
 
-- `fil::copa::match_semicol`: Matches ';' char
-- `fil::copa::match_comma`: Matches ',' char
-- `fil::copa::match_if` : Matches "if" string
-- `fil::copa::match_while`: Matches "while" string
+- `fil::copa::match_semicol`: Matches `;` char
+- `fil::copa::match_comma`: Matches `,` char
+- `fil::copa::match_if`: Matches `if` string
+- `fil::copa::match_while`: Matches `while` string
 - `fil::copa::match_space_like`: Matches space like as defined in the C
   standard ([std::isspace](https://en.cppreference.com/w/cpp/string/byte/isspace))
 
 Some are helping common composition:
 
-- `fil::copa::parenthesis_wrapped<...>>` : Matches the rule (...) if around parenthesis `(` rule `)`
-- `fil::copa::square_wrapped<...>` : Matches the rule (...) if around square brackets `[` rule `]`
-- `fil::copa::angle_wrapped<...>` : Matches the rule (...) if around angle brackets `<` rule `>`
+- `fil::copa::parenthesis_wrapped<...>`: Matches the rule wrapped in parenthesis `(` rule `)`
+- `fil::copa::bracket_wrapped<...>`: Matches the rule wrapped in curly brackets `{` rule `}`
+- `fil::copa::square_wrapped<...>`: Matches the rule wrapped in square brackets `[` rule `]`
+- `fil::copa::angle_wrapped<...>`: Matches the rule wrapped in angle brackets `<` rule `>`
+- `fil::copa::apostrophed_wrapped<...>`: Matches the rule wrapped in quotes `"` rule `"`
 
-## Important consideration Considerations
+Some utility function to be able to use those wrappers utilitie as value (and thus comnining with `|`, `+` or `~`)
+
+- `fil::copa::parenthesised(const Rule auto rule) -> fil::copa::parenthesis_wrapped<Rule>`:
+- `fil::copa::apostrophed(const Rule auto rule) -> fil::copa::apostrophed_wrapped<Rule>`:
+
+---
+
+## Important Considerations
 
 ### Avoiding `tuple_rule` in `or_rule`
 
@@ -180,7 +205,8 @@ auto rule = (match_string<"ABC">{} + match_identifier{})
 ```
 
 This pattern triggers expensive deep copies of the convertor whenever backtracking is needed. For better performance,
-consider it.
+consider restructuring.
+
 > This consideration is particularly important in performance-critical parsing scenarios or when dealing with large
 > inputs.
 
@@ -190,12 +216,14 @@ When using `or_rule` (the `|` operator) with a `tuple_rule` (the `+` operator) t
 side effects, a critical issue emerges: side effects from partially matched rules are not rolled back when the overall
 alternative fails.
 
-It is advised to do the following to avoid `or_rule` of `tuple_rule`
+It is advised to do the following to avoid `or_rule` of `tuple_rule`:
 
 - Flattening the alternatives: Combine non-overlapping prefixes into a single rule when possible
 - Restructuring the grammar: Rearrange rules to avoid using parser rule instead
 - Using lookahead patterns: Design your grammar to make early decisions before committing to longer sequences. Using a
   keyword to separate different possibilities is a good solution.
+
+---
 
 ## Mapping to AST
 
@@ -205,17 +233,21 @@ To map parsed values to your `ast_object`, use the `member` template:
 - If the field is a `std::vector`, `member` will automatically `push_back` the value.
 - If the field is a setter method `void set_field(Value)`, it will call that method.
 
+---
+
 ## Integrating with Readers
 
 The `parse` function takes a `reader`. The library provides `fil::buffer_reader` for in-memory strings and is designed
 to work with `fil::file_reader` for disk-based parsing.
 
-```cpp
+```c++
 #include <fil/file/file_reader.hh>
 // ...
 fil::file_reader reader(std::filesystem::path("input.txt"));
 auto result = fil::copa::parse(grammar, std::move(reader));
 ```
+
+---
 
 # Copa Reader
 
@@ -248,10 +280,10 @@ Your custom reader class must implement the following interface:
 ### What is Shallow Copy?
 
 When a rule fails (e.g., in an `or_rule`), the parser must backtrack. Readers implement this via a `shallow_copy`
-specialization, which allows the parser to save the current state (cursor) without duplicating the underlying data.
-This is done for performance reason in order to avoid unecessary copy of the data.
-If a shallow copy is not implemented. A normal copy of the reader would be made (which could imply a deepcopy or a copy
-that has the read cursor badly set)
+specialization, which allows the parser to save the current state (cursor) without duplicating the underlying data. This
+is done for performance reasons to avoid unnecessary copy of the data.
+If a shallow copy is not implemented, a normal copy of the reader would be made (which could imply a deepcopy or a copy
+that has the read cursor badly set).
 
 ### Why is it Important?
 
@@ -275,25 +307,301 @@ Specialize the `fil::shallow_copy` template for your reader type:
 // specialization of the shallow_copy
 template<> 
 struct shallow_copy<YourReaderType> {
-     // Create a shallow copy with shared data and copied cursor YourReaderType shallow;
-
+    // Create a shallow copy with shared data and copied cursor
     static constexpr auto copy(const YourReaderType& object) {
         //... implement a copy that does not imply a full data copy
         // easiest way is to declare shallow_copy as a friend of your reader
     }
-    
+
     static constexpr void assign(YourReaderType& object, YourReaderType&& other) {
-       // Handle move assignment (usually just cursor update)
+        // Handle move assignment (usually just cursor update)
+    }
+};
+```
+
+---
+
+# AST Tree Generator
+
+## Overview
+
+The `ast_tree_generator` is a specialized convertor sink in Copa designed to build **abstract syntax trees (AST)** with
+proper **operator precedence handling**. Unlike the simple `aggregator` convertor that directly assigns values to struct
+members, `ast_tree_generator` constructs a hierarchical tree structure suitable for expression parsing, especially when
+handling operators with different precedence levels.
+
+### When to Use
+
+- **Expression parsers** with operators of varying precedence (e.g., calculator with `+`, `-`, `*`, `/`)
+- **Binary operator trees** where parentheses or precedence rules determine the tree structure
+- **Recursive grammar rules** where multiple precedence levels are defined separately
+
+### When NOT to Use
+
+- Simple data structures that don't require tree hierarchies
+- Non-expression-based grammars (use `aggregator` instead)
+
+---
+
+## Core Concepts
+
+### AST Node Structure
+
+An `ast_node` is a binary tree node that represents an operation or value in an expression. It consists of:
+
+```c++
+template<std::invocable<std::string> auto CallbackOp>
+struct ast_node {
+    using operand_type = std::invoke_result_t<decltype(CallbackOp), std::string>;
+
+    operand_type value;                          // The operator or value
+    std::variant<std::shared_ptr<ast_node>, 
+                 std::string, int, char> lhs;   // Left-hand side child
+    std::variant<std::shared_ptr<ast_node>, 
+                 std::string, int, char> rhs;   // Right-hand side child
+
+    struct operand : callback<CallbackOp> {};    // Callback for operators
+    struct leaf : callback<[](const std::string& value) { 
+        return value; 
+    }> {};                                        // Callback for operands/leaves
+};
+```
+
+### Key Components
+
+1. **`value`**: Stores the operator or result at this node (transformed via the `operand` callback)
+2. **`lhs` (left)**: The left child - can be another AST node, string, int, or char
+3. **`rhs` (right)**: The right child - can be another AST node, string, int, or char
+4. **`operand` callback**: Transforms matched operator tokens into meaningful values
+5. **`leaf` callback**: Marks operand/literal values (the leaves of the tree)
+
+### Precedence Handling
+
+The `ast_tree_generator` takes a **precedence level** parameter:
+
+```c++
+explicit constexpr ast_tree_generator(std::uint32_t precedence = 0)
+    : precedence_(precedence) {}
+```
+
+- **Higher precedence operators** (e.g., `*` and `/` have precedence 2) bind tighter than lower ones
+- **Lower precedence operators** (e.g., `+` and `-` have precedence 1) bind looser
+- The precedence determines how the tree is restructured during parsing
+
+---
+
+## Using ast_tree_generator
+
+### Step 1: Define Your Callback
+
+Create a callback that transforms operator tokens into meaningful values:
+
+```c++
+enum class op : int {
+    INVALID,
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE
+};
+
+using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
+    if (token == "+") return op::PLUS;
+    if (token == "-") return op::MINUS;
+    if (token == "*") return op::MULTIPLY;
+    if (token == "/") return op::DIVIDE;
+    return op::INVALID;
+}>;
+```
+
+### Step 2: Define Grammar Rules for Each Precedence Level
+
+Create separate grammar rules for each precedence level, each with its own `ast_tree_generator`:
+
+```c++
+// Lowest precedence: addition and subtraction
+struct level_1_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::match_string<fil::fixed_string {"+"}, ast_node::operand> {} 
+             | fil::copa::match_string<fil::fixed_string {"-"}, ast_node::operand> {};
+    }
+    
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {1};  // precedence = 1
     }
 };
 
+// Higher precedence: multiplication and division
+struct level_2_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::match_string<fil::fixed_string {"*"}, ast_node::operand> {} 
+             | fil::copa::match_string<fil::fixed_string {"/"}, ast_node::operand> {};
+    }
+    
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {2};  // precedence = 2
+    }
+};
 ```
 
-## Implementation Steps
+### Step 3: Define Operand/Leaf Rules
 
-1. **Create a reader class** that manages access to your data source
-2. **Implement all required interface methods** for sequential access
-3. **Track cursor position** accurately for backtracking
-4. **Specialize `fil::shallow_copy`** to enable efficient state saving
-5. **Verify the concept** using `static_assert` with `copa::reader<YourType>`
+Define rules for operands (leaves of the tree):
+
+```c++
+struct base_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::match_number<ast_node::leaf> {}
+             | fil::copa::parenthesised(
+                 fil::copa::match_parser<calculator_grammar, ast_node::leaf> {});
+    }
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {0};  // precedence = 0 (base level)
+    }
+};
+```
+
+### Step 4: Compose All Levels
+
+Combine all precedence levels into a complete grammar:
+
+```c++
+struct calculator_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::list_rule<fil::copa::or_rule<
+            fil::copa::match_parser<base_grammar>,      // Try base first (operands)
+            fil::copa::match_parser<level_1_grammar>,   // Then level 1 operators
+            fil::copa::match_parser<level_2_grammar>    // Then level 2 operators
+        >> {};
+    }
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {0};
+    }
+};
+```
+
+---
+
+## Example: Expression Parser with Operator Precedence
+
+Here's a complete calculator example that parses and builds an AST for mathematical expressions:
+
+```c++
+#include <fil/copa/copa.hh>
+#include <fil/copa/sink.hh>
+#include <fil/meta/buffer_reader.hh>
+
+enum class op : int {
+    INVALID, PLUS, MINUS, MULTIPLY, DIVIDE
+};
+
+using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
+    if (token == "+") return op::PLUS;
+    if (token == "-") return op::MINUS;
+    if (token == "*") return op::MULTIPLY;
+    if (token == "/") return op::DIVIDE;
+    return op::INVALID;
+}>;
+
+// Multiplication and Division (precedence 2)
+struct level_2_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::match_string<fil::fixed_string {"*"}, ast_node::operand> {} 
+             | fil::copa::match_string<fil::fixed_string {"/"}, ast_node::operand> {};
+    }
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {2};
+    }
+};
+
+// Addition and Subtraction (precedence 1)
+struct level_1_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::match_string<fil::fixed_string {"+"}, ast_node::operand> {} 
+             | fil::copa::match_string<fil::fixed_string {"-"}, ast_node::operand> {};
+    }
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {1};
+    }
+};
+
+// Operands and Base Grammar (precedence 0)
+struct base_grammar {
+    using ast_object = ast_node;
+
+    //! defined below as recursion over calculator_grammar requires the class definition to be defined before the function definition
+    static constexpr auto rules(); 
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {0};
+    }
+};
+
+// Complete Grammar
+struct calculator_grammar {
+    using ast_object = ast_node;
+
+    static constexpr auto rules() {
+        return fil::copa::list_rule<fil::copa::or_rule<
+            fil::copa::match_parser<base_grammar>,
+            fil::copa::match_parser<level_1_grammar>,
+            fil::copa::match_parser<level_2_grammar>
+        >> {};
+    }
+
+    static constexpr auto convertor() { 
+        return fil::copa::sink::ast_tree_generator<ast_node> {0};
+    }
+};
+
+constexpr auto base_grammar::rules() {
+    return fil::copa::match_number<ast_node::leaf> {}
+         | fil::copa::parenthesised(
+             fil::copa::match_parser<calculator_grammar, ast_node::leaf> {});
+}
+
+int main() {
+    std::string input = "16 * (1337 + 42)";
+    fil::buffer_reader reader(std::move(input));
+    
+    auto result = fil::copa::parse(calculator_grammar{}, std::move(reader));
+    
+    if (result) {
+        // The resulting AST structure represents the expression
+        // with proper precedence handling:
+        //        *
+        //       / \
+        //      16  +
+        //         / \
+        //      1337 42
+        
+        std::cout << "Parse successful!" << std::endl;
+    }
+}
+```
+
+---
+
+## Performance Notes
+
+- **Precedence Handling**: Tree restructuring is O(depth) for each operator, typically very efficient
+- **Memory**: Uses `std::shared_ptr` for node management; consider memory usage with very deep trees
+- **Callback Overhead**: The operator callback is invoked once per operator; keep it lightweight
+- **Variant Storage**: The use of `std::variant` for `lhs` and `rhs` provides flexibility but has minor runtime overhead
 

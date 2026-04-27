@@ -45,11 +45,10 @@ struct level_1_grammar {
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {1}; }
 };
 
-struct calculator_grammar;
 struct base_grammar {
     using ast_object = ast_node;
 
-    static constexpr auto rules();
+    static constexpr fil::copa::rule auto rules();
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
 };
 
@@ -66,9 +65,9 @@ struct calculator_grammar {
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
 };
 
-constexpr auto base_grammar::rules() {
+constexpr fil::copa::rule auto base_grammar::rules() {
     return fil::copa::match_number<ast_node::leaf> {}
-         | fil::copa::parenthesised(fil::copa::match_parser<calculator_grammar, ast_node::leaf> {});
+         | fil::copa::parenthesised(fil::copa::match_production<calculator_grammar, ast_node::leaf> {});
 }
 
 TEST_CASE("Copa :calculator parsing") {

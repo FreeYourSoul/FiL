@@ -120,6 +120,8 @@ class parser {
         return details_::do_parse(ctx, prod);
     }
 
+    Reader&& get_reader() && { return std::move(input_); }
+
   private:
     Reader input_;
 };

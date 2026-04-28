@@ -219,12 +219,12 @@ struct match_production : composable_rule {
     using result_type = Prod::ast_object;
 
     static constexpr match_result match(auto& ctx, std::uint8_t, std::uint32_t = 0) {
-        static_assert(production<Prod>, "type provided to a match_parser must be a fil::copa::production.");
+        static_assert(production<Prod>, "type provided to a match_production must be a fil::copa::production.");
 
         using shallow = shallow_copy<std::decay_t<decltype(*ctx.reader)>>;
         auto reader   = shallow::copy(*ctx.reader);
 
-        auto parser = details_::parser {reader};
+        auto parser = details_::parser {std::move(reader)};
         auto prod   = Prod {};
         auto res    = parser.parse(prod);
 
@@ -236,10 +236,11 @@ struct match_production : composable_rule {
         fil::copa::debug::print_ast_tree(res.value());
         std::println("-------");
 
-        shallow::assign(*ctx.reader, std::move(reader));
-
+        // Now pass the result to the convertor
         ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, std::move(res).value());
         ctx.current_token = {};
+
+        shallow::assign(*ctx.reader, std::move(parser).get_reader());
 
         return match_result::SUCCESS;
     }

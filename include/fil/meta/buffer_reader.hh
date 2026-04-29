@@ -73,12 +73,12 @@ class buffer_reader {
 
     buffer_reader(buffer_reader&& other) noexcept
         : buffer_(std::move(other.buffer_))
-        , buffer_access_(buffer_)
+        , buffer_access_(buffer_.empty() ? other.buffer_access_ : buffer_)
         , cursor_(other.cursor_) {}
 
     buffer_reader& operator=(buffer_reader&& other) noexcept {
         buffer_        = std::move(other.buffer_);
-        buffer_access_ = std::string_view(buffer_.begin(), buffer_.end());
+        buffer_access_ = buffer_.empty() ? other.buffer_access_ : std::string_view(buffer_.begin(), buffer_.end());
         cursor_        = other.cursor_;
         return *this;
     }

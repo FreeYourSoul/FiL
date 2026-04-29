@@ -224,6 +224,8 @@ struct match_production : composable_rule {
         using shallow = shallow_copy<std::decay_t<decltype(*ctx.reader)>>;
         auto reader   = shallow::copy(*ctx.reader);
 
+        reader.previous_byte();
+
         auto parser = details_::parser {std::move(reader)};
         auto prod   = Prod {};
         auto res    = parser.parse(prod);
@@ -232,9 +234,7 @@ struct match_production : composable_rule {
             return match_result::FAILURE;
         }
 
-        std::println("-------");
         fil::copa::debug::print_ast_tree(res.value());
-        std::println("-------");
 
         // Now pass the result to the convertor
         ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, std::move(res).value());

@@ -9,6 +9,30 @@
 #include "fil/copa/member.hh"
 #include "fil/meta/shallow_copy.hh"
 
+/**
+ * @brief A convertor that aggregates parsed values into a single AST object.
+ *
+ * @details The `aggregator` is a generic converter used in Copa to directly assign or process
+ * parsed values and populate an `ast_object`. Unlike `ast_tree_generator`, which builds complex
+ * hierarchical trees with operator precedence handling, `aggregator` provides a simple, direct
+ * mapping from matched rules to struct members or callbacks.
+ *
+ * ## When to Use
+ *
+ * Use `aggregator` when:
+ * - Your grammar directly maps to a simple data structure (not a tree)
+ * - You want straightforward member assignment without tree construction
+ * - You don't need operator precedence or hierarchical AST building
+ *
+ * @tparam T The AST object type that will hold the parsing results.
+ *           - Must be default-constructible
+ *           - Must support move assignment and copy assignment
+ *           - Typically a struct with fields matching your grammar rules
+ *
+ * @see fil::copa::member
+ * @see fil::copa::callback
+ * @see fil::copa::production
+ */
 namespace fil::copa::sink {
 template<typename T>
 class aggregator {
@@ -46,6 +70,32 @@ struct convertor_noop {
     constexpr value_type value(auto*) const { return {}; }
 };
 
+/**
+ * @brief A convertor that builds binary expression trees with operator precedence handling.
+ *
+ * @details `ast_tree_generator` constructs hierarchical binary trees suitable for parsing expressions
+ * with operators of varying precedence levels. It automatically restructures the tree during parsing
+ * to ensure the correct precedence binding without post-processing.
+ *
+ * ## When to Use
+ *
+ * Use `ast_tree_generator` when:
+ * - Parsing mathematical expressions or similar operator-based grammars
+ * - Operators have different precedence levels (e.g., `*` binds tighter than `+`)
+ * - You need a tree where higher-precedence operators appear deeper in the tree
+ * - Parsing recursive expression grammars with multiple precedence levels
+ *
+ * ## Template Parameters
+ *
+ * @tparam ast_node The AST node type. Must be a @c fil::copa::ast_node<CallbackOp> where:
+ *   - `CallbackOp` is a callable that transforms operator tokens to meaningful values
+ *   - The node has `value`, `lhs`, and `rhs` members
+ *   - Leaf and operand callbacks are defined as nested types
+ *
+ * @see fil::copa::ast_node
+ * @see fil::copa::sink::aggregator
+ * @see fil::copa::production
+ */
 template<typename ast_node>
 class ast_tree_generator {
   public:

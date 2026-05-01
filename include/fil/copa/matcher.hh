@@ -234,8 +234,6 @@ struct match_production : composable_rule {
             return match_result::FAILURE;
         }
 
-        fil::copa::debug::print_ast_tree(res.value());
-
         // Now pass the result to the convertor
         ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, std::move(res).value());
         ctx.current_token = {};

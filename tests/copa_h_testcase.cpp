@@ -1,4 +1,4 @@
-#include "ast.hh"
+#include "wrapper_utils.hh"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -13,10 +13,10 @@
 #include "fil/file/temporary.hh"
 #include "fil/meta/buffer_reader.hh"
 
-#include "fil/copa/ast.hh"
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
 #include "fil/copa/sink.hh"
+#include "fil/copa/wrapper_utils.hh"
 
 //@todo :: check that or EOF is working
 //@todo :: check that EOF is working in general

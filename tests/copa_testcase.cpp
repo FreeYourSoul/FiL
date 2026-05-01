@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "ast.hh"
 #include "debug.hh"
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
@@ -12,6 +11,7 @@
 #include "fil/file/temporary.hh"
 #include "fil/meta/buffer_reader.hh"
 #include "print_error.hh"
+#include "wrapper_utils.hh"
 
 namespace {
 

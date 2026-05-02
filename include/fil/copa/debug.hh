@@ -64,7 +64,9 @@ void print_operand_tree(const T& operand, int depth, bool is_last) {
     std::string indent(depth * 3, '.');
     std::print("{}  {}", indent, (is_last ? "└── " : "├── "));
 
-    if constexpr (std::is_same_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, std::monostate>) {
+        std::println("<noset>");
+    } else if constexpr (std::is_same_v<T, std::string>) {
         std::println("String: \"{}\"", operand);
     } else if constexpr (std::is_same_v<T, int>) {
         std::println("Int: \"{}\"", operand);

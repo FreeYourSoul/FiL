@@ -169,6 +169,10 @@ class ast_tree_generator {
                 ctx->previous_node->rhs = ctx->tmp_node->lhs;
             }
         }
+
+        if (ctx->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
+            value_node = *ctx->tmp_node;
+        }
         return value_node;
     }
 
@@ -185,8 +189,8 @@ struct ast_node {
     using operand_type = std::invoke_result_t<decltype(CallbackOp), std::string>;
 
     operand_type value;
-    std::variant<std::shared_ptr<ast_node>, std::string, int, char> lhs;
-    std::variant<std::shared_ptr<ast_node>, std::string, int, char> rhs;
+    std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char> lhs;
+    std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char> rhs;
 
     struct operand : callback<CallbackOp> {};
     struct leaf : callback<[](const std::string& value) { return value; }> {};

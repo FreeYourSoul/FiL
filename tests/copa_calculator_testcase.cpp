@@ -7,7 +7,7 @@
 #include "fil/meta/buffer_reader.hh"
 
 enum class op : int {
-    INVALID,
+    none,
     plus,
     minus,
     multiply,
@@ -22,7 +22,7 @@ using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
         return op::multiply;
     if (token == "/")
         return op::divide;
-    return op::INVALID;
+    return op::none;
 }>;
 
 struct level_2_grammar {
@@ -399,13 +399,15 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         CHECK(std::get<int>(lhs->rhs) == 2);
     }
 
-    SECTION("parse : nested parentheses") {
-        fil::buffer_reader reader("((1 + 2))");
+    SECTION("parse : parenthesis simple") {
+        fil::buffer_reader reader("(1 + 2)");
 
-        /*   double nested parentheses around a simple addition
-                 +
-               /   \
-              1     2
+        /*   parentheses addition in parenthesis
+                   (none)
+                    /  \
+                  +   (noset)
+                /   \
+               1     2
         */
 
         calculator_grammar g;
@@ -413,9 +415,41 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
 
-        CHECK(result.value().value == op::plus);
-        CHECK(std::get<int>(result.value().lhs) == 1);
-        CHECK(std::get<int>(result.value().rhs) == 2);
+        CHECK(result.value().value == op::none);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::holds_alternative<std::monostate>(result.value().rhs));
+
+        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs != nullptr);
+        CHECK(std::get<int>(lhs->lhs) == 1);
+        CHECK(std::get<int>(lhs->rhs) == 2);
+    }
+
+    SECTION("parse : parenthesis on the left") {
+        fil::buffer_reader reader("(1 + 2) * 3");
+
+        /*   parentheses addition in parenthesis
+                     *
+                   /   \
+                  +     3
+                /   \
+               1     2
+        */
+
+        calculator_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        fil::copa::debug::print_ast_tree(result.value());
+
+        CHECK(result.value().value == op::multiply);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::get<int>(result.value().rhs) == 3);
+
+        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs != nullptr);
+        CHECK(lhs->value == op::plus);
+        CHECK(std::get<int>(lhs->lhs) == 1);
+        CHECK(std::get<int>(lhs->rhs) == 2);
     }
 
     SECTION("parse : nested parentheses on left") {
@@ -457,7 +491,9 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         fil::buffer_reader reader("(1 + (2 + (3 + 4))");
 
         /*   double nested parentheses around a simple addition
-                        +
+                          (none)
+                         /    \
+                        +     (noset)
                       /   \
                      1     +
                          /   \
@@ -471,11 +507,17 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
 
-        CHECK(result.value().value == op::plus);
-        CHECK(std::get<int>(result.value().lhs) == 1);
-        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        CHECK(result.value().value == op::none);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::holds_alternative<std::monostate>(result.value().rhs));
 
-        auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+
+        CHECK(lhs->value == op::plus);
+        CHECK(std::get<int>(lhs->lhs) == 1);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(lhs->rhs));
+
+        auto rhs = std::get<std::shared_ptr<ast_node>>(lhs->rhs);
         REQUIRE(rhs != nullptr);
         CHECK(rhs->value == op::plus);
         CHECK(std::get<int>(rhs->lhs) == 2);
@@ -486,6 +528,37 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         CHECK(rhs2->value == op::plus);
         CHECK(std::get<int>(rhs2->lhs) == 3);
         CHECK(std::get<int>(rhs2->rhs) == 4);
+    }
+
+    SECTION("parse : nested parentheses") {
+        fil::buffer_reader reader("((1 + 2))");
+
+        /*   double nested parentheses around a simple addition
+                 +
+               /   \
+              1     2
+        */
+
+        calculator_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        fil::copa::debug::print_ast_tree(result.value());
+
+        CHECK(result.value().value == op::none);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::holds_alternative<std::monostate>(result.value().rhs));
+
+        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+
+        CHECK(lhs->value == op::none);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(lhs->lhs));
+        CHECK(std::holds_alternative<std::monostate>(lhs->rhs));
+
+        auto lhs2 = std::get<std::shared_ptr<ast_node>>(lhs->lhs);
+        CHECK(std::holds_alternative<int>(lhs2->lhs));
+        CHECK(std::holds_alternative<int>(lhs2->rhs));
+        CHECK(std::get<int>(lhs2->lhs) == 1);
+        CHECK(std::get<int>(lhs2->rhs) == 2);
     }
 
     SECTION("parse : parenthesised left and right") {
@@ -523,7 +596,9 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         fil::buffer_reader reader("((2 + 3) * (4 - 1))");
 
         /*   outer parens wrap a multiplication of two parenthesised sub-expressions
-                    *
+                     (none)
+                     /   \
+                    *    (noset)
                   /   \
                  +     -
                /  \  /   \
@@ -535,15 +610,20 @@ TEST_CASE("Copa :calculator parsing", "[copa]") {
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
 
-        CHECK(result.value().value == op::multiply);
+        CHECK(result.value().value == op::none);
+        CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        CHECK(std::holds_alternative<std::monostate>(result.value().rhs));
 
-        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        auto l = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+
+        CHECK(l->value == op::multiply);
+        auto lhs = std::get<std::shared_ptr<ast_node>>(l->lhs);
         REQUIRE(lhs != nullptr);
         CHECK(lhs->value == op::plus);
         CHECK(std::get<int>(lhs->lhs) == 2);
         CHECK(std::get<int>(lhs->rhs) == 3);
 
-        auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        auto rhs = std::get<std::shared_ptr<ast_node>>(l->rhs);
         REQUIRE(rhs != nullptr);
         CHECK(rhs->value == op::minus);
         CHECK(std::get<int>(rhs->lhs) == 4);

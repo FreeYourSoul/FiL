@@ -868,7 +868,7 @@ TEST_CASE("Copa: repeat<N> rule", "[copa][repeat]") {
     }
 }
 
-TEST_CASE("Copa: AST generator") {
+TEST_CASE("Copa: AST generator", "[copa][ast]") {
 
     enum class op : int {
         INVALID,
@@ -1144,16 +1144,64 @@ TEST_CASE("Copa: AST generator") {
         }
     }
 
-    SECTION("parse : sub graph") {
-        fil::buffer_reader reader("2 * (3 + 4)");
+    SECTION("Copa: Mixed aggregator") {
+        struct grammar_single_ast {
+            struct ast_object {
+                ast_node node;
+            };
 
-        /* sub graph is the addition -- added as a leaf to the multiplication
-         *
-               /   \
-              2      +
-                   /   \
-                  3     4
-        */
+            static constexpr auto rules() {
+                return fil::copa::bracket_wrapped<fil::copa::match_production<grammar, fil::copa::member<&ast_object::node>>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        struct grammar_composition {
+
+            struct ast_object {
+                std::vector<ast_node> calculations;
+
+                void add_calc(std::expected<grammar_single_ast::ast_object, fil::copa::error_stack> calc) {
+                    if (calc.has_value())
+                        calculations.push_back(std::move(calc).value().node);
+                }
+            };
+
+            static constexpr auto rules() {
+                return fil::copa::list( //
+                    fil::copa::match_production<grammar_single_ast, fil::copa::member<&ast_object::add_calc>> {});
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        fil::buffer_reader reader( //
+            "{2 + 3}"
+            "{ 3 * 4}"
+            "{2 / 9 }");
+
+        grammar_composition g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        REQUIRE(!result.value().calculations.empty());
+        CHECK(result.value().calculations[0].value == op::plus);
+        CHECK(std::holds_alternative<int>(result->calculations[0].lhs));
+        CHECK(std::holds_alternative<int>(result->calculations[0].rhs));
+        CHECK(std::get<int>(result->calculations[0].lhs) == 2);
+        CHECK(std::get<int>(result->calculations[0].rhs) == 3);
+
+        REQUIRE(result.value().calculations.size() >= 2);
+        CHECK(result.value().calculations[1].value == op::multiply);
+        CHECK(std::holds_alternative<int>(result->calculations[1].lhs));
+        CHECK(std::holds_alternative<int>(result->calculations[1].rhs));
+        CHECK(std::get<int>(result->calculations[1].lhs) == 3);
+        CHECK(std::get<int>(result->calculations[1].rhs) == 4);
+
+        REQUIRE(result.value().calculations.size() == 3);
+        CHECK(result.value().calculations[2].value == op::divide);
+        CHECK(std::holds_alternative<int>(result->calculations[2].lhs));
+        CHECK(std::holds_alternative<int>(result->calculations[2].rhs));
+        CHECK(std::get<int>(result->calculations[2].lhs) == 2);
+        CHECK(std::get<int>(result->calculations[2].rhs) == 9);
     }
 }
 

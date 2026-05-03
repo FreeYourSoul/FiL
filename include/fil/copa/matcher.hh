@@ -71,6 +71,22 @@ struct match_char : composable_rule {
     }
 };
 
+template<char C, mem_or_cb_type Mem = member_noop>
+struct match_until : composable_rule {
+    using result_type = std::string;
+
+    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+        const auto peek = ctx.reader->peek();
+
+        if (peek.has_value() || peek.value() == C) {
+            ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, static_cast<char>(c));
+            ctx.current_token = {};
+            return match_result::SUCCESS;
+        }
+        return match_result::FAILURE;
+    }
+};
+
 /**
  * @brief Matches a sequence of consecutive alphanumeric characters (an identifier).
  *

@@ -70,7 +70,7 @@ constexpr fil::copa::rule auto base_grammar::rules() {
          | fil::copa::parenthesised(fil::copa::match_production<calculator_grammar, ast_node::leaf> {});
 }
 
-TEST_CASE("Copa :calculator parsing", "[copa]") {
+TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
     SECTION("parse : parenthesis") {
         fil::buffer_reader reader("16 * (1337 + 42)");
 

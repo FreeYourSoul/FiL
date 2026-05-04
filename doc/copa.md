@@ -133,6 +133,18 @@ int main() {
 - `list_rule<Rule>`: Matches zero or more occurrences of `Rule`.
 - `repeat<int N, Rule>`: Repeat N times the provided `Rule`.
 
+### Grammar Composition
+
+Copa allows embedding a full grammar production into another rule. This is essential for modularizing complex grammars
+or implementing recursion.
+
+- `match_parser<Production, Member>`: Embeds a nested `Production` as a rule. It uses the `Production`'s rules and
+  convertor to parse a sub-object and stores it in the specified `Member`.
+- `match_production<Production, Member>`: Similar to `match_parser`, but it performs a complete parsing cycle using a
+  `fil::copa::parser` instance for the nested production. This ensures that the production is handled as a standalone
+  entity, which is particularly important for recursive definitions where the full production lifecycle (including its
+  specific convertor logic) must be preserved.
+
 Rules can be composed using overloaded operators, every rule must inherit from `comsable_rule` to ensure that
 composability across every rule:
 
@@ -573,7 +585,7 @@ struct calculator_grammar {
 constexpr auto base_grammar::rules() {
     return fil::copa::match_number<ast_node::leaf> {}
          | fil::copa::parenthesised(
-             fil::copa::match_parser<calculator_grammar, ast_node::leaf> {});
+             fil::copa::match_production<calculator_grammar, ast_node::leaf> {});
 }
 
 int main() {
@@ -595,6 +607,19 @@ int main() {
     }
 }
 ```
+
+### Why use `match_production` for recursion?
+
+In the `base_grammar::rules()` definition above, we use `match_production<calculator_grammar, ast_node::leaf>` for the
+recursive call instead of `match_parser`.
+
+While `match_parser` is generally used to embed one production's rules into another, `match_production` is preferred for
+recursion because it:
+
+1. **Ensures Isolation**: It creates a fresh parser instance for the recursive call, ensuring that the nested
+   production's `convertor()` and `rules()` are handled as a standalone parsing operation.
+2. **Proper Backtracking**: It uses shallow copies of the reader to ensure that if the recursive parse fails, the reader
+   state is correctly restored before trying other alternatives in the `or_rule`.
 
 ---
 

@@ -230,6 +230,48 @@ struct match_parser : composable_rule {
     }
 };
 
+/**
+ * @brief Embeds a nested grammar production within another grammar rule with an isolated parsing context.
+ *
+ * @details `match_production` allows the composition of multiple grammars by treating a complete
+ * grammar production as a single matching rule, with a critical distinction from `match_parser`:
+ * it creates a fully independent parsing context with a shallow-copied reader. This isolation
+ * ensures that nested production parsing operates independently while maintaining synchronization
+ * with the parent parser's reader position upon successful completion.
+ *
+ * This isolation is beneficial in scenarios where nested productions require independent
+ * state management or when backtracking safety is critical. The shallow copy provides efficiency
+ * while the independent parser ensures clean separation of concerns.
+ *
+ * @par Distinction from match_parser
+ * Unlike @c match_parser, which shares the parsing context (`rule_ctx`) with the parent parser:
+ * - **match_parser**: Uses the same `rule_ctx`, reusing the parent's convertor context and reader reference
+ * - **match_production**: Creates a completely new parser instance with a shallow-copied reader,
+ *   resulting in an independent parsing context that doesn't share state with the parent.
+ *
+ * @par Parsing Behavior
+ * When a `match_production` is encountered during parsing:
+ * 1. The current reader state is shallow-copied to create an independent reader instance
+ * 2. A new standalone parser is instantiated with the copied reader
+ * 3. The parser attempts to match the input against `Prod::rules()` with its own convertor instance
+ * 4. If successful, the resulting `Prod::ast_object` is produced
+ * 5. The result is passed to the member/callback specified by `Mem` in the parent context
+ * 6. The parent reader is synchronized with the new parser's reader position upon success
+ * 7. If parsing fails, the entire match fails and input is not consumed by the parent
+ *
+ * @tparam Prod The grammar that will be matched. Must be a @c fil::copa::production type to be parsed as a nested rule.
+ * @tparam Mem  The target member or callback where the parsed result will be stored.
+ *              Defaults to @c fil::copa::member_noop (which implies no operation to be executed with the parse result).
+ *              - Use @c fil::copa::member<&ClassName::member> to bind to a member variable
+ *              - Use a callback type to process the parsed result with custom logic defined as a concept @c callback_type
+ *
+ * @see @c fil::copa::production
+ * @see @c fil::copa::match_parser for context-sharing variant
+ * @see @c fil::copa::member
+ * @see @c fil::copa::shallow_copy for reader copying semantics
+ * @see @c fil::copa::sink::aggregator
+ * @see @c fil::copa::list_rule
+ */
 template<typename Prod, mem_or_cb_type Mem = member_noop>
 struct match_production : composable_rule {
     using result_type = Prod::ast_object;

@@ -1144,7 +1144,7 @@ TEST_CASE("Copa: AST generator", "[copa][ast]") {
         }
     }
 
-    SECTION("Copa: Mixed aggregator") {
+    SECTION("Copa: Mixed aggregator with match_production") {
         struct grammar_single_ast {
             struct ast_object {
                 ast_node node;

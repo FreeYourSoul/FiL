@@ -184,13 +184,14 @@ class ast_tree_generator {
 
 namespace fil::copa {
 
-template<std::invocable<std::string> auto CallbackOp>
+template<std::invocable<std::string> auto CallbackOp, typename... Ts>
 struct ast_node {
     using operand_type = std::invoke_result_t<decltype(CallbackOp), std::string>;
+    using node_type    = std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char, Ts...>;
 
     operand_type value;
-    std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char> lhs;
-    std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char> rhs;
+    node_type lhs;
+    node_type rhs;
 
     struct operand : callback<CallbackOp> {};
     struct leaf : callback<[](const std::string& value) { return value; }> {};

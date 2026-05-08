@@ -52,9 +52,11 @@ using match_while        = match_string<fixed_string {"while"}>;
 using match_comma        = match_char<','>;
 using match_semicol      = match_char<';'>;
 using match_double_point = match_char<':'>;
+using match_point        = match_char<'.'>;
 
 static constexpr auto semicol      = match_semicol {};
 static constexpr auto comma        = match_comma {};
+static constexpr auto point        = match_point {};
 static constexpr auto double_point = match_double_point {};
 
 template<rule Content>

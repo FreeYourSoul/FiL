@@ -25,7 +25,7 @@ using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
     return op::none;
 }>;
 
-struct level_2_grammar {
+struct link_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
@@ -35,7 +35,7 @@ struct level_2_grammar {
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {2}; }
 };
 
-struct level_1_grammar {
+struct compare_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
@@ -52,14 +52,14 @@ struct base_grammar {
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
 };
 
-struct calculator_grammar {
+struct expression_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
         return fil::copa::list_rule<fil::copa::or_rule< //
             fil::copa::match_parser<base_grammar>,      //
-            fil::copa::match_parser<level_1_grammar>,   //
-            fil::copa::match_parser<level_2_grammar>    //
+            fil::copa::match_parser<compare_grammar>,   //
+            fil::copa::match_parser<link_grammar>       //
             >> {};
     }
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
@@ -67,7 +67,7 @@ struct calculator_grammar {
 
 constexpr fil::copa::rule auto base_grammar::rules() {
     return fil::copa::match_number<ast_node::leaf> {}
-         | fil::copa::parenthesised(fil::copa::match_production<calculator_grammar, ast_node::leaf> {});
+         | fil::copa::parenthesised(fil::copa::match_production<expression_grammar, ast_node::leaf> {});
 }
 
 TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
@@ -82,7 +82,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  1337   42
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -106,7 +106,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               3     5
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -127,7 +127,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               10    7
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -146,7 +146,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               6     9
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -165,7 +165,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               20    4
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -186,7 +186,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -212,7 +212,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
            2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -238,7 +238,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -264,7 +264,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  3     4
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -290,7 +290,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  6     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -316,7 +316,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
            6     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -344,7 +344,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                      2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -384,7 +384,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
            1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -410,7 +410,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -436,7 +436,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -465,7 +465,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -502,7 +502,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                            3     4
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -539,7 +539,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -572,7 +572,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               1   2  3    4
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -605,7 +605,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               2   3  4    1
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -641,7 +641,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  50   25
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -667,7 +667,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
           10     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -695,7 +695,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                      2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -728,7 +728,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
            1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -759,7 +759,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  3     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -785,7 +785,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                  3     1
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -809,7 +809,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               5     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -831,7 +831,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                   2     3
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -866,7 +866,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                        4     5
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -904,7 +904,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                   3   4 5    6
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -945,7 +945,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
               1     2
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());
@@ -973,7 +973,7 @@ TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
                   3     4
         */
 
-        calculator_grammar g;
+        expression_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         fil::copa::debug::print_ast_tree(result.value());

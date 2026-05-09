@@ -217,8 +217,6 @@ struct or_rule {
         auto process = [&ctx]<rule Rule>() -> bool {
             auto shallow_reader = shallow_copy<Reader>::copy(*ctx.reader);
             auto* convertor     = ctx.convertor;
-            auto convertor_ctx  = *ctx.convertor_ctx;
-            auto* cccc          = ctx.convertor_ctx;
 
             // if tuple, make a copy of the convertor for re-assignment at the end in case of error
             // this is an inefficient path; it is not recommended to do or_rule with tuples_rule as the rollback in case of error is costly
@@ -231,7 +229,7 @@ struct or_rule {
             details_::rule_ctx ctx_or {
                 .reader        = &shallow_reader,
                 .convertor     = convertor,
-                .convertor_ctx = cccc,
+                .convertor_ctx = ctx.convertor_ctx,
                 .current_token = ctx.current_token,
             };
 

@@ -204,7 +204,7 @@ template<typename Prod, mem_or_cb_type Mem = member_noop>
 struct match_parser : composable_rule {
     using result_type = Prod::ast_object;
 
-    static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
+    static constexpr match_result match(auto& ctx, std::uint8_t, std::uint32_t = 0) {
         static_assert(production<Prod>, "type provided to a match_parser must be a fil::copa::production.");
 
         auto convertor = Prod::convertor();

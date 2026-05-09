@@ -169,7 +169,6 @@ class ast_tree_generator {
                 ctx->previous_node->rhs = ctx->tmp_node->lhs;
             }
         }
-
         if (ctx->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
             value_node = *ctx->tmp_node;
         }
@@ -190,8 +189,8 @@ struct ast_node {
     using node_type    = std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char, Ts...>;
 
     operand_type value;
-    node_type lhs;
-    node_type rhs;
+    node_type lhs = std::monostate {};
+    node_type rhs = std::monostate {};
 
     struct operand : callback<CallbackOp> {};
     struct leaf : callback<[](const std::string& value) { return value; }> {};

@@ -5,7 +5,7 @@
 #include "fil/copa/sink.hh"
 #include "fil/copa/wrapper_utils.hh"
 #include "fil/meta/buffer_reader.hh"
-
+namespace {
 enum class op_comparator : int {
     none,
     greater,
@@ -76,91 +76,87 @@ struct compare_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
-        return fil::copa::match_string<fil::fixed_string {">"}, ast_object::operand> {} //
-             | fil::copa::match_string<fil::fixed_string {"<=>"}, ast_object::operand> {}
-             | fil::copa::match_string<fil::fixed_string {"<"}, ast_object::operand> {}
+        return fil::copa::match_string<fil::fixed_string {">="}, ast_object::operand> {} //
+             | fil::copa::match_string<fil::fixed_string {">"}, ast_object::operand> {}
              | fil::copa::match_string<fil::fixed_string {"<="}, ast_object::operand> {}
+             | fil::copa::match_string<fil::fixed_string {"<"}, ast_object::operand> {}
              | fil::copa::match_string<fil::fixed_string {"!="}, ast_object::operand> {}
              | fil::copa::match_string<fil::fixed_string {"=="}, ast_object::operand> {};
     }
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object> {1}; }
 };
 
-struct base_grammar {
+struct base_language_grammar {
     using ast_object = ast_node;
 
     static constexpr fil::copa::rule auto rules();
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object> {0}; }
 };
 
-struct expression_grammar {
+struct language_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
-        return fil::copa::list_rule<fil::copa::or_rule< //
-            fil::copa::match_parser<base_grammar>,      //
-            fil::copa::match_parser<compare_grammar>,   //
-            fil::copa::match_parser<link_grammar>       //
+        return fil::copa::list_rule<fil::copa::or_rule<     //
+            fil::copa::match_parser<base_language_grammar>, //
+            fil::copa::match_parser<link_grammar>,          //
+            fil::copa::match_parser<compare_grammar>        //
             >> {};
     }
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
 };
-
-constexpr fil::copa::rule auto base_grammar::rules() {
+constexpr fil::copa::rule auto base_language_grammar::rules() {
     return fil::copa::match_number<ast_node::leaf> {}                       //
          | fil::copa::match_production<variable_grammar, ast_node::leaf> {} //
-         | fil::copa::parenthesised(fil::copa::match_production<expression_grammar, ast_node::leaf> {});
+         | fil::copa::parenthesised(fil::copa::match_production<language_grammar, ast_node::leaf> {});
 }
+} // namespace
 
-TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
+TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa][single_run]") {
     SECTION("parse: simple variable with access") {
         fil::buffer_reader reader("obj.field == 42");
 
-        expression_grammar g;
+        language_grammar g;
         const auto result = fil::copa::parse(g, std::move(reader));
         REQUIRE(result.has_value());
         // fil::copa::debug::print_ast_tree(result.value());
 
         // Top level should be comparison (==)
-        CHECK(std::holds_alternative<op_comparator>(result.value().value));
+        REQUIRE(std::holds_alternative<op_comparator>(result.value().value));
         CHECK(std::get<op_comparator>(result.value().value) == op_comparator::equal);
 
         // Left side should be a variable with access
-        CHECK(std::holds_alternative<variable>(result.value().lhs));
+        REQUIRE(std::holds_alternative<variable>(result.value().lhs));
         const auto lhs_var = std::get<variable>(result.value().lhs);
         CHECK(lhs_var.variable_name == "obj");
         REQUIRE(lhs_var.access.has_value());
         CHECK(lhs_var.access.value() == "field");
 
         // Right side should be a number
-        CHECK(std::holds_alternative<int>(result.value().rhs));
+        REQUIRE(std::holds_alternative<int>(result.value().rhs));
         CHECK(std::get<int>(result.value().rhs) == 42);
     }
-    //
-    // SECTION("parse: simple variable without access") {
-    //     fil::buffer_reader reader("count > 10");
-    //
-    //     expression_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     CHECK(result.value().value == op_comparator::greater);
-    //
-    //     auto lhs_var = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs_var != nullptr);
-    //     CHECK(std::holds_alternative<variable>(lhs_var->leaf));
-    //     auto var = std::get<variable>(lhs_var->leaf);
-    //     CHECK(var.variable_name == "count");
-    //     CHECK(!var.access.has_value());
-    //
-    //     CHECK(std::get<int>(result.value().rhs) == 10);
-    // }
+
+    SECTION("parse: simple double integer check") {
+        fil::buffer_reader reader("2 && 10 ");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        REQUIRE(std::holds_alternative<op_link>(result.value().value));
+        CHECK(std::get<op_link>(result.value().value) == op_link::and_);
+
+        REQUIRE(std::holds_alternative<int>(result.value().lhs));
+        CHECK(std::get<int>(result.value().lhs) == 2);
+        REQUIRE(std::holds_alternative<int>(result.value().rhs));
+        CHECK(std::get<int>(result.value().rhs) == 10);
+    }
     //
     // SECTION("parse: two variables with access compared") {
     //     fil::buffer_reader reader("user.age == admin.age");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());
@@ -183,7 +179,7 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     // SECTION("parse: variable with access in logical AND") {
     //     fil::buffer_reader reader("user.active == 1 && user.banned != 1");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());
@@ -217,7 +213,7 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     // SECTION("parse: variable with access in logical OR") {
     //     fil::buffer_reader reader("config.debug == 1 || config.verbose == 1");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());
@@ -244,7 +240,7 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     // SECTION("parse: complex expression with variables and numbers") {
     //     fil::buffer_reader reader("data.threshold > 100 && status.code != 0");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());
@@ -273,7 +269,7 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     // SECTION("parse: variable with access in parentheses") {
     //     fil::buffer_reader reader("(obj.value > 5) && count < 10");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());
@@ -295,7 +291,7 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     // SECTION("parse: multiple variables with access in chain") {
     //     fil::buffer_reader reader("a.x > 5 || b.y < 10 || c.z == 0");
     //
-    //     expression_grammar g;
+    //     language_grammar g;
     //     const auto result = fil::copa::parse(g, std::move(reader));
     //     REQUIRE(result.has_value());
     //     fil::copa::debug::print_ast_tree(result.value());

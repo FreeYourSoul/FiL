@@ -6,6 +6,8 @@
 #include "fil/copa/wrapper_utils.hh"
 #include "fil/meta/buffer_reader.hh"
 
+namespace {
+
 enum class op : int {
     none,
     plus,
@@ -25,7 +27,7 @@ using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
     return op::none;
 }>;
 
-struct link_grammar {
+struct level_2_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
@@ -35,7 +37,7 @@ struct link_grammar {
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {2}; }
 };
 
-struct compare_grammar {
+struct level_1_grammar {
     using ast_object = ast_node;
 
     static constexpr auto rules() {
@@ -58,8 +60,8 @@ struct expression_grammar {
     static constexpr auto rules() {
         return fil::copa::list_rule<fil::copa::or_rule< //
             fil::copa::match_parser<base_grammar>,      //
-            fil::copa::match_parser<compare_grammar>,   //
-            fil::copa::match_parser<link_grammar>       //
+            fil::copa::match_parser<level_1_grammar>,   //
+            fil::copa::match_parser<level_2_grammar>    //
             >> {};
     }
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
@@ -69,8 +71,9 @@ constexpr fil::copa::rule auto base_grammar::rules() {
     return fil::copa::match_number<ast_node::leaf> {}
          | fil::copa::parenthesised(fil::copa::match_production<expression_grammar, ast_node::leaf> {});
 }
+} // namespace
 
-TEST_CASE("Copa :calculator parsing", "[copa][calculator]") {
+TEST_CASE("Copa: calculator parsing", "[copa][calculator]") {
     SECTION("parse : parenthesis") {
         fil::buffer_reader reader("16 * (1337 + 42)");
 

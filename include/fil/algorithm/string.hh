@@ -121,20 +121,30 @@ inline void rtrim(std::string& s) {
 }
 
 template<typename T>
+[[nodiscard]] std::string to_string(const T& elems) = delete ("A specialization of fil::to_string for the type must be provided for type");
+
+template<typename T>
 requires requires(T d) {
-    requires std::is_integral_v<std::decay_t<T>>;
+    requires std::is_integral_v<std::decay_t<T>> || std::is_floating_point_v<std::decay_t<T>>;
     { std::to_string(d) } -> std::convertible_to<std::string>;
 }
 [[nodiscard]] std::string to_string(const T& elem) {
     return std::to_string(elem);
 }
 
+template<>
+[[nodiscard]] inline std::string to_string(const std::string& elem) {
+    return elem;
+}
+
+template<>
+[[nodiscard]] inline std::string to_string(const std::string_view& elem) {
+    return std::string {elem};
+}
+
 template<typename T>
 requires requires(T d) {
-    requires std::is_same_v<std::decay_t<T>, std::string>                                 //
-                 || (std::is_array_v<T> && std::is_same_v<std::remove_extent_t<T>, char>) //
-                 || std::is_same_v<std::decay_t<T>, std::string_view>                     //
-                 || std::is_same_v<std::decay_t<T>, std::string>;
+    requires(std::is_array_v<T> && std::is_same_v<std::remove_extent_t<T>, char>); //
 }
 [[nodiscard]] std::string to_string(const T& elem) {
     return std::string(elem);
@@ -158,6 +168,11 @@ requires requires(T d) {
                })
          + "]";
 }
+
+template<typename T>
+concept is_stringifiable = requires(const T& elem) {
+    { fil::to_string(elem) } -> std::convertible_to<std::string>;
+};
 
 } // namespace fil
 

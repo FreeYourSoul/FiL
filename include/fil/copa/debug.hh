@@ -28,16 +28,21 @@
 #include <string>
 #include <variant>
 
+#include "fil/algorithm/string.hh"
+#include "fil/meta/type_traits.hpp"
+
 namespace fil::copa::debug {
 
 template<typename T>
-void print_operand_tree(const T& operand, int depth, bool is_last);
+std::string ast_node_to_string(const T& operand, int depth, bool is_last);
 
 template<typename T>
-void print_ast_tree(const T& node, int depth = 0, bool is_right = false, bool is_last = true) {
+std::string ast_tree_to_string(const T& node, int depth = 0, bool is_last = true) {
+    std::string result;
+
     // Print tree branch characters
     std::string indent(depth * 3, '.');
-    std::println("{}Value: {}", indent, int(node.value));
+    result += std::format("{}Value: {}\n", indent, fil::to_string(node.value));
 
     // Count non-empty children
     int child_count = 0;
@@ -48,40 +53,51 @@ void print_ast_tree(const T& node, int depth = 0, bool is_right = false, bool is
     // Print left child
     if (!node.lhs.valueless_by_exception()) {
         bool is_last_child = (child_count == 1) || !node.rhs.valueless_by_exception();
-        std::println("{}..{} L:", indent, (is_last_child ? "...." : "│   "));
-        std::visit([depth, is_last_child](auto& operand) { print_operand_tree(operand, depth + 2, is_last_child); }, node.lhs);
+        result += std::format("{}..{} L:\n", indent, (is_last_child ? "...." : "│   "));
+        result += //
+            std::visit([depth, is_last_child](auto& operand) { return ast_node_to_string(operand, depth + 2, is_last_child); }, node.lhs);
     }
 
     // Print right child
     if (!node.rhs.valueless_by_exception()) {
-        std::println("..{}.... R:", indent);
-        std::visit([depth](auto& operand) { print_operand_tree(operand, depth + 2, true); }, node.rhs);
+        result += std::format("..{}.... R:\n", indent);
+        result += //
+            std::visit([depth](auto& operand) { return ast_node_to_string(operand, depth + 2, true); }, node.rhs);
     }
+    return result;
 }
 
 template<typename T>
-void print_operand_tree(const T& operand, int depth, bool is_last) {
-    std::string indent(depth * 3, '.');
-    std::print("{}  {}", indent, (is_last ? "└── " : "├── "));
-
-    if constexpr (std::is_same_v<T, std::monostate>) {
-        std::println("<noset>");
-    } else if constexpr (std::is_same_v<T, std::string>) {
-        std::println("String: \"{}\"", operand);
-    } else if constexpr (std::is_same_v<T, int>) {
-        std::println("Int: \"{}\"", operand);
-    } else if constexpr (std::is_same_v<T, char>) {
-        std::println("Char: \"{}\"", operand);
-    } else {
-        if (operand) {
-            std::println("");
-            print_ast_tree(*operand, depth, false, is_last);
-        } else {
-            std::println("nullptr");
-        }
-    }
+std::string ast_tree_to_string(const std::shared_ptr<T>& node, int depth, bool is_right, bool is_last) {
+    return ast_tree_to_string(*node, depth, is_right, is_last);
 }
 
+template<typename T>
+std::string ast_node_to_string(const T& operand, int depth, bool is_last) {
+    std::string result;
+
+    std::string indent(depth * 3, '.');
+    result += std::format("{}  {}", indent, (is_last ? "└── " : "├── "));
+
+    if constexpr (std::is_same_v<T, std::monostate>) {
+        result += "<noset>\n";
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        result += std::format("String: \"{}\"\n", operand);
+    } else if constexpr (std::is_same_v<T, int>) {
+        result += std::format("Int: \"{}\"\n", operand);
+    } else if constexpr (std::is_same_v<T, char>) {
+        result += std::format("Char: \"{}\"\n", operand);
+    } else if constexpr (is_stringifiable<T>) {
+        result += fil::to_string(operand) + "\n";
+    } else {
+        if (operand) {
+            result += std::format("\n{}", ast_tree_to_string(*operand, depth, is_last));
+        } else {
+            result += "nullptr\n";
+        }
+    }
+    return result;
+}
 } // namespace fil::copa::debug
 
 #endif // FIL_DEBUG_HH

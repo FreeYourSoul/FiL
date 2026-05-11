@@ -6,7 +6,7 @@
 #include "fil/copa/wrapper_utils.hh"
 #include "fil/meta/buffer_reader.hh"
 namespace {
-enum class op_comparator : int {
+enum class op_comparator {
     none,
     greater,
     greater_equal,
@@ -15,7 +15,7 @@ enum class op_comparator : int {
     equal,
     different,
 };
-enum class op_link : int {
+enum class op_link {
     none,
     or_,
     and_,
@@ -99,8 +99,8 @@ struct language_grammar {
     static constexpr auto rules() {
         return fil::copa::list_rule<fil::copa::or_rule<     //
             fil::copa::match_parser<base_language_grammar>, //
-            fil::copa::match_parser<link_grammar>,          //
-            fil::copa::match_parser<compare_grammar>        //
+            fil::copa::match_parser<compare_grammar>,       //
+            fil::copa::match_parser<link_grammar>           //
             >> {};
     }
     static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_node> {0}; }
@@ -152,63 +152,76 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa][single_run]")
         REQUIRE(std::holds_alternative<int>(result.value().rhs));
         CHECK(std::get<int>(result.value().rhs) == 10);
     }
-    //
-    // SECTION("parse: two variables with access compared") {
-    //     fil::buffer_reader reader("user.age == admin.age");
-    //
-    //     language_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     CHECK(result.value().value == op_comparator::equal);
-    //
-    //     auto lhs_var = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs_var != nullptr);
-    //     auto lhs = std::get<variable>(lhs_var->leaf);
-    //     CHECK(lhs.variable_name == "user");
-    //     CHECK(lhs.access.value() == "age");
-    //
-    //     auto rhs_var = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
-    //     REQUIRE(rhs_var != nullptr);
-    //     auto rhs = std::get<variable>(rhs_var->leaf);
-    //     CHECK(rhs.variable_name == "admin");
-    //     CHECK(rhs.access.value() == "age");
-    // }
-    //
-    // SECTION("parse: variable with access in logical AND") {
-    //     fil::buffer_reader reader("user.active == 1 && user.banned != 1");
-    //
-    //     language_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     // Top level should be AND
-    //     CHECK(result.value().value == op_link::and_);
-    //
-    //     // Left side: user.active == 1
-    //     auto lhs_eq = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs_eq != nullptr);
-    //     CHECK(lhs_eq->value == op_comparator::equal);
-    //     auto lhs_var = std::get<std::shared_ptr<ast_node>>(lhs_eq->lhs);
-    //     REQUIRE(lhs_var != nullptr);
-    //     auto lhs = std::get<variable>(lhs_var->leaf);
-    //     CHECK(lhs.variable_name == "user");
-    //     CHECK(lhs.access.value() == "active");
-    //     CHECK(std::get<int>(lhs_eq->rhs) == 1);
-    //
-    //     // Right side: user.banned != 1
-    //     auto rhs_neq = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
-    //     REQUIRE(rhs_neq != nullptr);
-    //     CHECK(rhs_neq->value == op_comparator::different);
-    //     auto rhs_var = std::get<std::shared_ptr<ast_node>>(rhs_neq->lhs);
-    //     REQUIRE(rhs_var != nullptr);
-    //     auto rhs = std::get<variable>(rhs_var->leaf);
-    //     CHECK(rhs.variable_name == "user");
-    //     CHECK(rhs.access.value() == "banned");
-    //     CHECK(std::get<int>(rhs_neq->rhs) == 1);
-    // }
+
+    SECTION("parse: two variables with access compared") {
+        fil::buffer_reader reader("user.age == admin.age");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        REQUIRE(std::holds_alternative<op_comparator>(result.value().value));
+        CHECK(std::get<op_comparator>(result.value().value) == op_comparator::equal);
+
+        REQUIRE(std::holds_alternative<variable>(result.value().lhs));
+        const auto lhs_var = std::get<variable>(result.value().lhs);
+        CHECK(lhs_var.variable_name == "user");
+        REQUIRE(lhs_var.access.has_value());
+        CHECK(lhs_var.access.value() == "age");
+
+        REQUIRE(std::holds_alternative<variable>(result.value().rhs));
+        const auto rhs_var = std::get<variable>(result.value().rhs);
+        CHECK(rhs_var.variable_name == "admin");
+        REQUIRE(lhs_var.access.has_value());
+        CHECK(rhs_var.access.value() == "age");
+    }
+
+    SECTION("parse: variable with access in logical AND") {
+        fil::buffer_reader reader("user.active == 1 && user.banned != 1");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        //            &&
+        //          /    \
+        //         ==     !=
+        //       /   \    |   \
+        //      /     1   |    1
+        // user.active    user.banned
+        //
+
+        // Top level should be AND
+        // REQUIRE(std::holds_alternative<op_link>(result.value().value));
+        // CHECK(std::get<op_link>(result.value().value) == op_link::and_);
+
+        // Left side: user.active == 1
+        // const auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        // REQUIRE(lhs != nullptr);
+        // REQUIRE(std::holds_alternative<op_comparator>(lhs->value));
+        // CHECK(std::get<op_comparator>(lhs->value) == op_comparator::equal);
+        //
+        // const auto lhs_eq = std::get<variable>(lhs->lhs);
+        // CHECK(lhs_eq.variable_name == "user");
+        // CHECK(lhs_eq.access.has_value());
+        // CHECK(lhs_eq.access.value() == "active");
+        //
+        // CHECK(std::holds_alternative<int>(lhs->rhs));
+        // CHECK(std::get<int>(lhs->rhs) == 1);
+        //
+        // // Right side: user.banned != 1
+        // const auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        // REQUIRE(rhs != nullptr);
+        // REQUIRE(std::holds_alternative<op_comparator>(rhs->value));
+        // CHECK(std::get<op_comparator>(rhs->value) == op_comparator::different);
+        //
+        // const auto rhs_diff = std::get<variable>(rhs->lhs);
+        // CHECK(rhs_diff.variable_name == "user");
+        // CHECK(rhs_diff.access.has_value());
+        // CHECK(rhs_diff.access.value() == "banned");
+        //
+        // CHECK(std::holds_alternative<int>(rhs->rhs));
+        // CHECK(std::get<int>(lhs->rhs) == 1);
+    }
     //
     // SECTION("parse: variable with access in logical OR") {
     //     fil::buffer_reader reader("config.debug == 1 || config.verbose == 1");

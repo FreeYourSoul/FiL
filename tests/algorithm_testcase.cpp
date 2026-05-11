@@ -202,7 +202,7 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
         REQUIRE(1 == counter);
         REQUIRE("this" == value);
 
-    } // End section : basic split_string test
+    } // End section: basic split_string test
 
     SECTION("split_string no occurrence") {
 
@@ -321,11 +321,53 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
 
 } // end testcase : algorithm_testcase string
 
-TEST_CASE("Basic use case of fil::to_string", "[algorithm]") {
+namespace {
+struct complex {
+    std::string name;
+    std::string value;
+};
+
+struct composed_complex {
+    std::vector<complex> values;
+};
+
+} // namespace
+
+namespace fil {
+template<>
+std::string to_string(const complex& elem) {
+    return std::format("complex[name: {}, value: {}]", elem.name, elem.value);
+}
+
+template<>
+std::string to_string(const composed_complex& elem) {
+    return std::format("composed_complex#{}", fil::to_string(elem.values));
+}
+
+} // namespace fil
+
+TEST_CASE("fil algorihm to_string", "[algorithm]") {
 
     CHECK(fil::to_string(43) == "43");
+    CHECK(fil::to_string(43.42) == "43.42");
     CHECK(fil::to_string("chocobo") == "chocobo");
     CHECK(fil::to_string(std::string_view {"chocobo"}) == "chocobo");
     CHECK(fil::to_string(std::vector<int> {1, 2, 3}) == "[1, 2, 3]");
     CHECK(fil::to_string(std::vector<std::string> {"chocobo", "cloud", "ifrit"}) == "[chocobo, cloud, ifrit]");
+
+    SECTION("simple structure") {
+        CHECK(fil::to_string(complex {.name = "chocobo", .value = "cloud"}) == "complex[name: chocobo, value: cloud]");
+        CHECK(fil::to_string(std::vector<complex> {
+                  complex {.name = "chocobo", .value = "cloud"},
+                   complex {.name = "ifrit",   .value = "cloud"}
+        })
+              == "[complex[name: chocobo, value: cloud], complex[name: ifrit, value: cloud]]");
+    }
+
+    SECTION("composed structure") {
+        CHECK(fil::to_string(composed_complex {
+                  .values = {complex {.name = "chocobo", .value = "cloud"}, complex {.name = "ifrit", .value = "cloud"}}
+        })
+              == "composed_complex#[complex[name: chocobo, value: cloud], complex[name: ifrit, value: cloud]]");
+    }
 }

@@ -1,8 +1,6 @@
 #ifndef FIL_SINK_HH
 #define FIL_SINK_HH
 
-#include "debug.hh"
-
 #include <memory>
 #include <variant>
 

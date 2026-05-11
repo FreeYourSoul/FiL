@@ -320,3 +320,12 @@ TEST_CASE("algorithm_testcase string", "[algorithm]") {
     }
 
 } // end testcase : algorithm_testcase string
+
+TEST_CASE("Basic use case of fil::to_string", "[algorithm]") {
+
+    CHECK(fil::to_string(43) == "43");
+    CHECK(fil::to_string("chocobo") == "chocobo");
+    CHECK(fil::to_string(std::string_view {"chocobo"}) == "chocobo");
+    CHECK(fil::to_string(std::vector<int> {1, 2, 3}) == "[1, 2, 3]");
+    CHECK(fil::to_string(std::vector<std::string> {"chocobo", "cloud", "ifrit"}) == "[chocobo, cloud, ifrit]");
+}

@@ -95,7 +95,8 @@ inline std::string join(const std::vector<std::string>& to_join, const std::stri
     return result;
 }
 
-template<fil::to_string_able Element> std::string join(const std::vector<Element>& to_join, const std::string& separator = "") {
+template<fil::to_string_able Element>
+std::string join(const std::vector<Element>& to_join, const std::string& separator = "") {
     using namespace std;
     std::string result;
 
@@ -117,6 +118,45 @@ inline void ltrim(std::string& s) {
 
 inline void rtrim(std::string& s) {
     s.erase(std::ranges::find_if(s.rbegin(), s.rend(), [](auto ch) { return !std::isspace(ch); }).base(), s.end());
+}
+
+template<typename T>
+requires requires(T d) {
+    requires std::is_integral_v<std::decay_t<T>>;
+    { std::to_string(d) } -> std::convertible_to<std::string>;
+}
+[[nodiscard]] std::string to_string(const T& elem) {
+    return std::to_string(elem);
+}
+
+template<typename T>
+requires requires(T d) {
+    requires std::is_same_v<std::decay_t<T>, std::string>                                 //
+                 || (std::is_array_v<T> && std::is_same_v<std::remove_extent_t<T>, char>) //
+                 || std::is_same_v<std::decay_t<T>, std::string_view>                     //
+                 || std::is_same_v<std::decay_t<T>, std::string>;
+}
+[[nodiscard]] std::string to_string(const T& elem) {
+    return std::string(elem);
+}
+
+template<typename T>
+requires requires(T d) {
+    requires std::ranges::range<T>;
+    requires !(std::is_array_v<T> && std::is_same_v<std::remove_extent_t<T>, char>);
+    requires !std::is_same_v<std::decay_t<T>, std::string>;
+    requires !std::is_same_v<std::decay_t<T>, std::string_view>;
+}
+[[nodiscard]] std::string to_string(const T& elems) {
+    return std::ranges::fold_left( //
+               elems, std::string {"["},
+               [start = true](std::string acc, auto&& elem) mutable {
+                   if (!start)
+                       acc += ", ";
+                   start = false;
+                   return acc + to_string(elem);
+               })
+         + "]";
 }
 
 } // namespace fil

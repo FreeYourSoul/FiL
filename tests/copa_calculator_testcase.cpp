@@ -89,11 +89,6 @@ template<>
     std::unreachable();
 }
 
-template<>
-[[nodiscard]] std::string to_string(const ast_node& elem) {
-    return fil::copa::debug::ast_tree_to_string(elem);
-}
-
 } // namespace fil
 
 TEST_CASE("Copa: calculator parsing", "[copa][calculator]") {

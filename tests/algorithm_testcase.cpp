@@ -331,6 +331,13 @@ struct composed_complex {
     std::vector<complex> values;
 };
 
+struct composed_complex_2 {
+    std::string name;
+    std::string value;
+
+    [[nodiscard]] std::string to_string() const { return std::format("composed_complex_2[name: {}, value: {}]", name, value); }
+};
+
 } // namespace
 
 namespace fil {
@@ -369,5 +376,10 @@ TEST_CASE("fil algorihm to_string", "[algorithm]") {
                   .values = {complex {.name = "chocobo", .value = "cloud"}, complex {.name = "ifrit", .value = "cloud"}}
         })
               == "composed_complex#[complex[name: chocobo, value: cloud], complex[name: ifrit, value: cloud]]");
+    }
+
+    SECTION("composed structure with to_string member") {
+        CHECK(fil::to_string(composed_complex_2 {.name = "chocobo", .value = "cloud"})
+              == "composed_complex_2[name: chocobo, value: cloud]");
     }
 }

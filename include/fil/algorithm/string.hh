@@ -144,6 +144,14 @@ template<>
 
 template<typename T>
 requires requires(T d) {
+    { d.to_string() } -> std::convertible_to<std::string>;
+}
+[[nodiscard]] std::string to_string(const T& elem) {
+    return elem.to_string();
+}
+
+template<typename T>
+requires requires(T d) {
     requires(std::is_array_v<T> && std::is_same_v<std::remove_extent_t<T>, char>); //
 }
 [[nodiscard]] std::string to_string(const T& elem) {

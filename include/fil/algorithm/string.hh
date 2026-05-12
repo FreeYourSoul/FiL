@@ -34,92 +34,6 @@
 
 namespace fil {
 
-template<typename Handler>
-void split_string(const std::string& input, const std::string& separator, Handler&& handler, int limitation = -1) {
-
-    std::size_t pos_start = 0;
-    std::size_t pos_end;
-
-    do {
-        if (limitation != -1 && --limitation <= 0) {
-            pos_end = std::string::npos;
-        } else {
-            pos_end = input.find(separator, pos_start);
-        }
-        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
-        pos_start = pos_end + separator.size();
-    } while (pos_end != std::string::npos);
-}
-
-template<typename Handler>
-void split_string(const std::string& input, const std::vector<std::string>& separators, Handler&& handler, int limitation = -1) {
-
-    std::size_t pos_start = 0;
-    std::size_t pos_end;
-    std::vector<std::size_t> tmp;
-
-    tmp.resize(separators.size());
-    do {
-        for (std::uint32_t i = 0; i < separators.size(); ++i) {
-            auto v = input.find(separators.at(i), pos_start);
-            tmp[i] = (v == std::string::npos) ? input.size() : v;
-        }
-        std::size_t index = std::distance(tmp.begin(), std::min_element(tmp.begin(), tmp.end()));
-        if (limitation != -1 && --limitation <= 0) {
-            pos_end = input.size();
-        } else {
-            pos_end = tmp[index];
-        }
-        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
-        pos_start = pos_end + separators[index].size();
-
-    } while (pos_end < input.size());
-}
-
-inline std::string join(const std::vector<std::string>& to_join, const std::string& separator = "") {
-    auto size = separator.size() * to_join.size()
-              + std::accumulate(to_join.begin(), to_join.end(), 0, [](auto v, const auto& j) { return v + j.size(); });
-
-    std::string result;
-    result.reserve(size);
-
-    bool first = true;
-    for (const auto& j : to_join) {
-        if (first) {
-            first = false;
-        } else {
-            result.append(separator);
-        }
-        result.append(j);
-    }
-    return result;
-}
-
-template<fil::to_string_able Element>
-std::string join(const std::vector<Element>& to_join, const std::string& separator = "") {
-    using namespace std;
-    std::string result;
-
-    bool first = true;
-    for (const auto& j : to_join) {
-        if (first) {
-            first = false;
-        } else {
-            result.append(separator);
-        }
-        result.append(to_string(j));
-    }
-    return result;
-}
-
-inline void ltrim(std::string& s) {
-    s.erase(s.begin(), std::ranges::find_if(s, [](auto ch) { return !std::isspace(ch); }));
-}
-
-inline void rtrim(std::string& s) {
-    s.erase(std::ranges::find_if(s.rbegin(), s.rend(), [](auto ch) { return !std::isspace(ch); }).base(), s.end());
-}
-
 template<typename T>
 [[nodiscard]] std::string to_string(const T& elems) = delete ("A specialization of fil::to_string for the type must be provided for type");
 
@@ -181,6 +95,66 @@ template<typename T>
 concept is_stringifiable = requires(const T& elem) {
     { fil::to_string(elem) } -> std::convertible_to<std::string>;
 };
+
+template<typename Handler>
+void split_string(const std::string& input, const std::string& separator, Handler&& handler, int limitation = -1) {
+
+    std::size_t pos_start = 0;
+    std::size_t pos_end;
+
+    do {
+        if (limitation != -1 && --limitation <= 0) {
+            pos_end = std::string::npos;
+        } else {
+            pos_end = input.find(separator, pos_start);
+        }
+        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
+        pos_start = pos_end + separator.size();
+    } while (pos_end != std::string::npos);
+}
+
+template<typename Handler>
+void split_string(const std::string& input, const std::vector<std::string>& separators, Handler&& handler, int limitation = -1) {
+
+    std::size_t pos_start = 0;
+    std::size_t pos_end;
+    std::vector<std::size_t> tmp;
+
+    tmp.resize(separators.size());
+    do {
+        for (std::uint32_t i = 0; i < separators.size(); ++i) {
+            auto v = input.find(separators.at(i), pos_start);
+            tmp[i] = (v == std::string::npos) ? input.size() : v;
+        }
+        std::size_t index = std::distance(tmp.begin(), std::min_element(tmp.begin(), tmp.end()));
+        if (limitation != -1 && --limitation <= 0) {
+            pos_end = input.size();
+        } else {
+            pos_end = tmp[index];
+        }
+        std::forward<Handler>(handler)(input.substr(pos_start, pos_end - pos_start));
+        pos_start = pos_end + separators[index].size();
+
+    } while (pos_end < input.size());
+}
+
+template<fil::is_stringifiable Element>
+std::string join(const std::vector<Element>& to_join, const std::string& separator = "") {
+    return std::ranges::fold_left(to_join, std::string {}, [&separator, start = true](auto acc, auto&& elem) mutable {
+        if (!start)
+            acc += separator;
+        start = false;
+        return acc + fil::to_string(elem);
+    });
+}
+
+inline void ltrim(std::string& s) {
+    s.erase(s.begin(), std::ranges::find_if(s, [](auto ch) { return !std::isspace(ch); }));
+}
+
+inline void rtrim(std::string& s) {
+    s.erase(std::ranges::find_if(s.rbegin(), s.rend(), [](auto ch) { return !std::isspace(ch); }).base(), s.end());
+}
 
 } // namespace fil
 

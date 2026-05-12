@@ -4,7 +4,7 @@
 #include <memory>
 #include <variant>
 
-#include "fil/copa/debug.hh"
+#include "fil/copa/debug_details.hh"
 #include "fil/copa/member.hh"
 #include "fil/meta/shallow_copy.hh"
 
@@ -194,7 +194,7 @@ struct ast_node {
     struct operand : callback<CallbackOp> {};
     struct leaf : callback<[](const std::string& value) { return value; }> {};
 
-    [[nodiscard]] std::string to_string() const { return debug::ast_tree_to_string(*this); }
+    [[nodiscard]] std::string to_string() const { return debug_details_::ast_tree_to_string(*this); }
 };
 
 } // namespace fil::copa

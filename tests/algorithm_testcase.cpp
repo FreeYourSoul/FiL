@@ -178,9 +178,9 @@ TEST_CASE("algorithm_testcase all_contains", "[algorithm]") {
 struct test_struct {
     int a;
     std::string b;
-};
 
-std::string to_string(const test_struct& d) { return std::to_string(d.a) + "::" + d.b; }
+    [[maybe_unused]] [[nodiscard]] std::string to_string() const { return std::format("{}::{}", std::to_string(a), b); }
+};
 
 TEST_CASE("algorithm_testcase string", "[algorithm]") {
     SECTION("basic split_string test") {
@@ -355,12 +355,31 @@ std::string to_string(const composed_complex& elem) {
 
 TEST_CASE("fil algorihm to_string", "[algorithm]") {
 
-    CHECK(fil::to_string(43) == "43");
-    CHECK(fil::to_string(43.42) == "43.42");
-    CHECK(fil::to_string("chocobo") == "chocobo");
-    CHECK(fil::to_string(std::string_view {"chocobo"}) == "chocobo");
-    CHECK(fil::to_string(std::vector<int> {1, 2, 3}) == "[1, 2, 3]");
-    CHECK(fil::to_string(std::vector<std::string> {"chocobo", "cloud", "ifrit"}) == "[chocobo, cloud, ifrit]");
+    // basic checks
+    static_assert(fil::is_stringifiable<int>, "integer shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::uint8_t>, "std::uint8_t shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::uint16_t>, "std::uint16_t shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::uint32_t>, "std::uint8_t shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::uint64_t>, "std::uint64_t shall be stringifiable");
+    static_assert(fil::is_stringifiable<double>, "integer shall be stringifiable");
+    static_assert(fil::is_stringifiable<float>, "integer shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::string>, "string shall be stringifiable");
+    static_assert(fil::is_stringifiable<std::string_view>, "string_view shall be stringifiable");
+    static_assert(fil::is_stringifiable<char[4]>, "char[] shall be stringifiable");
+
+    // custom checks
+    static_assert(fil::is_stringifiable<complex>, "custom with fil::to_string specialized shall be stringifiable");
+    static_assert(fil::is_stringifiable<composed_complex>, "custom with fil::to_string specialized shall be stringifiable");
+    static_assert(fil::is_stringifiable<composed_complex_2>, "custom with to_string implemented shall be stringifiable");
+
+    SECTION("simple test cases") {
+        CHECK(fil::to_string(43) == "43");
+        CHECK(fil::to_string(43.42) == "43.42");
+        CHECK(fil::to_string("chocobo") == "chocobo");
+        CHECK(fil::to_string(std::string_view {"chocobo"}) == "chocobo");
+        CHECK(fil::to_string(std::vector<int> {1, 2, 3}) == "[1, 2, 3]");
+        CHECK(fil::to_string(std::vector<std::string> {"chocobo", "cloud", "ifrit"}) == "[chocobo, cloud, ifrit]");
+    }
 
     SECTION("simple structure") {
         CHECK(fil::to_string(complex {.name = "chocobo", .value = "cloud"}) == "complex[name: chocobo, value: cloud]");

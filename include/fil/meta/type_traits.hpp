@@ -37,10 +37,8 @@ concept is_std_vector = requires(T t) {
 };
 
 template<typename T>
-concept to_string_able = requires(const T& elem) {
+concept std_stringifiable = requires(const T& elem) {
     { std::to_string(elem) } -> std::convertible_to<std::string>;
-} || requires(T elem) {
-    { to_string(elem) } -> std::convertible_to<std::string>;
 };
 
 template<typename T>

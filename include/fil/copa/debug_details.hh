@@ -31,7 +31,7 @@
 #include "fil/algorithm/string.hh"
 #include "fil/meta/type_traits.hpp"
 
-namespace fil::copa::debug {
+namespace fil::copa::debug_details_ {
 
 template<typename T>
 std::string ast_node_to_string(const T& operand, int depth, bool is_last);
@@ -88,7 +88,7 @@ std::string ast_node_to_string(const T& operand, int depth, bool is_last) {
     } else if constexpr (std::is_same_v<T, char>) {
         result += std::format("Char: \"{}\"\n", operand);
     } else if constexpr (is_stringifiable<T>) {
-        result += fil::to_string(operand) + "\n";
+        result += std::format("{}\n", fil::to_string(operand));
     } else {
         if (operand) {
             result += std::format("\n{}", ast_tree_to_string(*operand, depth, is_last));
@@ -98,6 +98,6 @@ std::string ast_node_to_string(const T& operand, int depth, bool is_last) {
     }
     return result;
 }
-} // namespace fil::copa::debug
+} // namespace fil::copa::debug_details_
 
 #endif // FIL_DEBUG_HH

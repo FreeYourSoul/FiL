@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "debug.hh"
 #include "fil/copa/copa.hh"
 #include "fil/copa/matcher.hh"
 #include "fil/copa/sink.hh"

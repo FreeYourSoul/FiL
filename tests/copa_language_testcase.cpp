@@ -418,13 +418,13 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
         REQUIRE(result.has_value());
         std::println("{}", fil::to_string(result.value()));
 
-        //             ||
-        //         /       \
+        //            ||
+        //         /      \
         //        ||        ==
         //      /    \     /  \
         //    >       <   c.z  chocobo
-        //   /  \   /   \
-        // a.x   5 b.y  10
+        //   / \     / \
+        // a.x  5  b.y  10
 
         // Top-level OR
         CHECK(std::holds_alternative<op_link>(result.value().value));

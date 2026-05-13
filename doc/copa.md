@@ -22,6 +22,12 @@ by composing simple rules and mapping them directly to C++ structures (AST objec
     - [Core Requirements](#core-requirements)
     - [The Shallow Copy Concept](#the-shallow-copy-concept)
     - [Implementation Steps](#implementation-steps)
+- [How Structural Parsing and AST Construction Interact](#how-structural-parsing-and-ast-construction-interact)
+    - [The Callback Mechanism](#the-callback-mechanism)
+    - [Shared Convertor Context in match_parser](#shared-convertor-context-in-match_parser)
+    - [Isolated Parsing with match_production](#isolated-parsing-with-match_production)
+    - [Worked Example: Parsing "1 + 2 * 3"](#worked-example-parsing-1--2--3)
+    - [Parenthesized Subexpressions](#parenthesized-subexpressions)
 - [AST Tree Generator](#ast-tree-generator)
     - [Overview](#overview)
     - [Core Concepts](#core-concepts)
@@ -333,6 +339,154 @@ struct shallow_copy<YourReaderType> {
 
 ---
 
+# How Structural Parsing and AST Construction Interact
+
+Structural parsing (rules and matchers) and AST construction (the convertor) are two separate concerns in Copa.
+Rules define **what** to match; the convertor defines **how to build** the result from what was matched. This section
+explains the internal data flow that connects them.
+
+## The Callback Mechanism
+
+Every matcher holds two template parameters: the string/character pattern to match, and a **member or callback** (`Mem`)
+that determines what happens with the matched value.
+
+When a matcher successfully completes, it immediately invokes the convertor:
+
+```c++
+ctx.convertor->operator()(ctx.convertor_ctx, Mem{}, matched_value);
+```
+
+The `Mem` type controls how the value is routed:
+
+| `Mem` type                                                 | Convertor behavior                                                      |
+|------------------------------------------------------------|-------------------------------------------------------------------------|
+| `member<&Struct::field>`                                   | Assigns the matched value to a struct field (used with `aggregator`)    |
+| Callback type (e.g. `ast_node::leaf`, `ast_node::operand`) | Invokes the callback to modify the AST (used with `ast_tree_generator`) |
+| `member_noop` (default)                                    | Does nothing — the value is discarded                                   |
+
+The **convertor context** (`ctx_extension`) persists across all matcher firings for a given parsing level. For
+`aggregator` this context is irrelevant. For `ast_tree_generator` it holds the tree nodes currently being
+assembled.
+
+## Shared Convertor Context in match_parser
+
+This is the critical integration point for expression parsing with multiple precedence levels.
+
+When `match_parser<Prod>` runs, it:
+
+1. Creates a **new convertor** from `Prod::convertor()` — the nested grammar's own convertor instance
+2. Passes the **same `ctx_extension` pointer** that belongs to the outer grammar's convertor
+3. Runs `Prod`'s rules to completion using that shared context
+4. Passes the result to the **outer convertor** via `Mem{}`
+
+Because the `ctx_extension` is shared, every `leaf` and `operand` callback fired by any of the nested grammars all
+write into the **same tree being assembled** by the outer grammar. The different `precedence` values on each nested
+convertor instance are what control how the tree is restructured:
+
+## Isolated Parsing with match_production
+
+`match_production<Prod, Mem>` provides a completely different integration model:
+
+1. It **shallow-copies** the current reader (cursor only, underlying data is shared)
+2. Creates a **fresh standalone parser** with its own convertor and its own `ctx_extension`
+3. Parses the input as an independent sub-expression
+4. Passes the **result** (not the context state) to the parent convertor via `Mem{}`
+5. Synchronizes the parent reader's cursor to the position after the consumed input
+
+This isolation means the sub-expression is parsed as a self-contained unit. When passed to the outer grammar's convertor
+via a `leaf` callback, the entire sub-tree becomes a single opaque node — exactly the right behavior for parenthesized
+expressions for example.
+
+## Worked Example: Parsing "1 + 2 * 3"
+
+Using the calculator grammar (level_1: prec=1 for `+`/`-`, level_2: prec=2 for `*`/`/`, base: prec=0 for operands):
+
+```
+Shared ctx_extension state progression:
+
+① match_parser<base_grammar> matches "1":
+    base convertor (prec=0) fires leaf(1)
+    → tmp_node = {lhs: 1}
+    ctx: {tmp_node:{lhs:1}, current:null, previous:null, prev_prec:0}
+
+② match_parser<level_1_grammar> matches "+":
+    level_1 convertor (prec=1) fires operand("+")
+    → first operator: current_node = previous_node = {op:+, lhs:1}
+    ctx: {tmp_node:null, current:{+,lhs:1}, previous:{+,lhs:1}, prev_prec:1}
+
+③ match_parser<base_grammar> matches "2":
+    base convertor (prec=0) fires leaf(2)
+    → tmp_node = {lhs: 2}
+    ctx: {tmp_node:{lhs:2}, current:{+,lhs:1}, previous:{+,lhs:1}}
+
+④ match_parser<level_2_grammar> matches "*":
+    level_2 convertor (prec=2) fires operand("*")
+    → prec(2) >= prev_prec(1): append to right of previous_node
+    → previous_node->rhs = {op:*, lhs:2}; previous_node = &{*,lhs:2}
+    ctx: {tmp_node:null, current:{+,lhs:1,rhs:{*,lhs:2}}, previous:{*,lhs:2}, prev_prec:2}
+
+⑤ match_parser<base_grammar> matches "3":
+    base convertor (prec=0) fires leaf(3)
+    → tmp_node = {lhs: 3}
+    ctx: {tmp_node:{lhs:3}, current:{+,lhs:1,rhs:{*,lhs:2}}, previous:{*,lhs:2}}
+
+⑥ End of input → convertor.value() called:
+    → previous_node->rhs = tmp_node->lhs  →  {*,lhs:2,rhs:3}
+
+Result:
+        +
+       / \
+      1   *
+         / \
+        2   3
+```
+
+The tree is built **in a single left-to-right pass**; no post-processing or separate rewriting step is needed.
+
+The same precedence logic produces a different shape for `"2 * 3 + 4"` — when a lower-precedence operator
+arrives after a higher-precedence one (step ④ in reverse), the algorithm rotates the tree:
+
+```
+After matching "2 * 3":
+    ctx: {current:{*,lhs:2}, previous:{*,lhs:2}, prev_prec:2, tmp_node:{lhs:3}}
+
+Matching "+", prec(1) < prev_prec(2): ROTATE
+    previous_node->rhs = tmp_node->lhs   →  {*,lhs:2,rhs:3}
+    tmp_node->lhs      = current_node    →  {+,lhs:{*,2,3}}
+    current_node = previous_node = tmp_node
+
+After matching "4" and calling value():
+        +
+       / \
+      *   4
+     / \
+    2   3
+```
+
+## Parenthesized Subexpressions
+
+Parentheses are handled by `match_production` in `base_grammar::rules()`:
+
+```c++
+constexpr auto base_grammar::rules() {
+    return fil::copa::match_number<ast_node::leaf> {}
+         | fil::copa::parenthesised(
+               fil::copa::match_production<expression_grammar, ast_node::leaf> {});
+}
+```
+
+When the parser encounters `(`:
+
+1. `match_production` shallow-copies the reader and spawns a fresh `expression_grammar` parser
+2. That parser builds its own complete sub-tree (e.g., `{+,lhs:1,rhs:2}` for `(1 + 2)`)
+3. The result is passed to `base_grammar`'s convertor as a **leaf** via `ast_node::leaf`
+4. The `leaf` handler wraps it in a `shared_ptr<ast_node>` and stores it in `tmp_node->lhs`
+
+From the outer tree's perspective, `(1 + 2)` is just a leaf — identical in position to a plain number. This is what
+gives parentheses their grouping power: they reset precedence context completely.
+
+---
+
 # AST Tree Generator
 
 ## Overview
@@ -608,18 +762,61 @@ int main() {
 }
 ```
 
-### Why use `match_production` for recursion?
+---
 
-In the `base_grammar::rules()` definition above, we use `match_production<calculator_grammar, ast_node::leaf>` for the
-recursive call instead of `match_parser`.
+## Advanced Features
 
-While `match_parser` is generally used to embed one production's rules into another, `match_production` is preferred for
-recursion because it:
+### Custom Node Value Types
 
-1. **Ensures Isolation**: It creates a fresh parser instance for the recursive call, ensuring that the nested
-   production's `convertor()` and `rules()` are handled as a standalone parsing operation.
-2. **Proper Backtracking**: It uses shallow copies of the reader to ensure that if the recursive parse fails, the reader
-   state is correctly restored before trying other alternatives in the `or_rule`.
+By default, `ast_node` stores leaves as `std::string`, `int`, or `char`. You can extend this with additional types
+by providing extra template arguments:
+
+```c++
+struct MyFloat {};
+
+using ast_node = fil::copa::ast_node<
+    [](const std::string& token) -> op { /* ... */ },
+    MyFloat,         // added to the node_type variant
+    double           // also added
+>;
+
+// The node_type variant now includes: monostate, shared_ptr<ast_node>, string, int, char, MyFloat, double
+```
+
+This is useful when your grammar needs to store typed leaf values beyond the built-in set.
+
+### Debugging: to_string()
+
+`ast_node` provides a `to_string()` method for visualizing the tree structure during development:
+
+```c++
+auto result = fil::copa::parse(expression_grammar{}, std::move(reader));
+if (result) {
+    // Prints a human-readable representation of the entire AST
+    std::println("{}", result.value().to_string());
+}
+```
+
+The output format is also accessible via `fil::to_string(result.value())` if you specialize
+`fil::to_string` for your operator enum, as shown in the calculator test.
+
+### Designing the Operator Callback
+
+The `CallbackOp` lambda passed to `ast_node` is invoked once per operator token. Keep it lightweight — it is called
+during parsing, not as a post-processing step. A `switch` on a pre-tokenized enum is the typical pattern:
+
+```c++
+using ast_node = fil::copa::ast_node<[](const std::string& token) -> op {
+    if (token == "+") return op::PLUS;
+    if (token == "-") return op::MINUS;
+    if (token == "*") return op::MULTIPLY;
+    if (token == "/") return op::DIVIDE;
+    return op::INVALID;    // always handle the unknown case
+}>;
+```
+
+> Avoid any operation that could fail or throw inside the callback: parsing does not have a recovery mechanism at that
+> point.
 
 ---
 

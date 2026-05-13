@@ -149,7 +149,7 @@ template<>
 
 } // namespace fil
 
-TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa][single_run]") {
+TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     SECTION("parse: simple variable with access") {
         fil::buffer_reader reader("obj.field == 42");
 
@@ -265,110 +265,225 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa][single_run]")
     }
 
     SECTION("parse: variable with access in logical OR") {
-        // fil::buffer_reader reader("config.debug == 1 || config.verbose == 1");
+        fil::buffer_reader reader("config.debug == 1337 || config.verbose == 42");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+
+        std::println("{}", fil::to_string(result.value()));
+
+        //            ||
+        //          /    \
+        //         ==      ==
+        //       /   \    |   \
+        //      /   1337  |    1
+        // user.debug    user.verbose
         //
-        // language_grammar g;
-        // const auto result = fil::copa::parse(g, std::move(reader));
-        // REQUIRE(result.has_value());
-        //
-        // CHECK(result.value().value == op_link::or_);
-        //
-        // auto lhs_eq = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-        // REQUIRE(lhs_eq != nullptr);
-        // CHECK(lhs_eq->value == op_comparator::equal);
-        // auto lhs_var = std::get<std::shared_ptr<ast_node>>(lhs_eq->lhs);
-        // auto lhs     = std::get<variable>(lhs_var->leaf);
-        // CHECK(lhs.variable_name == "config");
-        // CHECK(lhs.access.value() == "debug");
-        //
-        // auto rhs_eq = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
-        // REQUIRE(rhs_eq != nullptr);
-        // CHECK(rhs_eq->value == op_comparator::equal);
-        // auto rhs_var = std::get<std::shared_ptr<ast_node>>(rhs_eq->lhs);
-        // auto rhs     = std::get<variable>(rhs_var->leaf);
-        // CHECK(rhs.variable_name == "config");
-        // CHECK(rhs.access.value() == "verbose");
+
+        REQUIRE(std::holds_alternative<op_link>(result.value().value));
+        CHECK(std::get<op_link>(result.value().value) == op_link::or_);
+
+        const auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(lhs->value));
+        CHECK(std::get<op_comparator>(lhs->value) == op_comparator::equal);
+
+        REQUIRE(std::holds_alternative<variable>(lhs->lhs));
+        const auto lhs1_var = std::get<variable>(lhs->lhs);
+        CHECK(lhs1_var.variable_name == "config");
+        REQUIRE(lhs1_var.access.has_value());
+        CHECK(lhs1_var.access.value() == "debug");
+
+        REQUIRE(std::holds_alternative<int>(lhs->rhs));
+        CHECK(std::get<int>(lhs->rhs) == 1337);
+
+        const auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(rhs != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(rhs->value));
+        CHECK(std::get<op_comparator>(rhs->value) == op_comparator::equal);
+        REQUIRE(std::holds_alternative<variable>(rhs->lhs));
+        const auto lhs2_var = std::get<variable>(rhs->lhs);
+        CHECK(lhs2_var.variable_name == "config");
+        REQUIRE(lhs2_var.access.has_value());
+        CHECK(lhs2_var.access.value() == "verbose");
+
+        REQUIRE(std::holds_alternative<int>(rhs->rhs));
+        CHECK(std::get<int>(rhs->rhs) == 42);
     }
 
-    // SECTION("parse: complex expression with variables and numbers") {
-    //     fil::buffer_reader reader("data.threshold > 100 && status.code != 0");
-    //
-    //     language_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     CHECK(result.value().value == op_link::and_);
-    //
-    //     auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs != nullptr);
-    //     CHECK(lhs->value == op_comparator::greater);
-    //     auto lhs_var = std::get<std::shared_ptr<ast_node>>(lhs->lhs);
-    //     auto var1    = std::get<variable>(lhs_var->leaf);
-    //     CHECK(var1.variable_name == "data");
-    //     CHECK(var1.access.value() == "threshold");
-    //     CHECK(std::get<int>(lhs->rhs) == 100);
-    //
-    //     auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
-    //     REQUIRE(rhs != nullptr);
-    //     CHECK(rhs->value == op_comparator::different);
-    //     auto rhs_var = std::get<std::shared_ptr<ast_node>>(rhs->lhs);
-    //     auto var2    = std::get<variable>(rhs_var->leaf);
-    //     CHECK(var2.variable_name == "status");
-    //     CHECK(var2.access.value() == "code");
-    //     CHECK(std::get<int>(rhs->rhs) == 0);
-    // }
-    //
-    // SECTION("parse: variable with access in parentheses") {
-    //     fil::buffer_reader reader("(obj.value > 5) && count < 10");
-    //
-    //     language_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     CHECK(result.value().value == op_link::and_);
-    //
-    //     auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs != nullptr);
-    //     // Parenthesised expression wrapped
-    //     auto lhs_comparison = std::get<std::shared_ptr<ast_node>>(lhs->lhs);
-    //     REQUIRE(lhs_comparison != nullptr);
-    //     CHECK(lhs_comparison->value == op_comparator::greater);
-    //     auto var = std::get<variable>(std::get<std::shared_ptr<ast_node>>(lhs_comparison->lhs)->leaf);
-    //     CHECK(var.variable_name == "obj");
-    //     CHECK(var.access.value() == "value");
-    //     CHECK(std::get<int>(lhs_comparison->rhs) == 5);
-    // }
-    //
-    // SECTION("parse: multiple variables with access in chain") {
-    //     fil::buffer_reader reader("a.x > 5 || b.y < 10 || c.z == 0");
-    //
-    //     language_grammar g;
-    //     const auto result = fil::copa::parse(g, std::move(reader));
-    //     REQUIRE(result.has_value());
-    //     fil::copa::debug::print_ast_tree(result.value());
-    //
-    //     // Top-level OR
-    //     CHECK(std::holds_alternative<op_link>(result.value().value));
-    //     CHECK(std::get<op_link>(result.value().value) == op_link::or_);
-    //
-    //     // Left: a.x > 5
-    //     auto lhs_or = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
-    //     REQUIRE(lhs_or != nullptr);
-    //     CHECK(std::holds_alternative<op_comparator>(lhs_or->value));
-    //     CHECK(std::get<op_comparator>(lhs_or->value) == op_comparator::greater);
-    //
-    //     CHECK(std::holds_alternative<std::shared_ptr<ast_node>>(lhs_or->lhs));
-    //     auto var_a = std::get<variable>(std::get<std::shared_ptr<ast_node>>(lhs_or->lhs));
-    //     CHECK(var_a.variable_name == "a");
-    //     CHECK(var_a.access.value() == "x");
-    //
-    //     // Right: nested OR
-    //     auto rhs_or = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
-    //     REQUIRE(rhs_or != nullptr);
-    //     CHECK(rhs_or->value == op_link::or_);
-    //     CHECK(std::get<std::shared_ptr<ast_node>>(rhs_or->lhs)->value == op_comparator::less);
-    //     CHECK(std::get<std::shared_ptr<ast_node>>(rhs_or->rhs)->value == op_comparator::equal);
-    // }
+    SECTION("parse: complex expression with variables and numbers") {
+        fil::buffer_reader reader("data.threshold > 100 && 0 != status.code");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        std::println("{}", fil::to_string(result.value()));
+
+        //            &&
+        //          /    \
+        //         >       !=
+        //       /   \    |   \
+        //      /    100   \    status.code
+        // data.threshold   0
+        //
+
+        REQUIRE(std::holds_alternative<op_link>(result.value().value));
+        CHECK(std::get<op_link>(result.value().value) == op_link::and_);
+
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(lhs->value));
+        CHECK(std::get<op_comparator>(lhs->value) == op_comparator::greater);
+
+        REQUIRE(std::holds_alternative<variable>(lhs->lhs));
+        const auto lhs_var = std::get<variable>(lhs->lhs);
+        CHECK(lhs_var.variable_name == "data");
+        REQUIRE(lhs_var.access.has_value());
+        CHECK(lhs_var.access.value() == "threshold");
+        REQUIRE(std::holds_alternative<int>(lhs->rhs));
+        CHECK(std::get<int>(lhs->rhs) == 100);
+
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        const auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(rhs != nullptr);
+        CHECK(std::holds_alternative<op_comparator>(rhs->value));
+        CHECK(std::get<op_comparator>(rhs->value) == op_comparator::different);
+
+        REQUIRE(std::holds_alternative<variable>(rhs->rhs));
+        const auto rhs_var = std::get<variable>(rhs->rhs);
+        CHECK(rhs_var.variable_name == "status");
+        CHECK(rhs_var.access.value() == "code");
+
+        REQUIRE(std::holds_alternative<int>(rhs->lhs));
+        CHECK(std::get<int>(rhs->lhs) == 0);
+    }
+
+    SECTION("parse: variable with access in parentheses") {
+        fil::buffer_reader reader("(obj.value > 5 || 42) && count < 10");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        std::println("{}", fil::to_string(result.value()));
+
+        REQUIRE(std::holds_alternative<op_link>(result.value().value));
+        CHECK(std::get<op_link>(result.value().value) == op_link::and_);
+
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        const auto lhs = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs != nullptr);
+
+        REQUIRE(std::holds_alternative<op_link>(lhs->value));
+        CHECK(std::get<op_link>(lhs->value) == op_link::or_);
+
+        // Parenthesised expression wrapped LHS
+        const auto lhs_parenthesis_expr = std::get<std::shared_ptr<ast_node>>(lhs->lhs);
+        REQUIRE(lhs_parenthesis_expr != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(lhs_parenthesis_expr->value));
+        CHECK(std::get<op_comparator>(lhs_parenthesis_expr->value) == op_comparator::greater);
+
+        REQUIRE(std::holds_alternative<variable>(lhs_parenthesis_expr->lhs));
+        const auto rhs_var = std::get<variable>(lhs_parenthesis_expr->lhs);
+        CHECK(rhs_var.variable_name == "obj");
+        CHECK(rhs_var.access.has_value());
+        CHECK(rhs_var.access.value() == "value");
+
+        REQUIRE(std::holds_alternative<int>(lhs_parenthesis_expr->rhs));
+        CHECK(std::get<int>(lhs_parenthesis_expr->rhs) == 5);
+
+        REQUIRE(std::holds_alternative<int>(lhs->rhs));
+        CHECK(std::get<int>(lhs->rhs) == 42);
+
+        // RHS
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        const auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(rhs != nullptr);
+
+        REQUIRE(std::holds_alternative<variable>(rhs->lhs));
+        const auto rhs_lhs_less_var = std::get<variable>(rhs->lhs);
+        CHECK(rhs_lhs_less_var.variable_name == "count");
+        CHECK(!rhs_lhs_less_var.access.has_value());
+
+        REQUIRE(std::holds_alternative<int>(rhs->rhs));
+        CHECK(std::get<int>(rhs->rhs) == 10);
+    }
+
+    SECTION("parse: multiple variables with access in chain") {
+        fil::buffer_reader reader("a.x > 5 || b.y < 10 || c.z == chocobo");
+
+        language_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        std::println("{}", fil::to_string(result.value()));
+
+        //             ||
+        //         /       \
+        //        ||        ==
+        //      /    \     /  \
+        //    >       <   c.z  chocobo
+        //   /  \   /   \
+        // a.x   5 b.y  10
+
+        // Top-level OR
+        CHECK(std::holds_alternative<op_link>(result.value().value));
+        CHECK(std::get<op_link>(result.value().value) == op_link::or_);
+
+        // Left: a.x > 5 || b.y < 10
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().lhs));
+        auto lhs_or = std::get<std::shared_ptr<ast_node>>(result.value().lhs);
+        REQUIRE(lhs_or != nullptr);
+        CHECK(std::holds_alternative<op_link>(lhs_or->value));
+        CHECK(std::get<op_link>(lhs_or->value) == op_link::or_);
+
+        // Left_Left : a.x > 5
+        auto lhs_left = std::get<std::shared_ptr<ast_node>>(lhs_or->lhs);
+        REQUIRE(lhs_left != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(lhs_left->value));
+        CHECK(std::get<op_comparator>(lhs_left->value) == op_comparator::greater);
+
+        REQUIRE(std::holds_alternative<variable>(lhs_left->lhs));
+        const auto axVar = std::get<variable>(lhs_left->lhs);
+        CHECK(axVar.variable_name == "a");
+        REQUIRE(axVar.access.has_value());
+        CHECK(axVar.access.value() == "x");
+
+        REQUIRE(std::holds_alternative<int>(lhs_left->rhs));
+        CHECK(std::get<int>(lhs_left->rhs) == 5);
+
+        // Left_Right : b.y < 10
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        auto lhs_right = std::get<std::shared_ptr<ast_node>>(lhs_or->rhs);
+        REQUIRE(lhs_right != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(lhs_right->value));
+        CHECK(std::get<op_comparator>(lhs_right->value) == op_comparator::less);
+
+        REQUIRE(std::holds_alternative<variable>(lhs_right->lhs));
+        const auto byVar = std::get<variable>(lhs_right->lhs);
+        CHECK(byVar.variable_name == "b");
+        REQUIRE(byVar.access.has_value());
+        CHECK(byVar.access.value() == "y");
+
+        REQUIRE(std::holds_alternative<int>(lhs_right->rhs));
+        CHECK(std::get<int>(lhs_right->rhs) == 10);
+
+        // Right : c.z == chocobo
+        REQUIRE(std::holds_alternative<std::shared_ptr<ast_node>>(result.value().rhs));
+        auto rhs = std::get<std::shared_ptr<ast_node>>(result.value().rhs);
+        REQUIRE(rhs != nullptr);
+        REQUIRE(std::holds_alternative<op_comparator>(rhs->value));
+        CHECK(std::get<op_comparator>(rhs->value) == op_comparator::equal);
+
+        REQUIRE(std::holds_alternative<variable>(rhs->lhs));
+        const auto czVar = std::get<variable>(rhs->lhs);
+        CHECK(czVar.variable_name == "c");
+        REQUIRE(czVar.access.has_value());
+        CHECK(czVar.access.value() == "z");
+
+        REQUIRE(std::holds_alternative<variable>(rhs->rhs));
+        const auto chocobo = std::get<variable>(rhs->rhs);
+        CHECK(chocobo.variable_name == "chocobo");
+        CHECK(!chocobo.access.has_value());
+    }
 }

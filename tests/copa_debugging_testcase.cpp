@@ -5,6 +5,8 @@
 #include "fil/copa/member.hh"
 #include "fil/copa/sink.hh"
 #include "fil/copa/wrapper_utils.hh"
+#include "fil/file/file_reader.hh"
+#include "fil/file/temporary.hh"
 #include "fil/meta/buffer_reader.hh"
 #include "fil/meta/visit_utils.hh"
 
@@ -147,5 +149,101 @@ TEST_CASE("copa : debugging info in aggregator", "[copa]") {
         REQUIRE(result.has_value());
         CHECK(result->copa_debug_info.line == 1);
         CHECK(result->copa_debug_info.cursor > 0);
+    }
+}
+
+TEST_CASE("copa : debugging info in aggregator (file_reader)", "[copa]") {
+
+    SECTION("aggregator: copa_debug_info populated when parsing from a file") {
+        struct grammar_with_debug {
+            struct ast_object {
+                std::string value;
+                fil::copa::debug_info copa_debug_info;
+            };
+            static constexpr auto rules() { return fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {}; }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        const fil::temporary_file tmp("hello ");
+        fil::file_reader reader(tmp);
+        grammar_with_debug grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->value == "hello");
+        CHECK(result->copa_debug_info.line == 1);
+        CHECK(result->copa_debug_info.cursor > 0);
+    }
+
+    SECTION("aggregator: no copa_debug_info member - no-op, file parse still succeeds") {
+        struct grammar_no_debug {
+            struct ast_object {
+                std::string value;
+            };
+            static constexpr auto rules() { return fil::copa::match_identifier<fil::copa::member<&ast_object::value>> {}; }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        const fil::temporary_file tmp("hello ");
+        fil::file_reader reader(tmp);
+        grammar_no_debug grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->value == "hello");
+    }
+
+    SECTION("aggregator: copa_debug_info line reflects multiline file") {
+        struct grammar_multiline {
+            struct ast_object {
+                std::string first;
+                std::string second;
+                fil::copa::debug_info copa_debug_info;
+            };
+            static constexpr auto rules() {
+                return fil::copa::match_identifier<fil::copa::member<&ast_object::first>> {}
+                     + fil::copa::match_identifier<fil::copa::member<&ast_object::second>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        const fil::temporary_file tmp("foo\nbar ");
+        fil::file_reader reader(tmp);
+        grammar_multiline grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->first == "foo");
+        CHECK(result->second == "bar");
+        CHECK(result->copa_debug_info.line >= 2);
+    }
+
+    SECTION("aggregator: copa_debug_info cursor reflects position in file") {
+        struct grammar_sequence {
+            struct ast_object {
+                std::string first;
+                std::string second;
+                std::string third;
+                fil::copa::debug_info copa_debug_info;
+            };
+            static constexpr auto rules() {
+                return fil::copa::match_identifier<fil::copa::member<&ast_object::first>> {}
+                     + fil::copa::match_identifier<fil::copa::member<&ast_object::second>> {}
+                     + fil::copa::match_identifier<fil::copa::member<&ast_object::third>> {};
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        const fil::temporary_file tmp("aa bb cc ");
+        fil::file_reader reader(tmp);
+        grammar_sequence grammar;
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->first == "aa");
+        CHECK(result->second == "bb");
+        CHECK(result->third == "cc");
+        // cursor advanced past all three tokens
+        CHECK(result->copa_debug_info.cursor >= 6);
     }
 }

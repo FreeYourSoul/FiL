@@ -65,12 +65,12 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
                 return ctx.convertor->value(ctx);
 
             ctx.err_stack.push({
-                .token_failure = ctx.current_token,
-                .line          = ctx.current_line,
-                .cursor        = ctx.reader->reader_cursor(),
-                .parsing_step  = meta::type_name<decltype(formula)>(),
-                .error_msg     = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
-                                             ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
+                .token        = ctx.current_token,
+                .line         = ctx.current_line,
+                .cursor       = ctx.reader->reader_cursor(),
+                .parsing_step = meta::type_name<decltype(formula)>(),
+                .error_msg    = std::format("parsing didn't finish properly : ctx_cursor {} - idx.size {} - idx.back {}",
+                                            ctx.reader->reader_cursor(), ctx.idx.size(), ctx.idx.back()),
             });
             return std::unexpected(error_stack {std::move(ctx.err_stack)});
         }

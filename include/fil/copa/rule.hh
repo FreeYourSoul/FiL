@@ -154,12 +154,12 @@ struct tuple_rule {
 
         if (current == match_result::FAILURE) {
             ctx.err_stack.push({
-                .token_failure = ctx.current_token,
-                .line          = ctx.current_line,
-                .cursor        = ctx.reader->reader_cursor(),
-                .parsing_step  = meta::type_name<tuple_rule>(),
-                .error_msg     = std::format("an error occurred while parsing element {} of the tuple rule : rule failed is : {}",
-                                             ctx.idx[depth], step_name),
+                .token        = ctx.current_token,
+                .line         = ctx.current_line,
+                .cursor       = ctx.reader->reader_cursor(),
+                .parsing_step = meta::type_name<tuple_rule>(),
+                .error_msg    = std::format("an error occurred while parsing element {} of the tuple rule : rule failed is : {}",
+                                            ctx.idx[depth], step_name),
             });
         }
 
@@ -255,11 +255,11 @@ struct or_rule {
             ctx.err_stack.clear();
         else
             ctx.err_stack.push({
-                .token_failure = ctx.current_token,
-                .line          = ctx.current_line,
-                .cursor        = ctx.reader->reader_cursor(),
-                .parsing_step  = meta::type_name<or_rule>(),
-                .error_msg     = std::format("or rule failed to be parsed"),
+                .token        = ctx.current_token,
+                .line         = ctx.current_line,
+                .cursor       = ctx.reader->reader_cursor(),
+                .parsing_step = meta::type_name<or_rule>(),
+                .error_msg    = std::format("or rule failed to be parsed"),
             });
 
         return success ? match_result::SUCCESS : match_result::FAILURE;

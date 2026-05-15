@@ -30,11 +30,11 @@
 namespace fil::copa {
 
 struct debug_info {
-    std::string token_failure; //!< token on which the error occurred
-    std::size_t line;          //!< line number at which the error occurred
-    std::size_t cursor;        //!< cursor at which the error occurred
-    std::string parsing_step;  //!< name of the matcher failing
-    std::string error_msg;     //!< error message from the parsing error
+    std::string token;        //!< token on which the error occurred
+    std::size_t line;         //!< line number at which the error occurred
+    std::size_t cursor;       //!< cursor at which the error occurred
+    std::string parsing_step; //!< name of the matcher failing
+    std::string error_msg;    //!< error message from the parsing error
 };
 
 class error_stack {

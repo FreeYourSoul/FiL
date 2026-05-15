@@ -24,12 +24,12 @@
 #ifndef FIL_DEBUG_HH
 #define FIL_DEBUG_HH
 
+#include <memory>
 #include <print>
 #include <string>
 #include <variant>
 
 #include "fil/algorithm/string.hh"
-#include "fil/meta/type_traits.hpp"
 
 namespace fil::copa::debug_details_ {
 

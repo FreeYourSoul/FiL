@@ -14,12 +14,12 @@ namespace fil::copa::sink {
 namespace debug_aggregation {
 
 template<typename T>
-concept has_debug_info = requires(const T& t) {
+concept with_debug_info_type = requires(const T& t) {
     { t.copa_debug_info } -> std::convertible_to<debug_info>;
 };
 
-//! no-op version in case aggregate object doesn't contain required @c debug_info member
-void aggregate_debug_info(const auto&) { /*no-op if no debug info defined*/ }
+//! no-op version in case an aggregate object doesn't contain required @c debug_info member
+void aggregate_debug_info(const auto&, auto&) { /*no-op if no debug info defined*/ }
 
 /**
  * @brief aggregate the debugging information if the structure contains a @c copa_debug_info member of @c debug_info type
@@ -27,11 +27,11 @@ void aggregate_debug_info(const auto&) { /*no-op if no debug info defined*/ }
  * @param ctx parsing context
  * @param aggregate object to aggregate
  */
-void aggregate_debug_info(const auto& ctx, has_debug_info auto& aggregate) {
+void aggregate_debug_info(const auto& ctx, with_debug_info_type auto& aggregate) {
     aggregate.copa_debug_info = debug_info {
-        .token_failure = ctx.current_token,
-        .line          = ctx.current_line,
-        .cursor        = ctx.reader->reader_cursor(),
+        .token  = ctx.current_token,
+        .line   = ctx.current_line,
+        .cursor = ctx.reader->reader_cursor(),
     };
 }
 
@@ -82,7 +82,10 @@ class aggregator {
         mem(value_, std::forward<Value>(value));
     }
 
-    constexpr const value_type& value(auto& ctx) const { return value_; }
+    constexpr const value_type& value(auto& ctx) {
+        debug_aggregation::aggregate_debug_info(ctx, value_);
+        return value_;
+    }
 
   private:
     value_type value_ {};
@@ -185,7 +188,7 @@ class ast_tree_generator {
         ctx->previous_precedence = precedence_;
     }
 
-    constexpr value_type value(auto& ctx) const {
+    constexpr value_type value(auto& ctx) {
         ctx_extension* ctx_ext = ctx.convertor_ctx;
 
         ast_node value_node;
@@ -201,6 +204,9 @@ class ast_tree_generator {
         if (ctx_ext->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
             value_node = *ctx_ext->tmp_node;
         }
+
+        debug_aggregation::aggregate_debug_info(ctx, value_node);
+
         return value_node;
     }
 

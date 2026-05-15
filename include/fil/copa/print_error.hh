@@ -91,7 +91,7 @@ void print_error(Reader& reader, const debug_info& error) {
     }
 
     const auto start_column = error.cursor - line_start_cursor;
-    const auto error_length = error.token_failure.size();
+    const auto error_length = error.token.size();
 
     // Print the error line with highlighting
     fmt::print(stderr, " {:>4}\n",

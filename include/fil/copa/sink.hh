@@ -7,6 +7,35 @@
 #include "fil/copa/debug_details.hh"
 #include "fil/copa/member.hh"
 #include "fil/meta/shallow_copy.hh"
+#include "fil/meta/typename.hh"
+
+namespace fil::copa::sink {
+
+namespace debug_aggregation {
+
+template<typename T>
+concept has_debug_info = requires(const T& t) {
+    { t.copa_debug_info } -> std::convertible_to<debug_info>;
+};
+
+//! no-op version in case aggregate object doesn't contain required @c debug_info member
+void aggregate_debug_info(const auto&) { /*no-op if no debug info defined*/ }
+
+/**
+ * @brief aggregate the debugging information if the structure contains a @c copa_debug_info member of @c debug_info type
+ *
+ * @param ctx parsing context
+ * @param aggregate object to aggregate
+ */
+void aggregate_debug_info(const auto& ctx, has_debug_info auto& aggregate) {
+    aggregate.copa_debug_info = debug_info {
+        .token_failure = ctx.current_token,
+        .line          = ctx.current_line,
+        .cursor        = ctx.reader->reader_cursor(),
+    };
+}
+
+} // namespace debug_aggregation
 
 /**
  * @brief A convertor that aggregates parsed values into a single AST object.
@@ -32,7 +61,6 @@
  * @see fil::copa::callback
  * @see fil::copa::production
  */
-namespace fil::copa::sink {
 template<typename T>
 class aggregator {
 
@@ -54,7 +82,7 @@ class aggregator {
         mem(value_, std::forward<Value>(value));
     }
 
-    constexpr const value_type& value(auto*) const { return value_; }
+    constexpr const value_type& value(auto& ctx) const { return value_; }
 
   private:
     value_type value_ {};
@@ -66,7 +94,7 @@ struct convertor_noop {
     using ctx_extension = int;
 
     constexpr void operator()(void*, const auto&, auto&&) {}
-    constexpr value_type value(auto*) const { return {}; }
+    constexpr value_type value(auto&) const { return {}; }
 };
 
 /**
@@ -157,19 +185,21 @@ class ast_tree_generator {
         ctx->previous_precedence = precedence_;
     }
 
-    constexpr value_type value(ctx_extension* ctx) const {
-        ast_node value_node;
-        if (ctx->current_node) {
-            value_node.value = ctx->current_node->value;
-            value_node.lhs   = ctx->current_node->lhs;
-            value_node.rhs   = ctx->current_node->rhs;
+    constexpr value_type value(auto& ctx) const {
+        ctx_extension* ctx_ext = ctx.convertor_ctx;
 
-            if (ctx->previous_node && ctx->tmp_node) {
-                ctx->previous_node->rhs = ctx->tmp_node->lhs;
+        ast_node value_node;
+        if (ctx_ext->current_node) {
+            value_node.value = ctx_ext->current_node->value;
+            value_node.lhs   = ctx_ext->current_node->lhs;
+            value_node.rhs   = ctx_ext->current_node->rhs;
+
+            if (ctx_ext->previous_node && ctx_ext->tmp_node) {
+                ctx_ext->previous_node->rhs = ctx_ext->tmp_node->lhs;
             }
         }
-        if (ctx->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
-            value_node = *ctx->tmp_node;
+        if (ctx_ext->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
+            value_node = *ctx_ext->tmp_node;
         }
         return value_node;
     }

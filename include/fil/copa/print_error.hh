@@ -70,7 +70,7 @@ concept error_line_reader = reader<T> && requires(T& t, std::size_t line_number)
  * @param error The error information containing line number, cursor position, token, and error message
  */
 template<error_line_reader Reader>
-void print_error(Reader& reader, const error_info& error) {
+void print_error(Reader& reader, const debug_info& error) {
     const std::size_t read_start = (error.line < 3uz) ? 1uz : error.line - 3uz;
 
     std::string error_line;

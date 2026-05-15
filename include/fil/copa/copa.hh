@@ -26,7 +26,7 @@
 
 #include <expected>
 
-#include "fil/copa/error.hh"
+#include "fil/copa/debug.hh"
 #include "fil/copa/production.hh"
 #include "fil/copa/rule.hh"
 #include "fil/meta/typename.hh"
@@ -62,7 +62,7 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
         if (!c.has_value()) {
             if (ctx.idx.back() == details_::rule_idx_value_success(formula)
                 && (ctx.is_main_parser || details_::shall_eof_be_success(formula)))
-                return ctx.convertor->value(ctx.convertor_ctx);
+                return ctx.convertor->value(ctx);
 
             ctx.err_stack.push({
                 .token_failure = ctx.current_token,
@@ -90,7 +90,7 @@ std::expected<Result, error_stack> do_parse_rule(auto& ctx, const rule auto& for
         return std::unexpected(ctx.err_stack);
     }
 
-    return ctx.convertor->value(ctx.convertor_ctx);
+    return ctx.convertor->value(ctx);
 }
 
 template<reader Reader, typename Convertor, production Prod>

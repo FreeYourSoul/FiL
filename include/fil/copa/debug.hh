@@ -29,7 +29,7 @@
 
 namespace fil::copa {
 
-struct error_info {
+struct debug_info {
     std::string token_failure; //!< token on which the error occurred
     std::size_t line;          //!< line number at which the error occurred
     std::size_t cursor;        //!< cursor at which the error occurred
@@ -40,27 +40,27 @@ struct error_info {
 class error_stack {
   public:
     using difference_type   = std::ptrdiff_t;
-    using value_type        = error_info;
-    using pointer           = error_info*;
-    using reference         = error_info&;
+    using value_type        = debug_info;
+    using pointer           = debug_info*;
+    using reference         = debug_info&;
     using iterator_category = std::random_access_iterator_tag;
 
     error_stack() = default;
-    explicit error_stack(error_info&& error) { push(std::move(error)); }
+    explicit error_stack(debug_info&& error) { push(std::move(error)); }
 
-    void push(error_info&& error) { stack_.push_back(std::move(error)); }
+    void push(debug_info&& error) { stack_.push_back(std::move(error)); }
     void clear() { stack_.clear(); }
 
-    [[nodiscard]] const std::vector<error_info>& get_errors() const { return stack_; }
+    [[nodiscard]] const std::vector<debug_info>& get_errors() const { return stack_; }
     [[nodiscard]] std::size_t size() const { return stack_.size(); }
 
-    std::vector<error_info>::iterator begin() { return stack_.begin(); }
-    std::vector<error_info>::iterator end() { return stack_.end(); }
-    std::vector<error_info>::reverse_iterator rbegin() { return stack_.rbegin(); }
-    std::vector<error_info>::reverse_iterator rend() { return stack_.rend(); }
+    std::vector<debug_info>::iterator begin() { return stack_.begin(); }
+    std::vector<debug_info>::iterator end() { return stack_.end(); }
+    std::vector<debug_info>::reverse_iterator rbegin() { return stack_.rbegin(); }
+    std::vector<debug_info>::reverse_iterator rend() { return stack_.rend(); }
 
   private:
-    std::vector<error_info> stack_;
+    std::vector<debug_info> stack_;
 };
 
 } // namespace fil::copa

@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 
-#include "fil/copa/error.hh"
+#include "fil/copa/debug.hh"
 #include "fil/copa/sink.hh"
 #include "fil/meta/reader.hh"
 #include "fil/meta/shallow_copy.hh"

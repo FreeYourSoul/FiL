@@ -1,3 +1,5 @@
+#include "visit.hh"
+
 #include <catch2/catch_all.hpp>
 
 #include "fil/algorithm/string.hh"
@@ -6,6 +8,7 @@
 #include "fil/copa/sink.hh"
 #include "fil/copa/wrapper_utils.hh"
 #include "fil/meta/buffer_reader.hh"
+#include "fil/meta/visit_utils.hh"
 
 namespace {
 
@@ -1015,5 +1018,45 @@ TEST_CASE("Copa: calculator parsing", "[copa][calculator]") {
         CHECK(rhs_div->value == op::divide);
         CHECK(std::get<int>(rhs_div->lhs) == 10);
         CHECK(std::get<int>(rhs_div->rhs) == 5);
+    }
+}
+
+TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
+    SECTION("simple tree") {
+        fil::buffer_reader reader("6 / 2 - 1");
+        /*
+                         -
+                       /   \
+                      /     1.5
+                    /   \
+                   6     2
+        */
+
+        expression_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        std::println("{}", fil::to_string(result.value()));
+
+        // make a visitor responsible for calculations
+        static constexpr auto calculation_visitor = fil::overload {
+            [](const auto&, const auto&) { return 0.0; },
+            [](const auto&, int i) { return static_cast<double>(i); },
+            [](const auto& res, const ast_node& node) {
+                if (res.size() < 2)
+                    return 0.0;
+                switch (node.value) {
+                    case op::plus: return res[0] + res[1];
+                    case op::minus: return res[0] - res[1];
+                    case op::multiply: return res[0] * res[1];
+                    case op::divide: return res[0] / res[1];
+                    default: return 0.0;
+                }
+                std::unreachable();
+            },
+        };
+
+        const auto result_calculation = fil::copa::visit<calculation_visitor, double>(result.value());
+
+        CHECK(result_calculation == (6 / 2 - 1));
     }
 }

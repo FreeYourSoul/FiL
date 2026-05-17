@@ -10,6 +10,7 @@ add_library(copa INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/production.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/sink.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/rule.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/visit.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/wrapper_utils.hh
 )
 

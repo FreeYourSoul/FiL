@@ -1,9 +1,34 @@
+/// MIT License
+//
+// Copyright (c) 2025 Quentin Balland
+// Repository : https://github.com/FreeYourSoul/FiL
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+//         of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+//         to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//         copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+//         copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//         AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 #ifndef FIL_SINK_HH
 #define FIL_SINK_HH
 
 #include <memory>
 #include <variant>
 
+#include "fil/copa/debug.hh"
 #include "fil/copa/debug_details.hh"
 #include "fil/copa/member.hh"
 #include "fil/meta/shallow_copy.hh"
@@ -220,6 +245,8 @@ namespace fil::copa {
 
 template<std::invocable<std::string> auto CallbackOp, typename... Ts>
 struct ast_node {
+    struct is_copa_ast_node; // flag for concept
+
     using operand_type = std::invoke_result_t<decltype(CallbackOp), std::string>;
     using node_type    = std::variant<std::monostate, std::shared_ptr<ast_node>, std::string, int, char, Ts...>;
 
@@ -231,6 +258,13 @@ struct ast_node {
     struct leaf : callback<[](const std::string& value) { return value; }> {};
 
     [[nodiscard]] std::string to_string() const { return debug_details_::ast_tree_to_string(*this); }
+};
+
+template<typename T>
+concept ast_node_concept = requires(T& t) {
+    typename T::is_copa_ast_node;
+    typename T::operand_type;
+    typename T::node_type;
 };
 
 } // namespace fil::copa

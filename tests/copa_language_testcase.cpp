@@ -487,3 +487,5 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
         CHECK(!chocobo.access.has_value());
     }
 }
+
+TEST_CASE("Copa: visit language AST", "[copa]") {}

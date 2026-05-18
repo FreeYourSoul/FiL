@@ -1022,7 +1022,25 @@ TEST_CASE("Copa: calculator parsing", "[copa][calculator]") {
 }
 
 TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
-    SECTION("simple tree") {
+    // make a visitor responsible for calculations
+    static constexpr auto calculation_visitor = fil::overload {
+        [](const auto&, const auto&) { return 0.0; },
+        [](const auto&, int i) { return static_cast<double>(i); },
+        [](const auto& res, const ast_node& node) {
+            if (res.size() < 2)
+                return 0.0;
+            switch (node.value) {
+                case op::plus: return res[0] + res[1];
+                case op::minus: return res[0] - res[1];
+                case op::multiply: return res[0] * res[1];
+                case op::divide: return res[0] / res[1];
+                default: return 0.0;
+            }
+            std::unreachable();
+        },
+    };
+
+    SECTION("simple calculation tree") {
         fil::buffer_reader reader("6 / 2 - 1");
         /*
                          -
@@ -1037,26 +1055,30 @@ TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
         REQUIRE(result.has_value());
         std::println("{}", fil::to_string(result.value()));
 
-        // make a visitor responsible for calculations
-        static constexpr auto calculation_visitor = fil::overload {
-            [](const auto&, const auto&) { return 0.0; },
-            [](const auto&, int i) { return static_cast<double>(i); },
-            [](const auto& res, const ast_node& node) {
-                if (res.size() < 2)
-                    return 0.0;
-                switch (node.value) {
-                    case op::plus: return res[0] + res[1];
-                    case op::minus: return res[0] - res[1];
-                    case op::multiply: return res[0] * res[1];
-                    case op::divide: return res[0] / res[1];
-                    default: return 0.0;
-                }
-                std::unreachable();
-            },
-        };
-
         const auto result_calculation = fil::copa::visit<calculation_visitor, double>(result.value());
 
         CHECK(result_calculation == (6 / 2 - 1));
+    }
+
+    SECTION("parenthesis calculation tree") {
+        fil::buffer_reader reader("2 * (3 + 4) - (10 / 5)");
+        /*
+                        -
+                     /     \
+                    *       /
+                  /  \    /   \
+                 2   +   10    5
+                   /   \
+                  3     4
+        */
+
+        expression_grammar g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        std::println("{}", fil::to_string(result.value()));
+
+        const auto result_calculation = fil::copa::visit<calculation_visitor, double>(result.value());
+
+        CHECK(result_calculation == (2 * (3 + 4) - (10 / 5)));
     }
 }

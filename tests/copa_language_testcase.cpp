@@ -488,4 +488,39 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     }
 }
 
-TEST_CASE("Copa: visit language AST", "[copa]") {}
+TEST_CASE("Copa: visit language AST", "[copa]") {
+
+    struct program_ctx {
+
+        struct compare {
+            std::string lhs;
+            std::string rhs;
+        };
+
+        std::vector<compare> conjunctions_compare;
+    };
+
+    fil::buffer_reader reader("chocobo.fly > 5");
+
+    language_grammar g;
+    const auto result = fil::copa::parse(g, std::move(reader));
+    REQUIRE(result.has_value());
+    std::println("{}", fil::to_string(result.value()));
+
+    //                >
+    //              /  \
+    //    chocobo.fly   5
+
+    static constexpr auto compile_cmp_visitor = fil::overload {
+        [](const auto&, const auto&) { return 0.0; },
+        [](const auto&, int i) { return static_cast<double>(i); },
+        [](const auto& res, const op_link& oplink) -> program_ctx {
+            switch (oplink) {
+                case op_link::and_: return res[0] + res[1];
+                case op_link::or_: return res[0] - res[1];
+                default: return {};
+            }
+            std::unreachable();
+        },
+    };
+}

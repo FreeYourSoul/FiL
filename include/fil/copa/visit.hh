@@ -33,29 +33,29 @@ namespace fil::copa {
 template<typename T>
 concept visit_result = requires(T& t) { std::is_trivially_constructible_v<T>; };
 
-template<auto Callback, typename Res, typename T>
-Res visit(const T& node) {
-    return Callback(std::vector<Res> {}, node);
+template<typename Res, typename Callback, typename T>
+Res visit(Callback&& callback, const T& node) {
+    return std::forward<Callback>(callback)(std::vector<Res> {}, node);
 }
 
-template<auto Callback, typename Res, ast_node_concept T>
-Res visit(const T& node) {
-    return Callback(
+template<typename Res, typename Callback, ast_node_concept T>
+Res visit(Callback&& callback, const T& node) {
+    return callback(
         std::array<Res, 2> {
-            visit<Callback, Res>(node.lhs),
-            visit<Callback, Res>(node.rhs),
+            visit<Res>(callback, node.lhs),
+            visit<Res>(callback, node.rhs),
         },
         node);
 }
 
-template<auto Callback, typename Res, typename T>
-Res visit(const std::shared_ptr<T>& node) {
-    return visit<Callback, Res>(*node);
+template<typename Res, typename Callback, typename T>
+Res visit(Callback&& callback, const std::shared_ptr<T>& node) {
+    return visit<Res>(std::forward<Callback>(callback), *node);
 }
 
-template<auto Callback, typename Res, typename... Ts>
-Res visit(const std::variant<Ts...>& node) {
-    return std::visit([](const auto& n) { return visit<Callback, Res>(n); }, node);
+template<typename Res, typename Callback, typename... Ts>
+Res visit(Callback&& callback, const std::variant<Ts...>& node) {
+    return std::visit([&callback](const auto& n) { return visit<Res>(std::forward<Callback>(callback), n); }, node);
 }
 
 } // namespace fil::copa

@@ -32,7 +32,7 @@
 #include <utility>
 #include <vector>
 
-namespace fil {
+namespace fil::soa {
 
 //
 // to be moved in a metaprog utility of fil
@@ -50,16 +50,24 @@ concept nothrow_movable = std::is_nothrow_move_constructible_v<T> && std::is_not
  * parameter pack Ts until it triggers the specialization parameter_pack_index<T, T, Ts...> which forces the
  * two first types to be the same, thus returning stopping the parameter pack iteration.
  */
-template<typename T, typename, typename... Ts> static constexpr std::size_t parameter_pack_index    = 1 + parameter_pack_index<T, Ts...>;
-template<typename T, typename... Ts> static constexpr std::size_t parameter_pack_index<T, T, Ts...> = 0;
+template<typename T, typename, typename... Ts>
+static constexpr std::size_t parameter_pack_index = 1 + parameter_pack_index<T, Ts...>;
+template<typename T, typename... Ts>
+static constexpr std::size_t parameter_pack_index<T, T, Ts...> = 0;
 
-template<typename T> class soa_struct_t {
+template<typename T>
+class soa_struct_t {
     friend T;
 
   public:
+    using soa_type = T;
+
     [[nodiscard]] typename T::struct_id struct_id() const;
 
-    template<std::size_t index> [[nodiscard]] friend auto& get(soa_struct_t ss) { return std::get<index>(ss.soa_->data_)[ss.offset_]; }
+    template<std::size_t index>
+    [[nodiscard]] friend auto& get(soa_struct_t ss) {
+        return std::get<index>(ss.soa_->data_)[ss.offset_];
+    }
 
   private:
     soa_struct_t(T* soa, std::size_t offset)
@@ -78,14 +86,16 @@ template<typename T> class soa_struct_t {
  * @tparam struct_types Variadic template parameter pack representing the types
  * of elements present in each structure.
  */
-template<typename... struct_types> class soa {
+template<typename... struct_types>
+class soa {
 
   public:
     //! number of elements in the structure handled by the soa class
     static constexpr std::size_t struct_types_size = sizeof...(struct_types);
 
     //! retrieve the type at the provided index
-    template<std::size_t index> using struct_type_at = std::tuple_element_t<index, std::tuple<struct_types...>>;
+    template<std::size_t index>
+    using struct_type_at = std::tuple_element_t<index, std::tuple<struct_types...>>;
 
     /**
      * struct entity retrieve through a SOA access
@@ -105,7 +115,8 @@ template<typename... struct_types> class soa {
      * @brief iterator class following c++ standard.
      * This enables the usage of ranges and standard algorithm with the soa class
      */
-    template<typename> class iterator_t;
+    template<typename>
+    class iterator_t;
 
     struct sentinel {};                           //!< sentinel used for end iteration over a soa
     using iterator       = iterator_t<soa>;       //!< iterator declaration following standard
@@ -115,7 +126,8 @@ template<typename... struct_types> class soa {
 
   private:
     //! setup soa_struct as a friend class to provide the ability for soa class to instantiate it
-    template<typename> friend class soa_struct_t;
+    template<typename>
+    friend class soa_struct_t;
     using const_soa_struct = soa_struct_t<const soa>;
 
   public:
@@ -123,7 +135,8 @@ template<typename... struct_types> class soa {
      * @brief insert an element into the soa class
      * @param us elements to be inserted into the soa class (follows the order of the template parameters of the soa class)
      */
-    template<typename... Us> struct_id insert(Us... us);
+    template<typename... Us>
+    struct_id insert(Us... us);
 
     /**
      * @brief erase an element via a specific structure id
@@ -197,7 +210,9 @@ template<typename... struct_types> class soa {
     struct_id next_free_index_ {0, 0};
 };
 
-template<typename... struct_types> template<typename T> class soa<struct_types...>::iterator_t {
+template<typename... struct_types>
+template<typename T>
+class soa<struct_types...>::iterator_t {
     friend class soa;
     friend class soa_struct_t<soa>;
 
@@ -240,7 +255,8 @@ template<typename... struct_types> template<typename T> class soa<struct_types..
 //
 //
 
-template<typename... struct_types> struct soa<struct_types...>::struct_id {
+template<typename... struct_types>
+struct soa<struct_types...>::struct_id {
     struct_id next_generation() const noexcept;
 
     explicit constexpr struct_id(std::uint32_t i, std::uint8_t g = 0) noexcept;
@@ -256,9 +272,14 @@ constexpr soa<struct_types...>::struct_id::struct_id(std::uint32_t i, std::uint8
     : offset(i)
     , generation(g) {}
 
-template<typename T> typename T::struct_id soa_struct_t<T>::struct_id() const { return soa_->reverse_indexes_[offset_]; }
+template<typename T>
+typename T::struct_id soa_struct_t<T>::struct_id() const {
+    return soa_->reverse_indexes_[offset_];
+}
 
-template<typename... struct_types> template<typename... Us> soa<struct_types...>::struct_id soa<struct_types...>::insert(Us... us) {
+template<typename... struct_types>
+template<typename... Us>
+soa<struct_types...>::struct_id soa<struct_types...>::insert(Us... us) {
 
     std::invoke(
         [this]<std::size_t... Is, typename T>(std::index_sequence<Is...>, T to_insert) {
@@ -281,7 +302,8 @@ template<typename... struct_types> template<typename... Us> soa<struct_types...>
 }
 // soa definition
 //
-template<typename... struct_types> bool soa<struct_types...>::erase(struct_id id) {
+template<typename... struct_types>
+bool soa<struct_types...>::erase(struct_id id) {
     if (!has_id(id))
         return false;
 
@@ -308,8 +330,12 @@ template<typename... struct_types> bool soa<struct_types...>::erase(struct_id id
 
     return true;
 }
-template<typename... struct_types> bool soa<struct_types...>::erase(const_iterator it) { return erase(*it); }
-template<typename... struct_types> void soa<struct_types...>::reserve(std::size_t size) {
+template<typename... struct_types>
+bool soa<struct_types...>::erase(const_iterator it) {
+    return erase(*it);
+}
+template<typename... struct_types>
+void soa<struct_types...>::reserve(std::size_t size) {
     std::invoke([this, size]<std::size_t... Is>(std::index_sequence<Is...>) { (std::get<Is>(data_).reserve(size), ...); },
                 struct_number {});
 
@@ -317,25 +343,43 @@ template<typename... struct_types> void soa<struct_types...>::reserve(std::size_
     reverse_indexes_.reserve(size);
     next_free_index_ = struct_id {static_cast<std::uint32_t>(reverse_indexes_.size()), 0};
 }
-template<typename... struct_types> soa_struct_t<soa<struct_types...>> soa<struct_types...>::operator[](struct_id k) {
+template<typename... struct_types>
+soa_struct_t<soa<struct_types...>> soa<struct_types...>::operator[](struct_id k) {
     return {this, indexes_[k.offset].offset};
 }
-template<typename... struct_types> typename soa<struct_types...>::const_soa_struct soa<struct_types...>::operator[](struct_id k) const {
+template<typename... struct_types>
+typename soa<struct_types...>::const_soa_struct soa<struct_types...>::operator[](struct_id k) const {
     return {this, indexes_[k.offset].offset};
 }
-template<typename... struct_types> bool soa<struct_types...>::has_id(struct_id id) const {
+template<typename... struct_types>
+bool soa<struct_types...>::has_id(struct_id id) const {
     return std::ranges::any_of(reverse_indexes_, [id](auto& i) { return i == id; });
 }
-template<typename... struct_types> typename soa<struct_types...>::iterator soa<struct_types...>::begin() { return {this, 0}; }
-template<typename... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::begin() const { return {this, 0}; }
-template<typename... struct_types> typename soa<struct_types...>::const_iterator soa<struct_types...>::cbegin() const { return {this, 0}; }
-template<typename... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::end() const { return {}; }
-template<typename... struct_types> typename soa<struct_types...>::sentinel soa<struct_types...>::cend() const { return {}; }
+template<typename... struct_types>
+typename soa<struct_types...>::iterator soa<struct_types...>::begin() {
+    return {this, 0};
+}
+template<typename... struct_types>
+typename soa<struct_types...>::const_iterator soa<struct_types...>::begin() const {
+    return {this, 0};
+}
+template<typename... struct_types>
+typename soa<struct_types...>::const_iterator soa<struct_types...>::cbegin() const {
+    return {this, 0};
+}
+template<typename... struct_types>
+typename soa<struct_types...>::sentinel soa<struct_types...>::end() const {
+    return {};
+}
+template<typename... struct_types>
+typename soa<struct_types...>::sentinel soa<struct_types...>::cend() const {
+    return {};
+}
 
 // ------------------------------------------------------------------------------------------------------------------------------------
 // utility functions
 
-constexpr auto soa_apply = []<typename F>(F&& func) {
+constexpr auto apply = []<typename F>(F&& func) {
     return [&]<typename T>(T&& t) {                                                                                                 //
         auto apply_on_struct = [f = std::forward<F>(func), t = std::forward<T>(t)]<std::size_t... Is>(std::index_sequence<Is...>) { //
             return std::invoke(f, get<Is>(t)...);
@@ -347,26 +391,95 @@ constexpr auto soa_apply = []<typename F>(F&& func) {
 
 template<std::size_t... Ts>
 requires(sizeof...(Ts) > 0)
-auto soa_select(auto&& func) {
+auto index_select(auto&& func) {
     return [&]<typename T>(T&& t) { return std::invoke(func, get<Ts>(t)...); };
-};
+}
 
-} // namespace fil
+template<typename... Targets, typename... Args>
+auto extract_tuple(const std::tuple<Args...>& t) {
+    auto helper = []<std::size_t I>(std::integral_constant<std::size_t, I>, const std::tuple<Args...>& tuple) {
+        using element_type = std::tuple_element_t<I, std::tuple<Args...>>;
+        if constexpr ((std::is_same_v<element_type, Targets> || ...)) {
+            return std::make_tuple(std::get<I>(tuple));
+        } else {
+            return std::tuple<>();
+        }
+    };
+
+    return std::tuple_cat([&]<std::size_t... I>(std::index_sequence<I...>) {
+        return std::tuple_cat(helper(std::integral_constant<std::size_t, I> {}, t)...);
+    }(std::index_sequence_for<Args...> {}));
+}
+
+template<typename... Targets, typename... Args>
+auto extract_tuple_from_soa(const soa<Args...>& t) {
+    auto helper = []<std::size_t I>(std::integral_constant<std::size_t, I>, const std::tuple<Args...>& tuple) {
+        using element_type = soa<Args...>::template struct_type_at<I>;
+        if constexpr ((std::is_same_v<element_type, Targets> || ...)) {
+            return std::make_tuple(std::get<I>(tuple));
+        } else {
+            return std::tuple<>();
+        }
+    };
+
+    return std::tuple_cat([&]<std::size_t... I>(std::index_sequence<I...>) {
+        return std::tuple_cat(helper(std::integral_constant<std::size_t, I> {}, t)...);
+    }(std::index_sequence_for<Args...> {}));
+}
+
+// Helper to find index of a type in struct_types
+template<typename T, typename SoaType, std::size_t I = 0>
+static constexpr std::size_t find_type_index_in_soa_helper() {
+    if constexpr (I >= SoaType::struct_types_size) {
+        return std::numeric_limits<std::size_t>::max();
+    } else if constexpr (std::is_same_v<T, typename SoaType::template struct_type_at<I>>) {
+        return I;
+    } else {
+        return find_type_index_in_soa_helper<T, SoaType, I + 1>();
+    }
+}
+
+template<typename... Targets>
+requires(sizeof...(Targets) > 0)
+constexpr auto type_select = []<typename F>(F&& func) {
+    return [f = std::forward<F>(func)]<typename T>(T&& t)
+    requires requires {
+        { std::tuple_size<std::remove_cvref_t<T>>::value };
+    }
+    {
+        using clean_t = std::remove_cvref_t<T>;
+        // soa_struct_t<SoaType> — extract SoaType, then strip const for index lookup
+        using soa_type      = typename clean_t::soa_type;
+        using bare_soa_type = std::remove_const_t<soa_type>;
+
+        auto invoke_selected = [&f, &t]<std::size_t... Indices>(std::index_sequence<Indices...>) {
+            return std::invoke(
+                f, get<find_type_index_in_soa_helper<std::tuple_element_t<Indices, std::tuple<Targets...>>, bare_soa_type>()>(t)...);
+        };
+        return invoke_selected(std::index_sequence_for<Targets...> {});
+    };
+};
+} // namespace fil::soa
 
 //
 // specialization tuple operation for sao_struct_t
 namespace std {
 
-template<typename T> struct tuple_size<fil::soa_struct_t<T>> : std::integral_constant<std::size_t, T::struct_types_size> {};
+template<typename T>
+struct tuple_size<fil::soa::soa_struct_t<T>> : std::integral_constant<std::size_t, T::struct_types_size> {};
 
 // Add this before the other specializations
-template<typename T> struct tuple_size<fil::soa_struct_t<T>&> : tuple_size<fil::soa_struct_t<T>> {};
+template<typename T>
+struct tuple_size<fil::soa::soa_struct_t<T>&> : tuple_size<fil::soa::soa_struct_t<T>> {};
 
-template<typename T> struct tuple_size<const fil::soa_struct_t<T>> : tuple_size<fil::soa_struct_t<T>> {};
+template<typename T>
+struct tuple_size<const fil::soa::soa_struct_t<T>> : tuple_size<fil::soa::soa_struct_t<T>> {};
 
-template<typename T> struct tuple_size<const fil::soa_struct_t<T>&> : tuple_size<fil::soa_struct_t<T>> {};
+template<typename T>
+struct tuple_size<const fil::soa::soa_struct_t<T>&> : tuple_size<fil::soa::soa_struct_t<T>> {};
 
-template<std::size_t I, typename T> struct tuple_element<I, fil::soa_struct_t<T>> {
+template<std::size_t I, typename T>
+struct tuple_element<I, fil::soa::soa_struct_t<T>> {
     using type = typename T::template struct_type_at<I>;
 };
 

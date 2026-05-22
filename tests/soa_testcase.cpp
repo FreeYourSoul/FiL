@@ -19,7 +19,7 @@
 
 TEST_CASE("soa_vector", "[datastructure]") {
 
-    fil::soa<int, double, std::string> s {};
+    fil::soa::soa<int, double, std::string> s {};
 
     CHECK(s.is_empty());
 
@@ -134,7 +134,7 @@ TEST_CASE("soa_vector", "[datastructure]") {
 
     SECTION("test_soa_apply") {
         const auto it = std::ranges::find_if( //
-            s, fil::soa_apply([](int i, double, const std::string&) { return i == 3; }));
+            s, fil::soa::apply([](int i, double, const std::string&) { return i == 3; }));
 
         CHECK(it != s.end());
         auto [i, d, str] = *it;
@@ -143,15 +143,44 @@ TEST_CASE("soa_vector", "[datastructure]") {
         CHECK(str == "three");
     }
 
-    SECTION("test_soa_select") {
+    SECTION("test_soa_index_select") {
         const auto it = std::ranges::find_if( //
-            s, fil::soa_select<2>([](const std::string& str) { return str == "three"; }));
+            s, fil::soa::index_select<2>([](const std::string& str) { return str == "three"; }));
 
         CHECK(it != s.end());
         auto [i, d, str] = *it;
         CHECK(i == 3);
         CHECK(d == 3.3);
         CHECK(str == "three");
+    }
+
+    SECTION("test_soa_type_select") {
+
+        std::tuple<int, double, std::string> data {42, 1337.42, "quarante-deux"};
+        std::tuple<int, std::string> inside = fil::soa::extract_tuple<int, std::string>(data);
+
+        CHECK(std::get<0>(inside) == 42);
+        CHECK(std::get<1>(inside) == "quarante-deux");
+
+        const auto it_not_found = std::ranges::find_if( //
+            s, fil::soa::type_select<int, std::string>([](int, const std::string& str) { return str == "quarante-deux"; }));
+        CHECK(it_not_found == s.end());
+
+        const auto it_found = std::ranges::find_if( //
+            s, fil::soa::type_select<int, std::string>([](int i, const std::string&) { return i == 3; }));
+        CHECK(it_found != s.end());
+        const auto& [integer3, double_value3, string_value3] = *it_found;
+        CHECK(integer3 == 3);
+        CHECK(double_value3 == 3.3);
+        CHECK(string_value3 == "three");
+
+        // std::ranges::for_each(
+        //     s, fil::soa::type_select<int, std::string>([i = 0, &int_values, &string_values](int integer, const std::string& str) mutable
+        //     {
+        //         CHECK(integer == int_values[i]);
+        //         CHECK(str == string_values[i]);
+        //         ++i;
+        //     }));
     }
 
     SECTION("test_erase") {
@@ -190,7 +219,7 @@ TEST_CASE("soa_vector", "[datastructure]") {
     SECTION("modifications") {
 
         const auto it = std::ranges::find_if( //
-            s, fil::soa_select<2>([](const std::string& str) { return str == "two"; }));
+            s, fil::soa::index_select<2>([](const std::string& str) { return str == "two"; }));
 
         auto struct_soa                = *it;
         auto& [int_v, double_v, str_v] = struct_soa;
@@ -202,7 +231,7 @@ TEST_CASE("soa_vector", "[datastructure]") {
         SECTION("structure binding") { int_v = 1337; }
 
         const auto check = std::ranges::find_if( //
-            s, fil::soa_select<2>([](const std::string& str) { return str == "two"; }));
+            s, fil::soa::index_select<2>([](const std::string& str) { return str == "two"; }));
 
         const auto& [int_v_bis, double_v_bis, str_v_bis] = *check;
 

@@ -442,7 +442,7 @@ static constexpr std::size_t find_type_index_in_soa_helper() {
 template<typename... Targets>
 requires(sizeof...(Targets) > 0)
 constexpr auto type_select = []<typename F>(F&& func) {
-    return [f = std::forward<F>(func)]<typename T>(T&& t)
+    return [f = std::forward<F>(func)]<typename T>(T&& t) mutable
     requires requires {
         { std::tuple_size<std::remove_cvref_t<T>>::value };
     }

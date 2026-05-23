@@ -174,13 +174,14 @@ TEST_CASE("soa_vector", "[datastructure]") {
         CHECK(double_value3 == 3.3);
         CHECK(string_value3 == "three");
 
-        // std::ranges::for_each(
-        //     s, fil::soa::type_select<int, std::string>([i = 0, &int_values, &string_values](int integer, const std::string& str) mutable
-        //     {
-        //         CHECK(integer == int_values[i]);
-        //         CHECK(str == string_values[i]);
-        //         ++i;
-        //     }));
+        int i = 0;
+        std::ranges::for_each(
+            s, fil::soa::type_select<int, std::string>([&i, &int_values, &string_values](int integer, const std::string& str) {
+                CHECK(integer == int_values[i]);
+                CHECK(str == string_values[i]);
+                ++i;
+            }));
+        CHECK(i == 4);
     }
 
     SECTION("test_erase") {

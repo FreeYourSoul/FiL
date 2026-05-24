@@ -155,13 +155,7 @@ TEST_CASE("soa_vector", "[datastructure]") {
     }
 
     SECTION("test_soa_type_select") {
-
-        std::tuple<int, double, std::string> data {42, 1337.42, "quarante-deux"};
-        std::tuple<int, std::string> inside = fil::soa::extract_tuple<int, std::string>(data);
-
-        CHECK(std::get<0>(inside) == 42);
-        CHECK(std::get<1>(inside) == "quarante-deux");
-
+        
         const auto it_not_found = std::ranges::find_if( //
             s, fil::soa::type_select<int, std::string>([](int, const std::string& str) { return str == "quarante-deux"; }));
         CHECK(it_not_found == s.end());

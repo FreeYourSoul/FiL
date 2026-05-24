@@ -396,22 +396,6 @@ auto index_select(auto&& func) {
 }
 
 template<typename... Targets, typename... Args>
-auto extract_tuple(const std::tuple<Args...>& t) {
-    auto helper = []<std::size_t I>(std::integral_constant<std::size_t, I>, const std::tuple<Args...>& tuple) {
-        using element_type = std::tuple_element_t<I, std::tuple<Args...>>;
-        if constexpr ((std::is_same_v<element_type, Targets> || ...)) {
-            return std::make_tuple(std::get<I>(tuple));
-        } else {
-            return std::tuple<>();
-        }
-    };
-
-    return std::tuple_cat([&]<std::size_t... I>(std::index_sequence<I...>) {
-        return std::tuple_cat(helper(std::integral_constant<std::size_t, I> {}, t)...);
-    }(std::index_sequence_for<Args...> {}));
-}
-
-template<typename... Targets, typename... Args>
 auto extract_tuple_from_soa(const soa<Args...>& t) {
     auto helper = []<std::size_t I>(std::integral_constant<std::size_t, I>, const std::tuple<Args...>& tuple) {
         using element_type = soa<Args...>::template struct_type_at<I>;

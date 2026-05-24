@@ -25,7 +25,7 @@
 #include <fil/algorithm/contains.hh>
 #include <fil/algorithm/string.hh>
 #include <fil/algorithm/suitable.hh>
-#include <tuple>
+#include <fil/meta/tuple.hh>
 
 TEST_CASE("algorithm_testcase find_more_suitable", "[algorithm]") {
 
@@ -352,6 +352,14 @@ std::string to_string(const composed_complex& elem) {
 }
 
 } // namespace fil
+
+TEST_CASE("", "[algorithm]") {
+    std::tuple<int, double, std::string> data {42, 1337.42, "quarante-deux"};
+    std::tuple<int, std::string> inside = fil::extract_tuple<int, std::string>(data);
+
+    CHECK(std::get<0>(inside) == 42);
+    CHECK(std::get<1>(inside) == "quarante-deux");
+}
 
 TEST_CASE("fil algorihm to_string", "[algorithm]") {
 

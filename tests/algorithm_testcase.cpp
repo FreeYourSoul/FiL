@@ -361,7 +361,7 @@ TEST_CASE("", "[algorithm]") {
     CHECK(std::get<1>(inside) == "quarante-deux");
 }
 
-TEST_CASE("fil algorihm to_string", "[algorithm]") {
+TEST_CASE("fil algorithm to_string", "[algorithm]") {
 
     // basic checks
     static_assert(fil::is_stringifiable<int>, "integer shall be stringifiable");

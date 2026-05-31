@@ -65,6 +65,11 @@ parenthesis_wrapped<Content> parenthesised(const Content&) {
 }
 
 template<rule Content>
+bracket_wrapped<Content> bracketed(const Content&) {
+    return {};
+}
+
+template<rule Content>
 apostrophe_wrapped<Content> apostrophed(const Content&) {
     return {};
 }

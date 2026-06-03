@@ -749,8 +749,7 @@ TEST_CASE("Copa: Nested Parsers", "[copa][nested]") {
 
             // match "{" + level1 + "};"
             static constexpr auto rules() {
-                return fil::copa::bracket_wrapped< //
-                           fil::copa::match_parser<level1_grammar, fil::copa::member<&ast_object::deep>>> {}
+                return fil::copa::bracketed(fil::copa::match_parser<level1_grammar, fil::copa::member<&ast_object::deep>> {})
                      + fil::copa::semicol;
             }
             static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }

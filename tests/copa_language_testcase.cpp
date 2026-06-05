@@ -488,39 +488,63 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     }
 }
 
-TEST_CASE("Copa: visit language AST", "[copa]") {
+TEST_CASE("Copa: aggregation language", "[copa]") {
 
-    struct program_ctx {
+    struct agg_language {
+        struct ast_object {
+            std::vector<ast_node> nodes;
 
-        struct compare {
-            std::string lhs;
-            std::string rhs;
+            std::string to_string() const { return fil::join(nodes, "\n===========\n"); }
         };
 
-        std::vector<compare> conjunctions_compare;
+        static constexpr auto rules() {
+            return fil::copa::repeat<2>(                                                                 //
+                (fil::copa::match_production<language_grammar, fil::copa::member<&ast_object::nodes>> {} //
+                 + fil::copa::comma));
+        }
+        static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
     };
 
-    fil::buffer_reader reader("chocobo.fly > 5");
+    fil::buffer_reader reader(" chocobo.fly >= 5, c < 0, ");
 
-    language_grammar g;
+    agg_language g;
     const auto result = fil::copa::parse(g, std::move(reader));
     REQUIRE(result.has_value());
     std::println("{}", fil::to_string(result.value()));
 
-    //                >
-    //              /  \
-    //    chocobo.fly   5
+    REQUIRE(result->nodes.size() == 2);
 
-    static constexpr auto compile_cmp_visitor = fil::overload {
-        [](const auto&, const auto&) { return 0.0; },
-        [](const auto&, int i) { return static_cast<double>(i); },
-        [](const auto& res, const op_link& oplink) -> program_ctx {
-            switch (oplink) {
-                case op_link::and_: return res[0] + res[1];
-                case op_link::or_: return res[0] - res[1];
-                default: return {};
-            }
-            std::unreachable();
-        },
-    };
+    const auto& node0 = result->nodes[0];
+    const auto& node1 = result->nodes[1];
+
+    // Top level should be comparison (==)
+    REQUIRE(std::holds_alternative<op_comparator>(node0.value));
+    CHECK(std::get<op_comparator>(node0.value) == op_comparator::greater_equal);
+
+    const auto& lhs0 = node0.lhs;
+    const auto& rhs0 = node0.rhs;
+
+    // Left side should be a variable with access
+    REQUIRE(std::holds_alternative<variable>(lhs0));
+    const auto lhs_var = std::get<variable>(lhs0);
+    CHECK(lhs_var.variable_name == "chocobo");
+    REQUIRE(lhs_var.access.has_value());
+    CHECK(lhs_var.access.value() == "fly");
+
+    REQUIRE(std::holds_alternative<int>(rhs0));
+    CHECK(std::get<int>(rhs0) == 5);
+
+    REQUIRE(std::holds_alternative<op_comparator>(node1.value));
+    CHECK(std::get<op_comparator>(node1.value) == op_comparator::less);
+
+    const auto& lhs1 = node1.lhs;
+    const auto& rhs1 = node1.rhs;
+
+    REQUIRE(std::holds_alternative<variable>(lhs1));
+    const auto lhs_var1 = std::get<variable>(lhs1);
+    CHECK(lhs_var1.variable_name == "c");
+    CHECK(!lhs_var1.access.has_value());
+
+    REQUIRE(std::holds_alternative<int>(rhs1));
+    CHECK(std::get<int>(rhs1) == 0);
 }

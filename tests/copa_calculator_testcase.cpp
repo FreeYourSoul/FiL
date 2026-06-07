@@ -1026,7 +1026,7 @@ TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
     const auto calculation_visitor = fil::overload {
         [](const auto&, const auto&) { return 0.0; },
         [](const auto&, int i) { return static_cast<double>(i); },
-        [](const auto& res, const ast_node& node) {
+        [](const auto& res, const ast_node& node) -> double {
             if (res.size() < 2)
                 return 0.0;
             switch (node.value) {
@@ -1055,7 +1055,7 @@ TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
         REQUIRE(result.has_value());
         std::println("{}", fil::to_string(result.value()));
 
-        const auto result_calculation = fil::copa::visit<double>(calculation_visitor, result.value());
+        const auto result_calculation = fil::copa::visit(calculation_visitor, result.value());
 
         CHECK(result_calculation == (6 / 2 - 1));
     }
@@ -1077,7 +1077,7 @@ TEST_CASE("Copa: visit node based (no aggregation) AST", "[copa]") {
         REQUIRE(result.has_value());
         std::println("{}", fil::to_string(result.value()));
 
-        const auto result_calculation = fil::copa::visit<double>(calculation_visitor, result.value());
+        const auto result_calculation = fil::copa::visit(calculation_visitor, result.value());
 
         CHECK(result_calculation == (2 * (3 + 4) - (10 / 5)));
     }

@@ -30,32 +30,35 @@
 
 namespace fil::copa {
 
-template<typename T>
-concept visit_result = requires(T& t) { std::is_trivially_constructible_v<T>; };
+// Helper trait to extract the return type from a callback
+template<typename Callback, typename Node>
+using callback_astnode_result_t = std::invoke_result_t<Callback, std::vector<int>, Node>;
 
-template<typename Res, typename Callback, typename T>
-Res visit(Callback&& callback, const T& node) {
-    return std::forward<Callback>(callback)(std::vector<Res> {}, node);
+template<typename Callback, typename T>
+auto visit(Callback&& callback, const T& node) -> callback_astnode_result_t<Callback, T> {
+    using result_type = callback_astnode_result_t<Callback, T>;
+    return std::forward<Callback>(callback)(std::vector<result_type> {}, node);
 }
 
-template<typename Res, typename Callback, ast_node_concept T>
-Res visit(Callback&& callback, const T& node) {
+template<typename Callback, ast_node_concept T>
+auto visit(Callback&& callback, const T& node) -> callback_astnode_result_t<Callback, T> {
+    using result_type = callback_astnode_result_t<Callback, T>;
     return callback(
-        std::array<Res, 2> {
-            visit<Res>(callback, node.lhs),
-            visit<Res>(callback, node.rhs),
+        std::array<result_type, 2> {
+            visit(callback, node.lhs),
+            visit(callback, node.rhs),
         },
         node);
 }
 
-template<typename Res, typename Callback, typename T>
-Res visit(Callback&& callback, const std::shared_ptr<T>& node) {
-    return visit<Res>(std::forward<Callback>(callback), *node);
+template<typename Callback, typename T>
+auto visit(Callback&& callback, const std::shared_ptr<T>& node) {
+    return visit(std::forward<Callback>(callback), *node);
 }
 
-template<typename Res, typename Callback, typename... Ts>
-Res visit(Callback&& callback, const std::variant<Ts...>& node) {
-    return std::visit([&callback](const auto& n) { return visit<Res>(std::forward<Callback>(callback), n); }, node);
+template<typename Callback, typename... Ts>
+auto visit(Callback&& callback, const std::variant<Ts...>& node) {
+    return std::visit([&callback](const auto& n) { return visit(std::forward<Callback>(callback), n); }, node);
 }
 
 } // namespace fil::copa

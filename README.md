@@ -14,13 +14,15 @@ Free instrument Library is a general-purpose C++ library principally header-only
 FiL provides various modern C++ features:
 
 - **[CLI](doc/cli.md)**: Callback-based command line interface library.
+- **[Copa](doc/copa.md)**: DEclarative COmbinatory PArser (generic recursive descent parser).
 - **[Algorithms & Datastructures](doc/algorithm_datastructures.md)**: Common string algorithms, RNG, and specialized
   containers.
+- **[SOA](doc/soa.md)**: Cache-friendly Structure of Arrays data structure.
 - **[File Reader](doc/file_reader.md)**: High-performance, memory-efficient file reading.
 - **[FSM](doc/fsm.md)**: Simple Finite State Machine implementation.
-- **[SOA](doc/soa.md)**: Cache-friendly Structure of Arrays data structure.
 - **[Database KV](doc/database_kv.md)**: Abstraction for Key-Value data stores (RocksDB, Redis, etc.).
-- **[Copa](doc/copa.md)**: DEclarative COmbinatory PArser (generic descent parser).
+- **[P2P (Kademlia)](doc/p2p.md)**: Implementation of the Kademlia distributed hash table protocol.
+- **[Meta Utilities](doc/meta.md)**: Metaprogramming helpers and reader abstractions.
 
 ## Dependencies
 
@@ -36,10 +38,8 @@ _If using compiled version of the library with database kv_
 
 ### Installation from sources
 
-```cmake
-git
-clone
-git@github.com:FreeYourSoul/FiL.git
+```bash
+git clone git@github.com:FreeYourSoul/FiL.git
 cd FiL
 cmake -S . -Bbuild
 sudo cmake --build build --target install

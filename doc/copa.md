@@ -1,4 +1,4 @@
-# copa (COmbinator PArser)
+# Copa (DEclarative COmbinatory PArser)
 
 `copa` is a C++26 header-only combinator-based parser library. It allows you to build complex recursive descent parsers
 by composing simple rules and mapping them directly to C++ structures (AST objects).
@@ -144,19 +144,22 @@ int main() {
 Copa allows embedding a full grammar production into another rule. This is essential for modularizing complex grammars
 or implementing recursion.
 
-- `match_parser<Production, Member>`: Embeds a nested `Production` as a rule. It uses the `Production`'s rules and
-  convertor to parse a sub-object and stores it in the specified `Member`.
-- `match_production<Production, Member>`: Similar to `match_parser`, but it performs a complete parsing cycle using a
-  `fil::copa::parser` instance for the nested production. This ensures that the production is handled as a standalone
-  entity, which is particularly important for recursive definitions where the full production lifecycle (including its
-  specific convertor logic) must be preserved.
+- `match_parser<Production, Member>`: Embeds a nested `Production` as a rule. It uses the `Production`'s rules and its
+  own convertor instance, but **shares the same convertor context** (e.g., the tree being built) with the parent parser.
+  This is essential for multi-level precedence where different rules contribute to the same AST structure.
+- `match_production<Production, Member>`: Performs a complete, **isolated** parsing cycle using a fresh
+  `fil::copa::parser` instance. It has its own independent convertor and context. The result of this production is
+  passed as a single completed object to the parent's convertor. This is most likely required when you need to "reset"
+  the parsing context, such as when passing from a general aggregator to a `tree_generator`, or for handling
+  parenthesized sub-expressions where the sub-tree must be completed before being attached as a single leaf to the outer
+  tree. (recursion of grammar is another example)
 
-Rules can be composed using overloaded operators, every rule must inherit from `comsable_rule` to ensure that
-composability across every rule:
+Rules can be composed using overloaded operators. Every rule must inherit from `composable_rule` to ensure
+composability across all rules:
 
-- **Sequence    (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB`. (using `tuple_rule`)
-- **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice). (using `or_rule`)
-- **Optional    (`~`)**: `~RuleA` matches `RuleA` or not (choice). (using `or_rule`)
+- **Sequence    (`+`)**: `RuleA + RuleB` matches `RuleA` followed by `RuleB` (using `tuple_rule`).
+- **Alternation (`|`)**: `RuleA | RuleB` matches `RuleA` or `RuleB` (choice) (using `or_rule`).
+- **Optional    (`~`)**: `~RuleA` matches `RuleA` or nothing (using `or_rule`).
 
 Example:
 
@@ -186,15 +189,15 @@ This rule can be added to an instance of a rule by using the `~` operator.
 - `fil::copa::match_space_like`: Matches space like as defined in the C
   standard ([std::isspace](https://en.cppreference.com/w/cpp/string/byte/isspace))
 
-Some are helping common composition:
+Some helping common compositions:
 
-- `fil::copa::parenthesis_wrapped<...>`: Matches the rule wrapped in parenthesis `(` rule `)`
+- `fil::copa::parenthesis_wrapped<...>`: Matches the rule wrapped in parentheses `(` rule `)`
 - `fil::copa::bracket_wrapped<...>`: Matches the rule wrapped in curly brackets `{` rule `}`
 - `fil::copa::square_wrapped<...>`: Matches the rule wrapped in square brackets `[` rule `]`
 - `fil::copa::angle_wrapped<...>`: Matches the rule wrapped in angle brackets `<` rule `>`
 - `fil::copa::apostrophed_wrapped<...>`: Matches the rule wrapped in quotes `"` rule `"`
 
-Some utility function to be able to use those wrappers utilitie as value (and thus comnining with `|`, `+` or `~`)
+Some utility functions to use those wrappers as values (and thus combining with `|`, `+` or `~`):
 
 - `fil::copa::parenthesised(const Rule auto rule) -> fil::copa::parenthesis_wrapped<Rule>`:
 - `fil::copa::apostrophed(const Rule auto rule) -> fil::copa::apostrophed_wrapped<Rule>`:
@@ -353,6 +356,17 @@ handling operators with different precedence levels.
 - **Expression parsers** with operators of varying precedence (e.g., calculator with `+`, `-`, `*`, `/`)
 - **Binary operator trees** where parentheses or precedence rules determine the tree structure
 - **Recursive grammar rules** where multiple precedence levels are defined separately
+
+### Understanding Precedence and Context Sharing
+
+The power of `ast_tree_generator` comes from how it interacts with `match_parser` and `match_production`:
+
+- **`match_parser`** is used to combine different precedence levels (e.g., `level_1_grammar` and `level_2_grammar`).
+  Because it shares the convertor context, the tree being built in `level_2` is the SAME tree being built in `level_1`.
+  This allows the `ast_tree_generator` to perform tree rotations across level boundaries.
+- **`match_production`** is used to start a FRESH tree. When you encounter a parenthesized expression, you want to build
+  that entire sub-tree independently and then treat the result as a single value (a leaf) in the outer expression.
+  `match_production` provides this isolation.
 
 ### When NOT to Use
 
@@ -537,7 +551,7 @@ The `Mem` type controls how the value is routed:
 
 The **convertor context** (`ctx_extension`) persists across all matcher firings for a given parsing level. For
 `aggregator` this context is irrelevant. For `ast_tree_generator` it holds the tree nodes currently being
-assembled.
+assembled (specifically the `current_node`, `previous_node`, and `prev_prec` used for rotations).
 
 ## Shared Convertor Context in match_parser
 
@@ -548,25 +562,26 @@ When `match_parser<Prod>` runs, it:
 1. Creates a **new convertor** from `Prod::convertor()` — the nested grammar's own convertor instance
 2. Passes the **same `ctx_extension` pointer** that belongs to the outer grammar's convertor
 3. Runs `Prod`'s rules to completion using that shared context
-4. Passes the result to the **outer convertor** via `Mem{}`
 
 Because the `ctx_extension` is shared, every `leaf` and `operand` callback fired by any of the nested grammars all
 write into the **same tree being assembled** by the outer grammar. The different `precedence` values on each nested
-convertor instance are what control how the tree is restructured:
+convertor instance are what control how the tree is restructured. This is why `match_parser` is used to chain together
+different operator levels (e.g., addition rules and multiplication rules).
 
 ## Isolated Parsing with match_production
 
 `match_production<Prod, Mem>` provides a completely different integration model:
 
 1. It **shallow-copies** the current reader (cursor only, underlying data is shared)
-2. Creates a **fresh standalone parser** with its own convertor and its own `ctx_extension`
+2. Creates a **fresh standalone parser** with its own convertor and **its own fresh `ctx_extension`**
 3. Parses the input as an independent sub-expression
-4. Passes the **result** (not the context state) to the parent convertor via `Mem{}`
+4. Passes the **result** (the fully completed `ast_object`) to the parent convertor via `Mem{}`
 5. Synchronizes the parent reader's cursor to the position after the consumed input
 
 This isolation means the sub-expression is parsed as a self-contained unit. When passed to the outer grammar's convertor
 via a `leaf` callback, the entire sub-tree becomes a single opaque node — exactly the right behavior for parenthesized
-expressions for example.
+expressions. Using `match_production` effectively "resets" the precedence logic because it starts a new tree from
+scratch.
 
 ## Parenthesized Subexpressions
 

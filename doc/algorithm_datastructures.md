@@ -26,6 +26,13 @@ Other available string algorithms:
 - `starts_with` / `ends_with`: Check if a string has a given prefix/suffix.
 - `contains`: Check if a collection contains a given element (found in `fil/algorithm/contains.hh`).
 
+## Structure of Arrays (SOA)
+
+The `soa` container is a cache-friendly data structure that stores members of a structure in separate contiguous arrays.
+This is particularly useful for Entity Component Systems (ECS) or high-performance data processing.
+
+See the dedicated **[SOA Documentation](soa.md)** for more details.
+
 ## Boundary Map
 
 The `boundary_map` is a specialized map-like structure for handling value ranges.

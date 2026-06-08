@@ -1,41 +1,34 @@
 # CLI (Command Line Interface)
 
-FiL provides a modern, header-only Command Line Interface library. it is callback-based, where every command is part of
-the `fil::sub_command` class.
+FiL provides a modern, header-only Command Line Interface library. It is callback-based, where every command is defined
+using the `fil::sub_command` class.
 
 ## Basic Usage
 
-To use it, you need to use a base class for the CLI (typically `fil::command_line_interface`, which is a sub-class of
-`sub_command`) that provides a `parse_command_line` method.
+To use it, you create an instance of `fil::command_line_interface` (which is a subclass of `fil::sub_command`). It
+provides the `parse_command_line` method to process `argc` and `argv`.
+
+### Simple Example
 
 ```cpp
 #include <fil/cli/command_line_interface.hh>
 #include <iostream>
-#include <vector>
-#include <string>
 
 int main(int argc, char** argv) {
-    // Define the main CLI command with its callback
+    // Define the main CLI command with its callback and description
     fil::command_line_interface cli([]() { 
         std::cout << "Executing main command" << std::endl; 
     }, "A Simple Command Line tool");
 
-    // Add an option with an argument: ./binary --opt-with-arg "argument value"
-    // Alias -o is also provided
-    cli.add_option(fil::option("--opt-with-arg", "-o", [](std::string arg) {
-        std::cout << "Option with arg: " << arg << std::endl;
-    }, "command with arg"));
+    // Add an option with an argument: ./binary --name "John"
+    cli.add_option(fil::option("--name", "-n", [](std::string arg) {
+        std::cout << "Hello, " << arg << "!" << std::endl;
+    }, "The name to greet"));
 
-    // Add an option without argument: ./binary --opt-without-arg
-    cli.add_option(fil::option("--opt-without-arg", []() {
-        std::cout << "Option without arg triggered" << std::endl;
-    }, "command without arg"));
-
-    // Handle positional parameters
-    std::vector<std::string> cli_arguments;
-    cli.on_parameter_handler([&cli_arguments](std::string param) {
-        cli_arguments.emplace_back(std::move(param));
-    });
+    // Add a flag (option without argument): ./binary --verbose
+    cli.add_option(fil::option("--verbose", []() {
+        std::cout << "Verbose mode enabled" << std::endl;
+    }, "Enable verbose output"));
 
     // Parse the command line
     cli.parse_command_line(argc, argv);
@@ -44,43 +37,66 @@ int main(int argc, char** argv) {
 }
 ```
 
+## Options and Arguments
+
+Options can be defined with or without an alias, and can take different types of arguments (string, int64_t, or no
+argument).
+
+### Option Types
+
+- **Flag**: `fil::option("--flag", []() { ... }, "Help text")`
+- **String Argument**: `fil::option("--opt", [](std::string s) { ... }, "Help text")`
+- **Integer Argument**: `fil::option("--count", [](std::int64_t i) { ... }, "Help text")`
+
+### Positional Parameters
+
+You can handle positional parameters (arguments not associated with an option) by providing a parameter handler:
+
+```cpp
+cli.on_parameter_handler([](std::string param) {
+    std::cout << "Positional parameter: " << param << std::endl;
+});
+```
+
 ## Advanced Features
 
 ### Sub-commands
 
-You can compose commands by adding sub-commands to any `sub_command` (including the main `cli` object).
+You can create complex command hierarchies by adding sub-commands to the main `cli` object or other sub-commands.
 
 ```cpp
-auto& sub = cli.add_sub_command("sub", []() {
-    std::cout << "Sub-command executed" << std::endl;
-}, "A sub-command description");
+auto& config = cli.add_sub_command("config", []() {
+    std::cout << "Configuring..." << std::endl;
+}, "Configuration commands");
 
-sub.add_option(fil::option("--sub-opt", []() {
-    std::cout << "Sub-command option executed" << std::endl;
-}, "Sub-command option"));
+config.add_option(fil::option("--set", [](std::string val) {
+    // ...
+}, "Set a config value"));
 ```
 
 ### Utility Functions
 
-FiL provides utility functions to simplify common tasks:
+The `fil::cli` namespace provides helpers for common patterns:
 
-#### Storing argument directly
+#### Storing Arguments Directly
 
-```cpp
-int value = 0;
-// Automatically adds an option that stores the argument into the 'value' variable
-fil::add_argument_option(cli, "--value", value, "An integer value");
-```
-
-#### Aggregating multiple arguments
+Automatically creates an option that stores its value into a variable:
 
 ```cpp
-std::vector<std::string> all_args;
-// Aggregates all remaining positional parameters of a sub-command into a vector
-fil::add_multi_arg(cli, all_args);
+int port = 8080;
+fil::cli::add_argument_option(cli, "--port", port, "Port number");
 ```
 
-## Help Command
+#### Aggregating Positional Arguments
 
-The `--help` command is automatically added by default to all commands and sub-commands, displaying the descriptions
-provided during setup.
+Collects all remaining positional arguments into a vector:
+
+```cpp
+std::vector<std::string> files;
+fil::cli::add_multi_arg(cli, files);
+```
+
+## Help Generation
+
+The `--help` (and `-h`) flag is automatically added to all commands and sub-commands. It generates a formatted help
+message based on the descriptions provided.

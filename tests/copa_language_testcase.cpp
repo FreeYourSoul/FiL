@@ -3,6 +3,7 @@
 #include "fil/copa/copa.hh"
 #include "fil/copa/member.hh"
 #include "fil/copa/sink.hh"
+#include "fil/copa/visit.hh"
 #include "fil/copa/wrapper_utils.hh"
 #include "fil/meta/buffer_reader.hh"
 #include "fil/meta/visit_utils.hh"
@@ -488,22 +489,35 @@ TEST_CASE("Copa: mixed aggregator and ast_tree_generator", "[copa]") {
     }
 }
 
-TEST_CASE("Copa: aggregation language", "[copa]") {
+// define outside inner-scope to provide visitor specialization
+struct agg_language {
+    struct ast_object {
+        std::vector<ast_node> nodes;
 
-    struct agg_language {
-        struct ast_object {
-            std::vector<ast_node> nodes;
-
-            std::string to_string() const { return fil::join(nodes, "\n===========\n"); }
-        };
-
-        static constexpr auto rules() {
-            return fil::copa::repeat<2>(                                                                 //
-                (fil::copa::match_production<language_grammar, fil::copa::member<&ast_object::nodes>> {} //
-                 + fil::copa::comma));
-        }
-        static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        std::string to_string() const { return fil::join(nodes, "\n===========\n"); }
     };
+
+    static constexpr auto rules() {
+        return fil::copa::repeat<2>(                                                                 //
+            (fil::copa::match_production<language_grammar, fil::copa::member<&ast_object::nodes>> {} //
+             + fil::copa::comma));
+    }
+    static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+};
+
+// specialize visitation
+namespace fil::copa {
+
+template<typename Callback>
+auto visit(Callback&& callback, const agg_language::ast_object& obj) {
+    for (const auto& n : obj.nodes)
+        fil::copa::visit(callback, n);
+    return 0.0;
+}
+
+} // namespace fil::copa
+
+TEST_CASE("Copa: aggregation language", "[copa]") {
 
     fil::buffer_reader reader(" chocobo.fly >= 5, c < 0, ");
 
@@ -514,37 +528,101 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
 
     REQUIRE(result->nodes.size() == 2);
 
-    const auto& node0 = result->nodes[0];
-    const auto& node1 = result->nodes[1];
+    SECTION("test combination of aggregation with ast tree") {
 
-    // Top level should be comparison (==)
-    REQUIRE(std::holds_alternative<op_comparator>(node0.value));
-    CHECK(std::get<op_comparator>(node0.value) == op_comparator::greater_equal);
+        const auto& node0 = result->nodes[0];
+        const auto& node1 = result->nodes[1];
 
-    const auto& lhs0 = node0.lhs;
-    const auto& rhs0 = node0.rhs;
+        // Top level should be comparison (==)
+        REQUIRE(std::holds_alternative<op_comparator>(node0.value));
+        CHECK(std::get<op_comparator>(node0.value) == op_comparator::greater_equal);
 
-    // Left side should be a variable with access
-    REQUIRE(std::holds_alternative<variable>(lhs0));
-    const auto lhs_var = std::get<variable>(lhs0);
-    CHECK(lhs_var.variable_name == "chocobo");
-    REQUIRE(lhs_var.access.has_value());
-    CHECK(lhs_var.access.value() == "fly");
+        const auto& lhs0 = node0.lhs;
+        const auto& rhs0 = node0.rhs;
 
-    REQUIRE(std::holds_alternative<int>(rhs0));
-    CHECK(std::get<int>(rhs0) == 5);
+        // Left side should be a variable with access
+        REQUIRE(std::holds_alternative<variable>(lhs0));
+        const auto lhs_var = std::get<variable>(lhs0);
+        CHECK(lhs_var.variable_name == "chocobo");
+        REQUIRE(lhs_var.access.has_value());
+        CHECK(lhs_var.access.value() == "fly");
 
-    REQUIRE(std::holds_alternative<op_comparator>(node1.value));
-    CHECK(std::get<op_comparator>(node1.value) == op_comparator::less);
+        REQUIRE(std::holds_alternative<int>(rhs0));
+        CHECK(std::get<int>(rhs0) == 5);
 
-    const auto& lhs1 = node1.lhs;
-    const auto& rhs1 = node1.rhs;
+        REQUIRE(std::holds_alternative<op_comparator>(node1.value));
+        CHECK(std::get<op_comparator>(node1.value) == op_comparator::less);
 
-    REQUIRE(std::holds_alternative<variable>(lhs1));
-    const auto lhs_var1 = std::get<variable>(lhs1);
-    CHECK(lhs_var1.variable_name == "c");
-    CHECK(!lhs_var1.access.has_value());
+        const auto& lhs1 = node1.lhs;
+        const auto& rhs1 = node1.rhs;
 
-    REQUIRE(std::holds_alternative<int>(rhs1));
-    CHECK(std::get<int>(rhs1) == 0);
+        REQUIRE(std::holds_alternative<variable>(lhs1));
+        const auto lhs_var1 = std::get<variable>(lhs1);
+        CHECK(lhs_var1.variable_name == "c");
+        CHECK(!lhs_var1.access.has_value());
+
+        REQUIRE(std::holds_alternative<int>(rhs1));
+        CHECK(std::get<int>(rhs1) == 0);
+    }
+
+    SECTION("test visit on aggregation") {
+
+        struct final_visitation_result {
+            std::vector<variable> variables_used;
+            std::vector<op_link> oplink_used;
+            std::vector<op_comparator> opcomp_used;
+            std::vector<int> values_used;
+        };
+
+        final_visitation_result res;
+        const auto node_visitor_with_return = fil::overload {
+            [](const auto&, const auto&) { return 0.0; },
+            [&res](const auto&, const variable& var) {
+                res.variables_used.push_back(var);
+                return 0.0;
+            },
+            [&res](const auto&, int i) {
+                res.values_used.push_back(i);
+                return 0.0;
+            },
+            // [&res](const auto&, const op_comparator& op) {
+            //     res.opcomp_used.push_back(op);
+            //     return 0;
+            // },
+            // [&res](const auto&, const op_link& op) {
+            //     res.oplink_used.push_back(op);
+            //     return 0;
+            // },
+            [&res](const auto&, const std::variant<op_link, op_comparator>& op_variant) {
+                // Handle the variant - visit it to extract the actual enum value
+                std::visit(
+                    [&res](const auto& op) {
+                        using T = std::decay_t<decltype(op)>;
+                        if constexpr (std::is_same_v<T, op_comparator>) {
+                            res.opcomp_used.push_back(op);
+                        } else if constexpr (std::is_same_v<T, op_link>) {
+                            res.oplink_used.push_back(op);
+                        }
+                    },
+                    op_variant);
+                return 0.0;
+            },
+        };
+        const auto& result_visit = fil::copa::visit(node_visitor_with_return, result.value());
+
+        REQUIRE(res.variables_used.size() == 2);
+        REQUIRE(res.oplink_used.size() == 0);
+        REQUIRE(res.opcomp_used.size() == 2);
+        REQUIRE(res.values_used.size() == 1);
+
+        CHECK(res.variables_used[0].variable_name == "chocobo");
+        CHECK(res.variables_used[0].access.value() == "fly");
+        CHECK(res.variables_used[1].variable_name == "c");
+        CHECK(!res.variables_used[1].access.has_value());
+
+        CHECK(res.opcomp_used[0] == op_comparator::greater_equal);
+        CHECK(res.opcomp_used[1] == op_comparator::less);
+
+        CHECK(res.values_used[0] == 5);
+    }
 }

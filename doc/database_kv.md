@@ -18,11 +18,14 @@ projects.
 
 The abstraction uses a policy-based design. You instantiate a `kv_db` with the desired backend policy.
 
+### Using RocksDB
+
+RocksDB is an embedded key-value store. It is fast and suitable for local storage.
+
 ```cpp
 #include <fil/kv_db/key_value_db.hh>
-#include <fil/kv_db/kv_rocksdb.hh> // If using RocksDB
+#include <fil/kv_db/kv_rocksdb.hh>
 
-// Example with RocksDB policy
 // Note: requires WITH_FIL_ROCKSDB CMake option
 fil::rocksdb_initializer init;
 init.path = "/tmp/testdb";
@@ -30,10 +33,10 @@ fil::kv_db<fil::kv_rocksdb_policy> db(init);
 
 // Basic operations
 db.set({"key", "value"});
-auto values = db.get("key");
+auto values = db.get("key"); // returns std::vector<std::string>
 
 // Multi-get
-auto kvs = db.multi_get({"key1", "key2"});
+auto kvs = db.multi_get({"key1", "key2"}); // returns std::vector<std::pair<std::string, std::string>>
 
 // Iteration
 db.list("prefix", [](std::string_view key, std::string_view value) {

@@ -218,7 +218,7 @@ struct match_parser : composable_rule {
         ctx_m_parser.reader->previous_byte(); // go back a character as we went forward before starting or
         ctx_m_parser.current_token.pop_back();
 
-        auto res = do_parse(ctx_m_parser, Prod {});
+        auto res = details_::do_parse(ctx_m_parser, Prod {});
         if (!res) {
             return match_result::FAILURE;
         }

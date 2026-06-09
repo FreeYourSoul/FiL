@@ -1201,6 +1201,45 @@ TEST_CASE("Copa: AST generator", "[copa][ast]") {
         CHECK(std::get<int>(result->calculations[2].lhs) == 2);
         CHECK(std::get<int>(result->calculations[2].rhs) == 9);
     }
+
+    SECTION("Copa: aggregator with callback") {
+        struct grammar_callback {
+            using ast_object = std::string;
+
+            struct my_callback {
+                std::string operator()(std::string value) const { return "PREFIX_" + value; }
+            };
+
+            static constexpr auto rules() { return fil::copa::match_identifier<my_callback> {}; }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        fil::buffer_reader reader("hello");
+        grammar_callback g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        CHECK(result.value() == "PREFIX_hello");
+    }
+
+    SECTION("Copa: aggregator with void callback") {
+        static bool callback_called = false;
+        callback_called             = false;
+        struct grammar_void_callback {
+            using ast_object = int;
+            struct void_callback {
+                void operator()(std::string) const { callback_called = true; }
+            };
+
+            static constexpr auto rules() { return fil::copa::match_identifier<void_callback> {}; }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        fil::buffer_reader reader("test");
+        grammar_void_callback g;
+        const auto result = fil::copa::parse(g, std::move(reader));
+        REQUIRE(result.has_value());
+        CHECK(callback_called);
+    }
 }
 
 } // namespace

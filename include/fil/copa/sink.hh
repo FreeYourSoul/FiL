@@ -100,7 +100,16 @@ class aggregator {
 
     template<callback_type Cb, typename Value>
     constexpr void operator()(void*, Cb cb, Value&& value) {
-        cb(std::forward<Value>(value));
+        using cb_result_t = std::invoke_result_t<Cb, Value>;
+        if constexpr (std::is_void_v<cb_result_t>) {
+            // Callback returns nothing => only side effects, no assignment to value_
+            cb(std::forward<Value>(value));
+        } else {
+            // Callback returns a value => it must be convertible to value_type (T)
+            static_assert(std::is_convertible_v<cb_result_t, value_type>,
+                          "aggregator: callback return type must be convertible to the aggregated value_type (T).");
+            value_ = cb(std::forward<Value>(value));
+        }
     }
     template<member_type Mem, typename Value>
     constexpr void operator()(void*, Mem mem, Value&& value) {

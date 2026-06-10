@@ -248,11 +248,66 @@ It is advised to do the following to avoid `or_rule` of `tuple_rule`:
 
 ## Mapping to AST
 
-To map parsed values to your `ast_object`, use the `member` template:
+To map parsed values to your `ast_object`, you can use either the `member` template or a custom **callback**:
+
+### Using `member`
 
 - `member<&Class::field>`: Assigns the matched value to the specified field.
 - If the field is a `std::vector`, `member` will automatically `push_back` the value.
 - If the field is a setter method `void set_field(Value)`, it will call that method.
+
+### Using Callbacks
+
+You can also provide a custom callback instead of a member pointer. A callback is any invocable type (struct with
+`operator()`, lambda, or function pointer) that accepts the matched value.
+
+#### Value-returning Callbacks
+
+If the callback returns a value, that value is assigned to the `ast_object` (the object being aggregated).
+
+```c++
+struct MyGrammar {
+    using ast_object = std::string;
+
+    struct my_callback {
+        std::string operator()(std::string value) const {
+            return "PREFIX_" + value;
+        }
+    };
+
+    static constexpr auto rules() {
+        return fil::copa::match_identifier<my_callback>{};
+    }
+    static constexpr auto convertor() {
+        return fil::copa::sink::aggregator<ast_object>{};
+    }
+};
+```
+
+In this case, the `aggregator` will store the string returned by `my_callback`.
+
+#### Void Callbacks
+
+If the callback returns `void`, it is executed for its side effects, and the `ast_object` remains unchanged (or is
+default-initialized).
+
+```c++
+struct MyGrammar {
+    using ast_object = int;
+    struct void_callback {
+        void operator()(std::string value) const {
+            std::cout << "Parsed: " << value << std::endl;
+        }
+    };
+
+    static constexpr auto rules() {
+        return fil::copa::match_identifier<void_callback>{};
+    }
+    static constexpr auto convertor() {
+        return fil::copa::sink::aggregator<ast_object>{};
+    }
+};
+```
 
 ---
 

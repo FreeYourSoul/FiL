@@ -42,11 +42,11 @@ auto visit(Callback&& callback, const T& node) -> callback_astnode_result_t<Call
 
 template<typename Callback, ast_node_concept T>
 auto visit(Callback&& callback, const T& node) -> callback_astnode_result_t<Callback, T> {
-    using result_type = callback_astnode_result_t<Callback, T>;
     return callback(
-        std::array<result_type, 2> {
+        std::array {
             visit(callback, node.lhs),
             visit(callback, node.rhs),
+            visit(callback, node.value),
         },
         node);
 }

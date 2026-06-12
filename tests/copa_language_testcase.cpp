@@ -585,14 +585,6 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
                 res.values_used.push_back(i);
                 return 0.0;
             },
-            // [&res](const auto&, const op_comparator& op) {
-            //     res.opcomp_used.push_back(op);
-            //     return 0;
-            // },
-            // [&res](const auto&, const op_link& op) {
-            //     res.oplink_used.push_back(op);
-            //     return 0;
-            // },
             [&res](const auto&, const std::variant<op_link, op_comparator>& op_variant) {
                 // Handle the variant - visit it to extract the actual enum value
                 std::visit(
@@ -613,7 +605,7 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
         REQUIRE(res.variables_used.size() == 2);
         REQUIRE(res.oplink_used.size() == 0);
         REQUIRE(res.opcomp_used.size() == 2);
-        REQUIRE(res.values_used.size() == 1);
+        REQUIRE(res.values_used.size() == 2);
 
         CHECK(res.variables_used[0].variable_name == "chocobo");
         CHECK(res.variables_used[0].access.value() == "fly");
@@ -624,5 +616,6 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
         CHECK(res.opcomp_used[1] == op_comparator::less);
 
         CHECK(res.values_used[0] == 5);
+        CHECK(res.values_used[1] == 0);
     }
 }

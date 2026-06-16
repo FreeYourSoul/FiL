@@ -385,6 +385,17 @@ struct rule_array_impl<0, R, Rs...> : tuple_rule<R, Rs...> {};   //!< Base case:
 template<rule R>
 struct may_rule : or_rule<R, details_::may_rule_not_present_matcher> {};
 
+/**
+ * @brief helper function to build an instance of a may rule
+ * @tparam Rule to embed in a may rule
+ * @return instance of the provided rule as a list
+ * @see @c fil::copa::may_rule
+ */
+template<rule Rule>
+may_rule<Rule> may(const Rule&) {
+    return fil::copa::may_rule<Rule> {};
+}
+
 template<rule Rule, std::size_t N>
 using rule_array = details_::rule_array_impl<N - 1, Rule>;
 

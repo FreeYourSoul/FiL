@@ -528,7 +528,7 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
 
     REQUIRE(result->nodes.size() == 2);
 
-    SECTION("test combination of aggregation with ast tree") {
+    SECTION("test combination of aggregation with ast tree (fixed repeat)") {
 
         const auto& node0 = result->nodes[0];
         const auto& node1 = result->nodes[1];
@@ -563,6 +563,43 @@ TEST_CASE("Copa: aggregation language", "[copa]") {
 
         REQUIRE(std::holds_alternative<int>(rhs1));
         CHECK(std::get<int>(rhs1) == 0);
+    }
+
+    SECTION("test simple ast in aggregation with listing") {
+        struct ast_simple_node {
+            using ast_object = ast_node;
+
+            static constexpr auto rules() {
+                return fil::copa::match_number<ast_node::leaf> {}  //
+                     + fil::copa::match_parser<compare_grammar> {} //
+                     + fil::copa::match_number<ast_node::leaf> {}  //
+                     + fil::copa::semicol;                         //
+            }
+            static constexpr auto convertor() { return fil::copa::sink::ast_tree_generator<ast_object> {0}; }
+        };
+
+        struct ast_agg {
+            struct ast_object {
+                std::vector<ast_node> nodes;
+
+                [[nodiscard]] std::string to_string() const { return fil::to_string(nodes); }
+            };
+
+            static constexpr auto rules() {
+                return fil::copa::list(fil::copa::match_production<ast_simple_node, fil::copa::member<&ast_object::nodes>> {}); //
+            }
+            static constexpr auto convertor() { return fil::copa::sink::aggregator<ast_object> {}; }
+        };
+
+        fil::buffer_reader reader2("1337 >= 5; 42 == 0; ");
+
+        ast_agg g2;
+        const auto result2 = fil::copa::parse(g2, std::move(reader2));
+
+        REQUIRE(result2.has_value());
+        std::println("{}", fil::to_string(result2.value()));
+
+        REQUIRE(result2->nodes.size() == 2);
     }
 
     SECTION("test visit on aggregation") {

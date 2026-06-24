@@ -227,13 +227,13 @@ class ast_tree_generator {
 
         ast_node value_node;
         if (ctx_ext->current_node) {
-            value_node.value = ctx_ext->current_node->value;
-            value_node.lhs   = ctx_ext->current_node->lhs;
-            value_node.rhs   = ctx_ext->current_node->rhs;
-
             if (ctx_ext->previous_node && ctx_ext->tmp_node) {
                 ctx_ext->previous_node->rhs = ctx_ext->tmp_node->lhs;
             }
+
+            value_node.value = ctx_ext->current_node->value;
+            value_node.lhs   = ctx_ext->current_node->lhs;
+            value_node.rhs   = ctx_ext->current_node->rhs;
         }
         if (ctx_ext->tmp_node && (!value_node.lhs.index() && !value_node.rhs.index())) {
             value_node = *ctx_ext->tmp_node;

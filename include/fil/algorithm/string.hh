@@ -33,7 +33,6 @@
 #include "fil/meta/type_traits.hpp"
 
 namespace fil {
-
 template<typename T>
 [[nodiscard]] std::string to_string(const T& elems) = delete ("A specialization of fil::to_string for the type must be provided for type");
 
@@ -89,6 +88,12 @@ requires requires(T d) {
                    return acc + to_string(elem);
                })
          + "]";
+}
+
+template<typename T>
+requires fil::is_variant_v<T>
+[[nodiscard]] std::string to_string(const T& elem) {
+    return std::visit([](auto&& v) { return to_string(v); }, elem);
 }
 
 template<typename T>

@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <variant>
+
 #include <catch2/catch_test_macros.hpp>
 #include <fil/algorithm/contains.hh>
 #include <fil/algorithm/string.hh>
@@ -380,6 +382,9 @@ TEST_CASE("fil algorithm to_string", "[algorithm]") {
     static_assert(fil::is_stringifiable<composed_complex>, "custom with fil::to_string specialized shall be stringifiable");
     static_assert(fil::is_stringifiable<composed_complex_2>, "custom with to_string implemented shall be stringifiable");
 
+    // check variant
+    static_assert(fil::is_stringifiable<std::variant<int, std::string>>, "variant of stringifiable type shall be stringifiable");
+
     SECTION("simple test cases") {
         CHECK(fil::to_string(43) == "43");
         CHECK(fil::to_string(43.42) == "43.42");
@@ -408,5 +413,16 @@ TEST_CASE("fil algorithm to_string", "[algorithm]") {
     SECTION("composed structure with to_string member") {
         CHECK(fil::to_string(composed_complex_2 {.name = "chocobo", .value = "cloud"})
               == "composed_complex_2[name: chocobo, value: cloud]");
+    }
+
+    SECTION("variant check") {
+        const std::variant<int, std::string, double> variant_intvalue {42};
+        CHECK(fil::to_string(variant_intvalue) == "42");
+
+        const std::variant<int, std::string, double> variant_strvalue {std::string {"chocobo"}};
+        CHECK(fil::to_string(variant_strvalue) == "chocobo");
+
+        const std::variant<int, std::string, double> variant_dblvalue {1337.42};
+        CHECK(fil::to_string(variant_dblvalue) == "1337.42");
     }
 }

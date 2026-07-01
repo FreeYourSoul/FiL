@@ -25,6 +25,7 @@
 #define FIL_TYPE_TRAITS_HH
 
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 namespace fil {
@@ -48,6 +49,18 @@ template<typename T, template<typename...> typename Template>
 concept instance_of = requires { //
     []<template<typename...> typename U, typename... Args>(U<Args...>&) {}(std::declval<T&>());
 };
+
+template<typename>
+struct is_variant : std::false_type {};
+
+template<typename... Args>
+struct is_variant<std::variant<Args...>> : std::true_type {};
+
+/**
+ * @brief concept checking that the provided type s a variant type
+ */
+template<typename T>
+concept is_variant_v = is_variant<T>::value;
 
 } // namespace fil
 

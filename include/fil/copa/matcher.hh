@@ -130,9 +130,11 @@ template<mem_or_cb_type Mem = member_noop>
 struct match_identifier : composable_rule {
     using result_type = std::string;
     static constexpr match_result match(auto& ctx, std::uint8_t c, std::uint32_t = 0) {
-        if (std::isalnum(c)) {
+        static constexpr auto is_identifier_character = [](std::uint8_t c) { return std::isalnum(c) || c == '_'; };
+
+        if (is_identifier_character(c)) {
             const auto peek = ctx.reader->peek();
-            if (!peek.has_value() || !std::isalnum(peek.value())) {
+            if (!peek.has_value() || !is_identifier_character(peek.value())) {
                 ctx.convertor->operator()(ctx.convertor_ctx, Mem {}, ctx.current_token);
                 ctx.current_token = {};
                 return match_result::SUCCESS;

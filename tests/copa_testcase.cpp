@@ -117,7 +117,20 @@ TEST_CASE("Copa: standalone test case", "[copa][standalone]") {
         REQUIRE(result->options.size() == 1);
         CHECK(result->options[0] == "a");
     }
+    SECTION("Successful parse with different identifiers containing _") {
+        // std::string input = "CMD stop FOR system ";
+        std::string input = "CMD stop FOR system MAGIC_SYSTEM ";
+        fil::buffer_reader reader(std::move(input));
+        simple_grammar grammar;
 
+        const auto result = fil::copa::parse(grammar, std::move(reader));
+
+        REQUIRE(result.has_value());
+        CHECK(result->command == "stop");
+        CHECK(result->name == "system");
+        REQUIRE(result->options.size() == 1);
+        CHECK(result->options[0] == "MAGIC_SYSTEM");
+    }
     SECTION("Successful parse with empty options") {
         std::string input = "CMD stop FOR system ]";
         fil::buffer_reader reader(std::move(input));
